@@ -1,0 +1,5 @@
+Kontur MTA — форк Multi Theft Auto: San Andreas (GPLv3).
+Полные исходники этой сборки: https://github.com/firedanya2000-stack/kontur-mta
+Коммит релиза: подставляет CI на шаге 12
+Базовый коммит апстрима: тег kontur-base (mtasa-blue 1.6.0)
+Контакт для запроса исходников: fire.danya.2000@gmail.com

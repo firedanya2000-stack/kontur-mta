@@ -416,3 +416,10 @@ utils/DXFiles/
 !*.dll
 !*.exe
 utils/vswhere.exe
+# Kontur MTA
+/_dist/
+/_source/
+/_keys/
+/dist/
+*.pdb
+*.key
