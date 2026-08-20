@@ -13,7 +13,8 @@ local CEF_VERSION = "114.2.10+g398e3c3+chromium-114.0.5735.110"
 local CEF_HASH = "28f848e2dd44870cb630c49090409e96b6574a12f01f7ab20a3263de0aeff49f"
 
 function make_cef_download_url()
-	return CEF_URL_PREFIX..http.escapeUrlParam(CEF_VERSION)..CEF_URL_SUFFIX
+	local escaped = CEF_VERSION:gsub("%+", "%%2B")
+	return CEF_URL_PREFIX..escaped..CEF_URL_SUFFIX
 end
 
 function update_install_cef(version, hash)
