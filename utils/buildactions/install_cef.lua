@@ -20,7 +20,8 @@ if os.getenv("MTA_MAETRO") == "true" then
 end
 
 function make_cef_download_url()
-	return CEF_URL_PREFIX..CEF_VERSION..CEF_URL_SUFFIX
+	local escaped = CEF_VERSION:gsub("%+", "%%2B")
+   	return CEF_URL_PREFIX..escaped..CEF_URL_SUFFIX
 end
 
 function update_install_cef(version, hash)
