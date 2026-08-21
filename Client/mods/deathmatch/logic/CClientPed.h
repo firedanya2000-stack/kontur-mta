@@ -35,6 +35,7 @@ class CClientPlayerClothes;
 class CClientProjectile;
 class CClientVehicle;
 class CTask;
+class CTaskSimpleSwim;
 
 enum eDelayedSyncData
 {
@@ -61,22 +62,29 @@ enum eBodyPart
     BODYPART_LEFT_LEG = 7,
     BODYPART_RIGHT_LEG = 8,
     BODYPART_HEAD = 9,
+    BODYPART_INVALID = 255,
 };
 
 enum eMovementState
 {
     MOVEMENTSTATE_UNKNOWN,
-    MOVEMENTSTATE_STAND,                // Standing still
-    MOVEMENTSTATE_WALK,                 // Walking
-    MOVEMENTSTATE_POWERWALK,            // Walking quickly
-    MOVEMENTSTATE_JOG,                  // Jogging
-    MOVEMENTSTATE_SPRINT,               // Sprinting
-    MOVEMENTSTATE_CROUCH,               // Crouching still
-    MOVEMENTSTATE_CRAWL,                // Crouch-moving
-    MOVEMENTSTATE_ROLL,                 // Crouch-rolling (Needs adding)
-    MOVEMENTSTATE_JUMP,                 // Jumping
-    MOVEMENTSTATE_FALL,                 // Falling
-    MOVEMENTSTATE_CLIMB                 // Climbing
+    MOVEMENTSTATE_STAND,            // Standing still
+    MOVEMENTSTATE_WALK,             // Walking
+    MOVEMENTSTATE_POWERWALK,        // Walking quickly
+    MOVEMENTSTATE_JOG,              // Jogging (Unused)
+    MOVEMENTSTATE_SPRINT,           // Sprinting
+    MOVEMENTSTATE_CROUCH,           // Crouching still
+    MOVEMENTSTATE_CRAWL,            // Crouch-moving
+    MOVEMENTSTATE_ROLL,             // Crouch-rolling
+    MOVEMENTSTATE_JUMP,             // Jumping
+    MOVEMENTSTATE_FALL,             // Falling
+    MOVEMENTSTATE_CLIMB,            // Climbing
+    MOVEMENTSTATE_SWIM,             // Swimming
+    MOVEMENTSTATE_WALK_TO_POINT,    // Entering vehicle (walking to the door)
+    MOVEMENTSTATE_ASCENT_JETPACK,   // Ascending with jetpack
+    MOVEMENTSTATE_DESCENT_JETPACK,  // Descending with jetpack
+    MOVEMENTSTATE_JETPACK,          // Jetpack flying
+    MOVEMENTSTATE_HANGING,          // Hanging from the whall during climbing task
 };
 
 enum eDeathAnims
@@ -105,8 +113,10 @@ struct SLastSyncedPedData
     CVector vPosition;
     CVector vVelocity;
     float   fRotation;
+    float   cameraRotation{};
     bool    bOnFire;
     bool    bIsInWater;
+    bool    isReloadingWeapon;
 };
 
 struct SRestoreWeaponItem
@@ -127,29 +137,23 @@ struct SReplacedAnimation
 
 struct SAnimationCache
 {
-    SString strName;
-    int     iTime;
-    bool    bLoop;
-    bool    bUpdatePosition;
-    bool    bInterruptable;
-    bool    bFreezeLastFrame;
-    int     iBlend;
-
-    SAnimationCache()
-    {
-        iTime = -1;
-        bLoop = false;
-        bUpdatePosition = false;
-        bInterruptable = false;
-        bFreezeLastFrame = true;
-        iBlend = 250;
-    }
+    std::string  strName;
+    int          iTime{-1};
+    bool         bLoop{false};
+    bool         bUpdatePosition{false};
+    bool         bInterruptible{false};
+    bool         bFreezeLastFrame{true};
+    int          iBlend{250};
+    float        progress{0.0f};
+    float        speed{1.0f};
+    bool         progressWaitForStreamIn{false};
+    std::int64_t startTime{0};
 };
 
 class CClientObject;
 
 // To hide the ugly "pointer truncation from DWORD* to unsigned long warning
-#pragma warning(disable:4311)
+#pragma warning(disable : 4311)
 
 class CClientPed : public CClientStreamElement, public CAntiCheatModule
 {
@@ -165,16 +169,16 @@ public:
     CClientPed(CClientManager* pManager, unsigned long ulModelID, ElementID ID);
     ~CClientPed();
 
-    void Unlink(){};
+    void Unlink() {};
 
     virtual eClientEntityType GetType() const { return CCLIENTPED; }
 
-    CPlayerPed*    GetGamePlayer() { return m_pPlayerPed; }
-    CEntity*       GetGameEntity() { return m_pPlayerPed; }
-    const CEntity* GetGameEntity() const { return m_pPlayerPed; }
+    CPlayerPed*    GetGamePlayer() noexcept { return m_pPlayerPed; }
+    CEntity*       GetGameEntity() noexcept { return m_pPlayerPed; }
+    const CEntity* GetGameEntity() const noexcept { return m_pPlayerPed; }
 
-    bool IsLocalPlayer() { return m_bIsLocalPlayer; }
-    bool IsSyncing() { return m_bIsSyncing; }
+    bool IsLocalPlayer() const noexcept { return m_bIsLocalPlayer; }
+    bool IsSyncing() const noexcept { return m_bIsSyncing; }
     void SetSyncing(bool bIsSyncing);
 
     bool            GetMatrix(CMatrix& Matrix) const;
@@ -182,7 +186,7 @@ public:
     virtual CSphere GetWorldBoundingSphere();
 
     void GetPosition(CVector& vecPosition) const;
-    void SetPosition(const CVector& vecPosition) { SetPosition(vecPosition, true, true); }
+    void SetPosition(const CVector& vecPosition) noexcept { SetPosition(vecPosition, true, true); }
     void SetPosition(const CVector& vecPosition, bool bResetInterpolation, bool bAllowGroundLoadFreeze = true);
 
     void SetInterior(unsigned char ucInterior);
@@ -210,7 +214,7 @@ public:
     float GetCurrentRotation();
     void  SetCurrentRotation(float fRotation, bool bIncludeTarget = true);
     void  SetTargetRotation(float fRotation);
-    void  SetTargetRotation(unsigned long ulDelay, float fRotation, float fCameraRotation);
+    void  SetTargetRotation(unsigned long ulDelay, std::optional<float> rotation, std::optional<float> cameraRotation);
 
     float GetCameraRotation();
     void  SetCameraRotation(float fRotation);
@@ -231,24 +235,29 @@ public:
 
     void SetTargetTarget(unsigned long ulDelay, const CVector& vecSource, const CVector& vecTarget);
 
-    int  GetVehicleInOutState() { return m_iVehicleInOutState; };
-    void SetVehicleInOutState(int iState) { m_iVehicleInOutState = iState; };
+    int  GetVehicleInOutState() const noexcept { return m_iVehicleInOutState; };
+    void SetVehicleInOutState(int iState) noexcept { m_iVehicleInOutState = iState; };
 
-    unsigned long GetModel() { return m_ulModel; };
+    unsigned long GetModel() const noexcept { return m_ulModel; };
     bool          SetModel(unsigned long ulModel, bool bTemp = false);
 
     bool GetCanBeKnockedOffBike();
     void SetCanBeKnockedOffBike(bool bCanBeKnockedOffBike);
 
-    bool            IsInVehicle() { return GetOccupiedVehicle() != NULL; };
-    CClientVehicle* GetOccupiedVehicle() { return m_pOccupiedVehicle; };
-    unsigned int    GetOccupiedVehicleSeat() { return m_uiOccupiedVehicleSeat; };
-    CClientVehicle* GetOccupyingVehicle() { return m_pOccupyingVehicle; };
+    bool IsInVehicle() const noexcept { return GetOccupiedVehicle() != NULL; };
+
+    CClientVehicle*       GetOccupiedVehicle() noexcept { return m_pOccupiedVehicle; };
+    const CClientVehicle* GetOccupiedVehicle() const noexcept { return m_pOccupiedVehicle; };
+
+    unsigned int GetOccupiedVehicleSeat() const noexcept { return m_uiOccupiedVehicleSeat; };
+
+    CClientVehicle*       GetOccupyingVehicle() noexcept { return m_pOccupyingVehicle; };
+    const CClientVehicle* GetOccupyingVehicle() const noexcept { return m_pOccupyingVehicle; };
 
     CClientVehicle* GetRealOccupiedVehicle();
     CClientVehicle* GetClosestEnterableVehicle(bool bGetPositionFromClosestDoor, bool bCheckDriverDoor, bool bCheckPassengerDoors,
                                                bool bCheckStreamedOutVehicles, unsigned int* uiClosestDoor = NULL, CVector* pClosestDoorPosition = NULL,
-                                               float fWithinRange = 6000.0f);
+                                               float fWithinRange = 6000.0f, bool localVehicles = false);
     bool            GetClosestDoor(CClientVehicle* pVehicle, bool bCheckDriverDoor, bool bCheckPassengerDoors, unsigned int& uiClosestDoor,
                                    CVector* pClosestDoorPosition = NULL);
 
@@ -267,28 +276,30 @@ public:
     float GetHealth();
     void  SetHealth(float fHealth);
     void  InternalSetHealth(float fHealth);
-    float GetArmor();
-    void  SetArmor(float fArmor);
+    float GetArmor() const noexcept;
+    void  SetArmor(float armor) noexcept;
     float GetOxygenLevel();
     void  SetOxygenLevel(float fOxygen);
 
     void LockHealth(float fHealth);
-    void LockArmor(float fArmor);
-    void UnlockHealth() { m_bHealthLocked = false; };
-    void UnlockArmor() { m_bArmorLocked = false; };
-    bool IsHealthLocked() const { return m_bHealthLocked; };
-    bool IsArmorLocked() const { return m_bArmorLocked; };
+    void LockArmor(float armor) noexcept;
+    void UnlockHealth() noexcept { m_bHealthLocked = false; };
+    void UnlockArmor() noexcept { m_armorLocked = false; };
+    bool IsHealthLocked() const noexcept { return m_bHealthLocked; };
+    bool IsArmorLocked() const noexcept { return m_armorLocked; };
 
     bool IsDying();
     bool IsDead();
-    void SetIsDead(bool bDead) { m_bDead = bDead; };
+    void SetIsDead(bool bDead) noexcept { m_bDead = bDead; };
     void Kill(eWeaponType weaponType, unsigned char ucBodypart, bool bStealth = false, bool bSetDirectlyDead = false, AssocGroupId animGroup = 0,
               AnimationId animID = 15);
+    // Holds the death animation on its last frame so a recreated ped is posed at once.
+    void FreezeDeathAnimationOnLastFrame();
     void StealthKill(CClientPed* pPed);
     void BeHit(CClientPed* pClientPedAttacker, ePedPieceTypes hitBodyPart, int hitBodySide, int weaponId);
 
-    int  GetRespawnState() { return m_pRespawnState; };
-    void SetRespawnState(int iRespawnState) { m_pRespawnState = iRespawnState; };
+    int  GetRespawnState() const noexcept { return m_pRespawnState; };
+    void SetRespawnState(int iRespawnState) noexcept { m_pRespawnState = iRespawnState; };
 
     CWeapon*    GiveWeapon(eWeaponType weaponType, unsigned int uiAmmo, bool bSetAsCurrent = false);
     bool        SetCurrentWeaponSlot(eWeaponSlot weaponSlot);
@@ -328,9 +339,9 @@ public:
         }
     };
     CVector              GetAim() const;
-    const CVector&       GetAimSource() { return m_shotSyncData->m_vecShotOrigin; };
-    const CVector&       GetAimTarget() { return m_shotSyncData->m_vecShotTarget; };
-    eVehicleAimDirection GetVehicleAimAnim() { return m_shotSyncData->m_cInVehicleAimDirection; };
+    const CVector&       GetAimSource() const noexcept { return m_shotSyncData->m_vecShotOrigin; };
+    const CVector&       GetAimTarget() const noexcept { return m_shotSyncData->m_vecShotTarget; };
+    eVehicleAimDirection GetVehicleAimAnim() const noexcept { return m_shotSyncData->m_cInVehicleAimDirection; };
     void                 SetAim(float fArmDirectionX, float fArmDirectionY, eVehicleAimDirection cInVehicleAimAnim);
     void SetAimInterpolated(unsigned long ulDelay, float fArmDirectionX, float fArmDirectionY, bool bAkimboAimUp, eVehicleAimDirection cInVehicleAimAnim);
     void SetAimingData(unsigned long ulDelay, const CVector& vecTargetPosition, float fArmDirectionX, float fArmDirectionY,
@@ -356,7 +367,8 @@ public:
     float GetStat(unsigned short usStat);
     void  ResetStats();
 
-    CClientPlayerClothes* GetClothes() { return m_pClothes; }
+    CClientPlayerClothes*       GetClothes() noexcept { return m_pClothes; }
+    const CClientPlayerClothes* GetClothes() const noexcept { return m_pClothes; }
 
     // This is kinda hacky, should be private but something depends on this. Should depend on some
     // streamer func. Perhaps use SetNeverStreamOut, but need something to reset that.
@@ -372,16 +384,17 @@ public:
 
     void SetInWater(bool bIsInWater) { m_bIsInWater = bIsInWater; };
     bool IsInWater();
-    bool IsOnGround();
+    bool IsOnGround(bool checkVehicles = false);
 
     bool          IsClimbing();
-    bool          IsRadioOn() { return m_bRadioOn; };
+    bool          IsRadioOn() const noexcept { return m_bRadioOn; };
     void          NextRadioChannel();
     void          PreviousRadioChannel();
     bool          SetCurrentRadioChannel(unsigned char ucChannel);
-    unsigned char GetCurrentRadioChannel() { return m_ucRadioChannel; };
+    unsigned char GetCurrentRadioChannel() const noexcept { return m_ucRadioChannel; };
 
-    CTaskManager* GetTaskManager() { return m_pTaskManager; }
+    CTaskManager*       GetTaskManager() noexcept { return m_pTaskManager; }
+    const CTaskManager* GetTaskManager() const noexcept { return m_pTaskManager; }
 
     bool    GetShotData(CVector* pvecOrigin, CVector* pvecTarget = NULL, CVector* pvecGunMuzzle = NULL, CVector* pvecFireOffset = NULL, float* fAimX = NULL,
                         float* fAimY = NULL);
@@ -399,10 +412,14 @@ public:
     std::list<CClientProjectile*>::iterator ProjectilesEnd() { return m_Projectiles.end(); }
     unsigned int                            CountProjectiles(eWeaponType weaponType = WEAPONTYPE_UNARMED);
 
+    std::list<CClientProjectile*>&       GetProjectiles() noexcept { return m_Projectiles; }
+    const std::list<CClientProjectile*>& GetProjectiles() const noexcept { return m_Projectiles; }
+
     void RemoveAllProjectiles();
     void DestroySatchelCharges(bool bBlow = true, bool bDestroy = true);
 
-    CRemoteDataStorage* GetRemoteData() { return m_remoteDataStorage; }
+    CRemoteDataStorage*       GetRemoteData() noexcept { return m_remoteDataStorage; }
+    const CRemoteDataStorage* GetRemoteData() const noexcept { return m_remoteDataStorage; }
 
     bool IsEnteringVehicle();
     bool IsLeavingVehicle();
@@ -416,22 +433,24 @@ public:
 
     float GetDistanceFromCentreOfMassToBaseOfModel();
 
-    unsigned char GetAlpha() { return m_ucAlpha; }
+    unsigned char GetAlpha() const noexcept { return m_ucAlpha; }
     void          SetAlpha(unsigned char ucAlpha);
 
-    bool           HasTargetPosition() { return (m_interp.pos.ulFinishTime != 0); }
-    CClientEntity* GetTargetOriginSource() { return m_interp.pTargetOriginSource; }
-    void           GetTargetPosition(CVector& vecPosition);
-    void           SetTargetPosition(const CVector& vecPosition, unsigned long ulDelay, CClientEntity* pTargetOriginSource = NULL);
-    void           RemoveTargetPosition();
-    void           UpdateTargetPosition();
-    void           UpdateUnderFloorFix(const CVector& vecTargetPosition, const CVector& vecOrigin);
+    bool                 HasTargetPosition() const noexcept { return m_interp.pos.ulFinishTime != 0; }
+    CClientEntity*       GetTargetOriginSource() noexcept { return m_interp.pTargetOriginSource; }
+    const CClientEntity* GetTargetOriginSource() const noexcept { return m_interp.pTargetOriginSource; }
+    void                 GetTargetPosition(CVector& vecPosition);
+    void                 SetTargetPosition(const CVector& vecPosition, unsigned long ulDelay, CClientEntity* pTargetOriginSource = NULL);
+    void                 RemoveTargetPosition();
+    void                 UpdateTargetPosition();
+    void                 UpdateUnderFloorFix(const CVector& vecTargetPosition, const CVector& vecOrigin);
 
     CClientEntity* GetTargetedEntity();
     CClientPed*    GetTargetedPed();
 
-    CClientEntity* GetCurrentContactEntity() { return m_pCurrentContactEntity; }
-    void           SetCurrentContactEntity(CClientEntity* pEntity) { m_pCurrentContactEntity = pEntity; }
+    CClientEntity*       GetCurrentContactEntity() noexcept { return m_pCurrentContactEntity; }
+    const CClientEntity* GetCurrentContactEntity() const noexcept { return m_pCurrentContactEntity; }
+    void                 SetCurrentContactEntity(CClientEntity* pEntity) noexcept { m_pCurrentContactEntity = pEntity; }
 
     bool IsSunbathing();
     void SetSunbathing(bool bSunbathing, bool bStartStanding = true);
@@ -445,22 +464,31 @@ public:
     bool IsDoingGangDriveby();
     void SetDoingGangDriveby(bool bDriveby);
 
+    // Set while onClientPlayerWeaponFire/onClientPedWeaponFire is dispatched.
+    void SetProcessingWeaponFireEvent(bool bProcessing) noexcept { m_bProcessingWeaponFireEvent = bProcessing; }
+
     bool GetRunningAnimationName(SString& strBlockName, SString& strAnimName);
     bool IsRunningAnimation();
-    void RunAnimation(AssocGroupId animGroup, AnimationId animID);
+
+    // It checks whether the animation is still playing based on time, not on task execution.
+    bool IsAnimationInProgress();
+
     void RunNamedAnimation(std::unique_ptr<CAnimBlock>& pBlock, const char* szAnimName, int iTime = -1, int iBlend = 250, bool bLoop = true,
-                           bool bUpdatePosition = true, bool bInterruptable = false, bool bFreezeLastFrame = true, bool bRunInSequence = false,
+                           bool bUpdatePosition = true, bool bInterruptible = false, bool bFreezeLastFrame = true, bool bRunInSequence = false,
                            bool bOffsetPed = false, bool bHoldLastFrame = false);
     void KillAnimation();
     std::unique_ptr<CAnimBlock> GetAnimationBlock();
-    const SAnimationCache&      GetAnimationCache() { return m_AnimationCache; }
+    const SAnimationCache&      GetAnimationCache() const noexcept { return m_AnimationCache; }
+    void                        RunAnimationFromCache();
+    void                        UpdateAnimationProgressAndSpeed();
+    void                        UpdateCustomPartialAnimationBones();
 
     bool IsUsingGun();
 
-    bool IsHeadless() { return m_bHeadless; }
+    bool IsHeadless() const noexcept { return m_bHeadless; }
     void SetHeadless(bool bHeadless);
 
-    bool IsFrozen() const { return m_bFrozen; }
+    bool IsFrozen() const noexcept { return m_bFrozen; }
     void SetFrozen(bool bFrozen);
     bool IsFrozenWaitingForGroundToLoad() const;
     void SetFrozenWaitingForGroundToLoad(bool bFrozen);
@@ -468,16 +496,17 @@ public:
     bool IsFootBloodEnabled();
     void SetFootBloodEnabled(bool bHasFootBlood);
 
-    bool IsBleeding() const { return m_bBleeding; };
+    bool IsBleeding() const noexcept { return m_bBleeding; };
     void SetBleeding(bool bBleeding);
 
-    bool IsOnFire();
-    void SetOnFire(bool bOnFire);
+    bool IsOnFire() override { return m_pPlayerPed ? m_pPlayerPed->IsOnFire() : m_bIsOnFire; }
+    bool SetOnFire(bool bOnFire) override;
 
     void GetVoice(short* psVoiceType, short* psVoiceID);
     void GetVoice(const char** pszVoiceType, const char** pszVoice);
     void SetVoice(short sVoiceType, short sVoiceID);
     void SetVoice(const char* szVoiceType, const char* szVoice);
+    void ResetVoice();
 
     bool IsSpeechEnabled();
     void SetSpeechEnabled(bool bEnabled);
@@ -487,9 +516,9 @@ public:
     bool GetBulletImpactData(CClientEntity** ppVictim = 0, CVector* pvecHitPosition = 0);
     void ClearBulletImpactData() { m_bBulletImpactData = false; }
 
-    bool CanReloadWeapon();
-    bool ReloadWeapon();
-    bool IsReloadingWeapon();
+    bool CanReloadWeapon() noexcept;
+    bool ReloadWeapon() noexcept;
+    bool IsReloadingWeapon() noexcept;
 
     bool ShouldBeStealthAiming();
     bool IsStealthAiming() { return m_bStealthAiming; }
@@ -501,27 +530,29 @@ public:
     std::unique_ptr<CAnimBlendAssociation> GetFirstAnimation();
 
     void                        DereferenceCustomAnimationBlock() { m_pCustomAnimationIFP = nullptr; }
-    std::shared_ptr<CClientIFP> GetCustomAnimationIFP() { return m_pCustomAnimationIFP; }
-    bool IsCustomAnimationPlaying() { return ((m_bRequestedAnimation || m_AnimationCache.bLoop) && m_pAnimationBlock && m_bisCurrentAnimationCustom); }
-    void SetCustomAnimationUntriggerable()
+    std::shared_ptr<CClientIFP> GetCustomAnimationIFP() const noexcept { return m_pCustomAnimationIFP; }
+    bool IsCustomAnimationPlaying() noexcept { return (m_bRequestedAnimation || m_AnimationCache.bLoop) && m_pAnimationBlock && m_bisCurrentAnimationCustom; }
+    void SetCustomAnimationUntriggerable() noexcept
     {
         m_bRequestedAnimation = false;
         m_AnimationCache.bLoop = false;
     }
-    bool            IsNextAnimationCustom() { return m_bisNextAnimationCustom; }
-    void            SetNextAnimationCustom(const std::shared_ptr<CClientIFP>& pIFP, const SString& strAnimationName);
-    void            SetCurrentAnimationCustom(bool bCustom) { m_bisCurrentAnimationCustom = bCustom; }
-    bool            IsCurrentAnimationCustom() { return m_bisCurrentAnimationCustom; }
-    CIFPAnimations* GetIFPAnimationsPointer() { return m_pIFPAnimations; }
-    void            SetIFPAnimationsPointer(CIFPAnimations* pIFPAnimations) { m_pIFPAnimations = pIFPAnimations; }
+    bool                  IsNextAnimationCustom() const noexcept { return m_bisNextAnimationCustom; }
+    void                  SetNextAnimationCustom(const std::shared_ptr<CClientIFP>& pIFP, const SString& strAnimationName);
+    void                  SetCurrentAnimationCustom(bool bCustom) noexcept { m_bisCurrentAnimationCustom = bCustom; }
+    bool                  IsCurrentAnimationCustom() const noexcept { return m_bisCurrentAnimationCustom; }
+    CIFPAnimations*       GetIFPAnimationsPointer() noexcept { return m_pIFPAnimations; }
+    const CIFPAnimations* GetIFPAnimationsPointer() const noexcept { return m_pIFPAnimations; }
+
+    void SetIFPAnimationsPointer(CIFPAnimations* pIFPAnimations) noexcept { m_pIFPAnimations = pIFPAnimations; }
 
     // This will indicate that we have played custom animation, so next animation can be internal GTA animation
     // You must call this function after playing a custom animation
-    void                SetNextAnimationNormal() { m_bisNextAnimationCustom = false; }
-    const SString&      GetNextAnimationCustomBlockName() { return m_strCustomIFPBlockName; }
-    const SString&      GetNextAnimationCustomName() { return m_strCustomIFPAnimationName; }
-    const unsigned int& GetCustomAnimationBlockNameHash() { return m_u32CustomBlockNameHash; }
-    const unsigned int& GetCustomAnimationNameHash() { return m_u32CustomAnimationNameHash; }
+    void                SetNextAnimationNormal() noexcept { m_bisNextAnimationCustom = false; }
+    const SString&      GetNextAnimationCustomBlockName() const noexcept { return m_strCustomIFPBlockName; }
+    const SString&      GetNextAnimationCustomName() const noexcept { return m_strCustomIFPAnimationName; }
+    const unsigned int& GetCustomAnimationBlockNameHash() const noexcept { return m_u32CustomBlockNameHash; }
+    const unsigned int& GetCustomAnimationNameHash() const noexcept { return m_u32CustomAnimationNameHash; }
 
     void                ReplaceAnimation(std::unique_ptr<CAnimBlendHierarchy>& pInternalAnimHierarchy, const std::shared_ptr<CClientIFP>& pIFP,
                                          CAnimBlendHierarchySAInterface* pCustomAnimHierarchy);
@@ -532,6 +563,14 @@ public:
     SReplacedAnimation* GetReplacedAnimation(CAnimBlendHierarchySAInterface* pInternalHierarchyInterface);
 
     std::unique_ptr<CAnimBlendAssociation> GetAnimAssociation(CAnimBlendHierarchySAInterface* pHierarchyInterface);
+
+    void SetHasSyncedAnim(bool synced) noexcept { m_hasSyncedAnim = synced; }
+    bool HasSyncedAnim() const noexcept { return m_hasSyncedAnim; }
+
+    void RunClimbingTask();
+
+    CTaskSimpleSwim* GetSwimmingTask() const;
+    void             RunSwimTask() const;
 
 protected:
     // This constructor is for peds managed by a player. These are unknown to the ped manager.
@@ -547,6 +586,7 @@ protected:
 
     // Used to destroy the current game ped and create a new one in the same state.
     void ReCreateModel();
+    void ReCreateGameEntity();
 
     void _CreateModel();
     void _CreateLocalModel();
@@ -571,20 +611,22 @@ protected:
 public:
     void _GetIntoVehicle(CClientVehicle* pVehicle, unsigned int uiSeat, unsigned char ucDoor);
     // Used to control and sync entering/exiting
-    bool EnterVehicle(CClientVehicle* pVehicle, bool bPassenger);
+    bool EnterVehicle(CClientVehicle* pVehicle, bool bPassenger, std::optional<unsigned int> optSeat = std::nullopt);
     bool ExitVehicle();
     void ResetVehicleInOut();
     void UpdateVehicleInOut();
 
     void Respawn(CVector* pvecPosition = NULL, bool bRestoreState = false, bool bCameraCut = false);
 
-    void      SetTaskToBeRestoredOnAnimEnd(bool bSetOnEnd) { m_bTaskToBeRestoredOnAnimEnd = bSetOnEnd; }
-    bool      IsTaskToBeRestoredOnAnimEnd() { return m_bTaskToBeRestoredOnAnimEnd; }
-    void      SetTaskTypeToBeRestoredOnAnimEnd(eTaskType taskType) { m_eTaskTypeToBeRestoredOnAnimEnd = taskType; }
-    eTaskType GetTaskTypeToBeRestoredOnAnimEnd() { return m_eTaskTypeToBeRestoredOnAnimEnd; }
+    void Say(const ePedSpeechContext& speechId, float probability = 1.0f);
 
-    bool IsWarpInToVehicleRequired() { return m_bWarpInToVehicleRequired; }
-    void SetWarpInToVehicleRequired(bool warp) { m_bWarpInToVehicleRequired = warp; }
+    void      SetTaskToBeRestoredOnAnimEnd(bool bSetOnEnd) noexcept { m_bTaskToBeRestoredOnAnimEnd = bSetOnEnd; }
+    bool      IsTaskToBeRestoredOnAnimEnd() const noexcept { return m_bTaskToBeRestoredOnAnimEnd; }
+    void      SetTaskTypeToBeRestoredOnAnimEnd(eTaskType taskType) noexcept { m_eTaskTypeToBeRestoredOnAnimEnd = taskType; }
+    eTaskType GetTaskTypeToBeRestoredOnAnimEnd() const noexcept { return m_eTaskTypeToBeRestoredOnAnimEnd; }
+
+    bool IsWarpInToVehicleRequired() const noexcept { return m_bWarpInToVehicleRequired; }
+    void SetWarpInToVehicleRequired(bool warp) noexcept { m_bWarpInToVehicleRequired = warp; }
 
     void NotifyCreate();
     void NotifyDestroy();
@@ -600,7 +642,7 @@ public:
     bool                        m_bRadioOn;
     unsigned char               m_ucRadioChannel;
     bool                        m_bHealthLocked;
-    bool                        m_bArmorLocked;
+    bool                        m_armorLocked;
     unsigned long               m_ulLastOnScreenTime;
     CClientVehiclePtr           m_pOccupiedVehicle;
     CClientVehiclePtr           m_pOccupyingVehicle;
@@ -612,8 +654,8 @@ public:
     CStatsData*       m_stats;
     CControllerState* m_currentControllerState;
     CControllerState* m_lastControllerState;
-    CControllerState m_rawControllerState;            // copy of lastControllerState before CClientPed::ApplyControllerStateFixes is applied (modifies states to
-                                                      // prevent stuff like rapid input glitch)
+    CControllerState  m_rawControllerState;  // copy of lastControllerState before CClientPed::ApplyControllerStateFixes is applied (modifies states to
+                                             // prevent stuff like rapid input glitch)
     CRemoteDataStorage*                      m_remoteDataStorage;
     unsigned long                            m_ulLastTimeFired;
     unsigned long                            m_ulLastTimeBeganAiming;
@@ -653,14 +695,16 @@ public:
     CClientEntityPtr                         m_pTargetedEntity;
     std::list<SDelayedSyncData*>             m_SyncBuffer;
     bool                                     m_bDucked;
-    bool                                     m_bWasDucked;            // For knowing when to register standing up
+    bool                                     m_bWasDucked;  // For knowing when to register standing up
     bool                                     m_bIsChoking;
     bool                                     m_bWearingGoggles;
     bool                                     m_bVisible;
     bool                                     m_bUsesCollision;
     float                                    m_fHealth;
-    float                                    m_fArmor;
+    float                                    m_armor;
     bool                                     m_bDead;
+    AssocGroupId                             m_deathAnimGroup;
+    AnimationId                              m_deathAnimID;
     bool                                     m_bWorldIgnored;
     float                                    m_fCurrentRotation;
     float                                    m_fMoveSpeed;
@@ -686,6 +730,8 @@ public:
     CClientPad                               m_Pad;
     bool                                     m_bDestroyingSatchels;
     bool                                     m_bDoingGangDriveby;
+    bool                                     m_bProcessingWeaponFireEvent;
+    bool                                     m_bDeferredGangDrivebyAbort;
     std::unique_ptr<CAnimBlock>              m_pAnimationBlock;
     bool                                     m_bRequestedAnimation;
     SAnimationCache                          m_AnimationCache;
@@ -706,6 +752,7 @@ public:
     bool                                     m_bPendingRebuildPlayer;
     uint                                     m_uiFrameLastRebuildPlayer;
     bool                                     m_bIsSyncing;
+    bool                                     m_shouldRecreate{false};
 
     bool             m_bBulletImpactData;
     CClientEntityPtr m_pBulletImpactEntity;
@@ -756,16 +803,19 @@ public:
     bool              m_bWarpInToVehicleRequired = false;
 
     // Enter/exit variables
-    unsigned long m_ulLastVehicleInOutTime;            // Last tick where we sent an enter/exit request
-    bool          m_bIsGettingOutOfVehicle;            // Indicates we are exiting a vehicle
-    bool          m_bIsGettingIntoVehicle;             // Indicates we are entering a vehicle
-    bool          m_bIsJackingVehicle;                 // Indicates we are jacking a vehicle
-    bool          m_bIsGettingJacked;                  // Indicates we are getting jacked
-    ElementID     m_VehicleInOutID;                    // ElementID of vehicle received from server
-    unsigned char m_ucVehicleInOutSeat;                // Seat ID we are entering/exiting received from server
-    bool          m_bNoNewVehicleTask;                 // When set, we are not allowed to initiate a new enter/exit task because we are waiting for server reply
-    ElementID     m_NoNewVehicleTaskReasonID;            // ElementID of the vehicle that we are waiting on
-    CClientPed*   m_pGettingJackedBy;                    // The ped that is jacking us
+    unsigned long m_ulLastVehicleInOutTime;    // Last tick where we sent an enter/exit request
+    bool          m_bIsGettingOutOfVehicle;    // Indicates we are exiting a vehicle
+    bool          m_bIsGettingIntoVehicle;     // Indicates we are entering a vehicle
+    bool          m_bIsJackingVehicle;         // Indicates we are jacking a vehicle
+    bool          m_bIsGettingJacked;          // Indicates we are getting jacked
+    ElementID     m_VehicleInOutID;            // ElementID of vehicle received from server
+    unsigned char m_ucVehicleInOutSeat;        // Seat ID we are entering/exiting received from server
+    bool          m_bNoNewVehicleTask;         // When set, we are not allowed to initiate a new enter/exit task because we are waiting for server reply
+    ElementID     m_NoNewVehicleTaskReasonID;  // ElementID of the vehicle that we are waiting on
+    CClientPed*   m_pGettingJackedBy;          // The ped that is jacking us
 
     std::shared_ptr<CClientModel> m_clientModel;
+
+    bool m_hasSyncedAnim{};
+    bool m_animationOverridedByClient{};
 };

@@ -5,15 +5,15 @@
  *  FILE:        mods/shared_logic/lua/CLuaFunctionRef.h
  *  PURPOSE:     Lua function reference
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
-#define LUA_REFNIL      (-1)
-#define VERIFY_FUNCTION(func) ( (func).ToInt () != LUA_REFNIL )
-#define IS_REFNIL(func) ( (func).ToInt () == LUA_REFNIL )
+#define LUA_REFNIL            (-1)
+#define VERIFY_FUNCTION(func) ((func).ToInt() != LUA_REFNIL)
+#define IS_REFNIL(func)       ((func).ToInt() == LUA_REFNIL)
 
 class CLuaFunctionRef
 {

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/lua/CLuaMain.h
  *  PURPOSE:     Lua virtual machine container class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -35,7 +35,7 @@ struct CRefInfo
     int               iFunction;
 };
 
-class CLuaMain            //: public CClient
+class CLuaMain  //: public CClient
 {
 public:
     ZERO_ON_NEW
@@ -140,7 +140,7 @@ private:
 
     bool m_bEnableOOP;
 
-    bool m_bBeingDeleted;            // prevent it being deleted twice
+    bool m_bBeingDeleted;  // prevent it being deleted twice
 
     CElapsedTime         m_FunctionEnterTimer;
     CElapsedTimeApprox   m_WarningTimer;

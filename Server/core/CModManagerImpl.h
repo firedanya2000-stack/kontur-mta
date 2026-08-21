@@ -5,7 +5,7 @@
  *  FILE:        core/CModManagerImpl.h
  *  PURPOSE:     Mod manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -46,6 +46,8 @@ public:
 
     void DoPulse();
 
+    bool IsReadyToAcceptConnections() const noexcept;
+
     bool IsFinished();
 
     bool             PendingWorkToDo();
@@ -60,6 +62,6 @@ private:
 
     CServerBase*    m_pBase;
     CDynamicLibrary m_Library;
-    SString         m_strServerPath;            // Root path
-    SString         m_strModPath;               // root/mods/deathmatch
+    SString         m_strServerPath;  // Root path
+    SString         m_strModPath;     // root/mods/deathmatch
 };

@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -47,10 +47,10 @@ namespace lua
             }
         }
     };
-}            // namespace lua
+}  // namespace lua
 
 #ifdef MTA_DEBUG
-#define LUA_STACK_EXPECT(i) lua::CLuaStackChecker invalidHiddenName(L, i)
+    #define LUA_STACK_EXPECT(i) lua::CLuaStackChecker invalidHiddenName(L, i)
 #else
-#define LUA_STACK_EXPECT(i)
+    #define LUA_STACK_EXPECT(i)
 #endif

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPlayerTextManager.cpp
  *  PURPOSE:     Player text display manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -67,8 +67,8 @@ void CPlayerTextManager::Update(CTextItem* pTextItem, bool bRemovedFromDisplay)
     eTextPriority updatePriority = pTextItem->GetPriority();
     CTextItem*    pClonedItem = new CTextItem(*pTextItem);
     if (bRemovedFromDisplay)
-        pClonedItem->m_bDeletable = true;            // we pretend that the text item has actually been deleted
-                                                     // as far as the player is concerned, it has been
+        pClonedItem->m_bDeletable = true;  // we pretend that the text item has actually been deleted
+                                           // as far as the player is concerned, it has been
 
     // Push it on the correct queue
     switch (updatePriority)

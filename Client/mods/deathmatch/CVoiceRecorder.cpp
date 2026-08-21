@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CVoiceRecorderRecorder.cpp
  *  PURPOSE:     Transfer box GUI
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -18,6 +18,7 @@ CVoiceRecorder::CVoiceRecorder()
 
     m_VoiceState = VOICESTATE_AWAITING_INPUT;
     m_SampleRate = SAMPLERATE_WIDEBAND;
+    m_ucQuality = 0;
 
     m_pAudioStream = NULL;
 
@@ -28,6 +29,7 @@ CVoiceRecorder::CVoiceRecorder()
     m_uiOutgoingReadIndex = 0;
     m_uiOutgoingWriteIndex = 0;
     m_bIsSendingVoiceData = false;
+    m_bOutgoingBufferFull = false;
 
     m_ulTimeOfLastSend = 0;
 
@@ -56,7 +58,7 @@ void CVoiceRecorder::Init(bool bEnabled, unsigned int uiServerSampleRate, unsign
 {
     m_bEnabled = bEnabled;
 
-    if (!bEnabled)            // If we aren't enabled, don't bother continuing
+    if (!bEnabled)  // If we aren't enabled, don't bother continuing
         return;
 
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -101,9 +103,10 @@ void CVoiceRecorder::Init(bool bEnabled, unsigned int uiServerSampleRate, unsign
     if (iBitRate)
         speex_encoder_ctl(m_pSpeexEncoderState, SPEEX_SET_BITRATE, &iBitRate);
 
-    m_pOutgoingBuffer = (char*)malloc(m_uiBufferSizeBytes * FRAME_OUTGOING_BUFFER_COUNT);
+    m_pOutgoingBuffer = (unsigned char*)malloc(m_uiBufferSizeBytes * FRAME_OUTGOING_BUFFER_COUNT);
     m_uiOutgoingReadIndex = 0;
     m_uiOutgoingWriteIndex = 0;
+    m_bOutgoingBufferFull = false;
 
     // Initialise the speex preprocessor
     int iSamplingRate;
@@ -158,6 +161,7 @@ void CVoiceRecorder::DeInit()
     m_uiOutgoingReadIndex = 0;
     m_uiOutgoingWriteIndex = 0;
     m_bIsSendingVoiceData = false;
+    m_bOutgoingBufferFull = false;
     m_ulTimeOfLastSend = 0;
     m_uiBufferSizeBytes = 0;
 }
@@ -199,7 +203,8 @@ void CVoiceRecorder::SetPTTState(bool bState)
 
     if (bState)
     {
-        if (m_VoiceState == VOICESTATE_AWAITING_INPUT)
+        // A re-press while the last packet is still draining continues the burst
+        if (m_VoiceState == VOICESTATE_AWAITING_INPUT || m_VoiceState == VOICESTATE_RECORDING_LAST_PACKET)
         {
             // Call event on the local player for starting to talk
             if (g_pClientGame->GetLocalPlayer())
@@ -213,7 +218,7 @@ void CVoiceRecorder::SetPTTState(bool bState)
 
                 m_Mutex.lock();
 
-                if (m_VoiceState == VOICESTATE_AWAITING_INPUT)
+                if (m_VoiceState == VOICESTATE_AWAITING_INPUT || m_VoiceState == VOICESTATE_RECORDING_LAST_PACKET)
                     m_VoiceState = VOICESTATE_RECORDING;
             }
         }
@@ -240,24 +245,28 @@ void CVoiceRecorder::SetPTTState(bool bState)
 
 bool CVoiceRecorder::GetPTTState()
 {
-    return m_VoiceState != VOICESTATE_AWAITING_INPUT;
+    // The key is up while the last packet drains, so only count active recording
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    return m_VoiceState == VOICESTATE_RECORDING;
 }
 
 void CVoiceRecorder::DoPulse()
 {
     std::lock_guard<std::mutex> lock(m_Mutex);
 
-    char*        pInputBuffer;
-    char         bufTempOutput[2048];
-    unsigned int uiTotalBufferSize = m_uiBufferSizeBytes * FRAME_OUTGOING_BUFFER_COUNT;
-
-    // Only send every 100 ms
-    if (CClientTime::GetTime() - m_ulTimeOfLastSend > 100 && m_VoiceState != VOICESTATE_AWAITING_INPUT)
+    // Only send every 100 ms, or flush the last packet right away on release
+    if ((CClientTime::GetTime() - m_ulTimeOfLastSend > 100 || m_VoiceState == VOICESTATE_RECORDING_LAST_PACKET) && m_VoiceState != VOICESTATE_AWAITING_INPUT)
     {
+        unsigned char* pInputBuffer;
+        unsigned char  audioBuffer[2048]{};
+        unsigned int   uiTotalBufferSize = m_uiBufferSizeBytes * FRAME_OUTGOING_BUFFER_COUNT;
+
         m_bIsSendingVoiceData = false;
         unsigned int uiBytesAvailable = 0;
 
-        if (m_uiOutgoingWriteIndex >= m_uiOutgoingReadIndex)
+        if (m_bOutgoingBufferFull)
+            uiBytesAvailable = uiTotalBufferSize;
+        else if (m_uiOutgoingWriteIndex >= m_uiOutgoingReadIndex)
             uiBytesAvailable = m_uiOutgoingWriteIndex - m_uiOutgoingReadIndex;
         else
             uiBytesAvailable = m_uiOutgoingWriteIndex + (uiTotalBufferSize - m_uiOutgoingReadIndex);
@@ -280,8 +289,8 @@ void CVoiceRecorder::DoPulse()
                 {
                     unsigned t;
                     for (t = 0; t < uiSpeexBlockSize; t++)
-                        bufTempOutput[t] = m_pOutgoingBuffer[t % uiTotalBufferSize];
-                    pInputBuffer = bufTempOutput;
+                        audioBuffer[t] = m_pOutgoingBuffer[(m_uiOutgoingReadIndex + t) % uiTotalBufferSize];
+                    pInputBuffer = audioBuffer;
                 }
                 else
                     pInputBuffer = m_pOutgoingBuffer + m_uiOutgoingReadIndex;
@@ -296,9 +305,7 @@ void CVoiceRecorder::DoPulse()
 
                 m_bIsSendingVoiceData = true;
 
-                unsigned int uiBytesWritten = speex_bits_write(&speexBits, bufTempOutput, 2048);
-
-                g_pClientGame->GetLocalPlayer()->GetVoice()->DecodeAndBuffer(bufTempOutput, uiBytesWritten);
+                unsigned int audioBufferLength = speex_bits_write(&speexBits, reinterpret_cast<char*>(audioBuffer), 2048);
 
                 NetBitStreamInterface* pBitStream = g_pNet->AllocateNetBitStream();
                 if (pBitStream)
@@ -307,8 +314,8 @@ void CVoiceRecorder::DoPulse()
 
                     if (pLocalPlayer)
                     {
-                        pBitStream->Write((unsigned short)uiBytesWritten);                  // size of buffer / voice data
-                        pBitStream->Write((char*)bufTempOutput, uiBytesWritten);            // voice data
+                        pBitStream->Write((unsigned short)audioBufferLength);
+                        pBitStream->Write(reinterpret_cast<char*>(audioBuffer), audioBufferLength);
 
                         g_pNet->SendPacket(PACKET_ID_VOICE_DATA, pBitStream, PACKET_PRIORITY_LOW, PACKET_RELIABILITY_UNRELIABLE_SEQUENCED,
                                            PACKET_ORDERING_VOICE);
@@ -319,11 +326,17 @@ void CVoiceRecorder::DoPulse()
             speex_bits_destroy(&speexBits);
 
             m_ulTimeOfLastSend = CClientTime::GetTime();
+            m_bOutgoingBufferFull = false;
         }
     }
 
-    if (m_VoiceState == VOICESTATE_RECORDING_LAST_PACKET)            // End of voice data (for events)
+    if (m_VoiceState == VOICESTATE_RECORDING_LAST_PACKET)  // End of voice data (for events)
     {
+        // The flush sends whole frames only; discard the unsent partial frame so
+        // the next talk burst does not start with stale audio
+        m_uiOutgoingReadIndex = m_uiOutgoingWriteIndex;
+        m_bOutgoingBufferFull = false;
+
         m_VoiceState = VOICESTATE_AWAITING_INPUT;
 
         if (g_pClientGame->GetPlayerManager()->GetLocalPlayer())
@@ -332,7 +345,7 @@ void CVoiceRecorder::DoPulse()
 
             if (pBitStream)
             {
-                g_pNet->SendPacket(PACKET_ID_VOICE_END, pBitStream, PACKET_PRIORITY_LOW, PACKET_RELIABILITY_UNRELIABLE_SEQUENCED, PACKET_ORDERING_VOICE);
+                g_pNet->SendPacket(PACKET_ID_VOICE_END, pBitStream, PACKET_PRIORITY_LOW, PACKET_RELIABILITY_RELIABLE_SEQUENCED, PACKET_ORDERING_VOICE);
                 g_pNet->DeallocateNetBitStream(pBitStream);
             }
         }
@@ -350,7 +363,9 @@ void CVoiceRecorder::SendFrame(const void* inputBuffer)
     unsigned int uiTotalBufferSize = m_uiBufferSizeBytes * FRAME_OUTGOING_BUFFER_COUNT;
 
     // Calculate how much of our buffer is remaining
-    if (m_uiOutgoingWriteIndex >= m_uiOutgoingReadIndex)
+    if (m_bOutgoingBufferFull)
+        remainingBufferSize = 0;
+    else if (m_uiOutgoingWriteIndex >= m_uiOutgoingReadIndex)
         remainingBufferSize = uiTotalBufferSize - (m_uiOutgoingWriteIndex - m_uiOutgoingReadIndex);
     else
         remainingBufferSize = m_uiOutgoingReadIndex - m_uiOutgoingWriteIndex;
@@ -365,7 +380,11 @@ void CVoiceRecorder::SendFrame(const void* inputBuffer)
     if (m_uiOutgoingWriteIndex == uiTotalBufferSize)
         m_uiOutgoingWriteIndex = 0;
 
-    // Wrap around the buffer?
+    // Wrap around the buffer? Skip exactly the bytes the incoming chunk overwrote.
+    // If the indices meet, the ring is exactly full; the fullness flag keeps that
+    // state distinct from empty for the flush
     if (m_uiBufferSizeBytes >= remainingBufferSize)
-        m_uiOutgoingReadIndex = (m_uiOutgoingReadIndex + m_iSpeexOutgoingFrameSampleCount * VOICE_SAMPLE_SIZE) % uiTotalBufferSize;
+        m_uiOutgoingReadIndex = (m_uiOutgoingReadIndex + m_uiBufferSizeBytes - remainingBufferSize) % uiTotalBufferSize;
+
+    m_bOutgoingBufferFull = (m_uiOutgoingWriteIndex == m_uiOutgoingReadIndex);
 }

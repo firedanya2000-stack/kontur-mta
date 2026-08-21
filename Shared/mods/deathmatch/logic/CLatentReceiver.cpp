@@ -4,7 +4,7 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -97,8 +97,7 @@ void CLatentReceiver::OnReceive(NetBitStreamInterface* pBitStream)
             pBitStream->Read(usCategory);
             pBitStream->Read(uiFinalSize);
             pBitStream->Read(uiRate);
-            if (pBitStream->Version() >= 0x31)
-                pBitStream->Read(usResourceNetId);
+            pBitStream->Read(usResourceNetId);
         }
         else if (ucSpecialFlag == FLAG_TAIL)
         {
@@ -128,6 +127,15 @@ void CLatentReceiver::OnReceive(NetBitStreamInterface* pBitStream)
             return OnReceiveError("bIsHead && activeRx.bReceiveActive");
         if (uiFinalSize > 100 * 1024 * 1024)
             return OnReceiveError("uiFinalSize too large");
+
+        // CATEGORY_PACKET reassembles raw packet data and feeds it into
+        // the main packet dispatch (CGame::StaticProcessPacket). Without
+        // a tighter cap, an attacker can craft a 100MB payload targeting
+        // packet handlers that scale poorly with input size (e.g.
+        // CPlayerModInfoPacket). 10MB is well above any legitimate use.
+        constexpr uint LATENT_PACKET_MAX_SIZE = 10 * 1024 * 1024;
+        if (usCategory == CATEGORY_PACKET && uiFinalSize > LATENT_PACKET_MAX_SIZE)
+            return OnReceiveError("CATEGORY_PACKET payload too large");
 
         activeRx.usId = usId;
         activeRx.bReceiveStarted = true;

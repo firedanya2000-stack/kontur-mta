@@ -93,13 +93,6 @@ static const float exc_gain_quant_scal1[2]={0.70469f, 1.05127f};
 
 #endif
 
-#ifdef VORBIS_PSYCHO
-#define EXTRA_BUFFER 100
-#else
-#define EXTRA_BUFFER 0
-#endif
-
-
 extern const spx_word16_t lag_window[];
 extern const spx_word16_t lpc_window[];
 
@@ -172,7 +165,7 @@ void *nb_encoder_init(const SpeexMode *m)
    st->highpass_enabled = 1;
 
 #ifdef ENABLE_VALGRIND
-   VALGRIND_MAKE_READABLE(st, NB_ENC_STACK);
+   VALGRIND_MAKE_MEM_DEFINED(st, NB_ENC_STACK);
 #endif
    return st;
 }
@@ -271,6 +264,10 @@ int nb_encoder_ctl(void *state, int request, void *ptr)
 #if !defined(DISABLE_VBR) && !defined(DISABLE_FLOAT_API)
    case SPEEX_SET_VBR_QUALITY:
       st->vbr_quality = (*(float*)ptr);
+      if (st->vbr_quality < 0)
+          st->vbr_quality = 0;
+      else if (st->vbr_quality > 10)
+          st->vbr_quality = 10;
       break;
    case SPEEX_GET_VBR_QUALITY:
       (*(float*)ptr) = st->vbr_quality;
@@ -515,8 +512,8 @@ int nb_encode(void *state, void *vin, SpeexBits *bits)
          int nol_pitch[6];
          spx_word16_t nol_pitch_coef[6];
 
-         bw_lpc(0.9, interp_lpc, bw_lpc1, NB_ORDER);
-         bw_lpc(0.55, interp_lpc, bw_lpc2, NB_ORDER);
+         bw_lpc(QCONST16(0.9,15), interp_lpc, bw_lpc1, NB_ORDER);
+         bw_lpc(QCONST16(0.55,15), interp_lpc, bw_lpc2, NB_ORDER);
 
          SPEEX_COPY(st->sw, st->winBuf, diff);
          SPEEX_COPY(st->sw+diff, in, NB_FRAME_SIZE-diff);
@@ -1113,7 +1110,7 @@ void *nb_decoder_init(const SpeexMode *m)
    st->highpass_enabled = 1;
 
 #ifdef ENABLE_VALGRIND
-   VALGRIND_MAKE_READABLE(st, NB_DEC_STACK);
+   VALGRIND_MAKE_MEM_DEFINED(st, NB_DEC_STACK);
 #endif
    return st;
 }
@@ -1471,6 +1468,11 @@ int nb_decode(void *state, SpeexBits *bits, void *vout)
 
       /* Final signal synthesis from excitation */
       iir_mem16(st->exc, lpc, out, NB_FRAME_SIZE, NB_ORDER, st->mem_sp, stack);
+
+      /* Normally this is written to later but since this is returning early,
+         avoid reading uninitialized memory in caller */
+      if (st->innov_save)
+         SPEEX_MEMSET(st->innov_save, 0, NB_NB_SUBFRAMES*NB_SUBFRAME_SIZE);
 
       st->count_lost=0;
       return 0;

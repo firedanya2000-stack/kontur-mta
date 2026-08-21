@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CResourceClientScriptItem.cpp
  *  PURPOSE:     Resource client-side script item class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -37,13 +37,13 @@ CResourceClientScriptItem::~CResourceClientScriptItem()
 {
 }
 
-ResponseCode CResourceClientScriptItem::Request(HttpRequest* ipoHttpRequest, HttpResponse* ipoHttpResponse)
+HttpStatusCode CResourceClientScriptItem::Request(HttpRequest* ipoHttpRequest, HttpResponse* ipoHttpResponse)
 {
     if (IsNoClientCache() == true)
     {
         const char* errmsg = "This script is not client cacheable";
         ipoHttpResponse->SetBody(errmsg, strlen(errmsg));
-        return HTTPRESPONSECODE_403_FORBIDDEN;
+        return HTTP_STATUS_CODE_403_FORBIDDEN;
     }
     else
         return CResourceFile::Request(ipoHttpRequest, ipoHttpResponse);
@@ -62,7 +62,7 @@ bool CResourceClientScriptItem::Start()
         // Compress the source
         unsigned int  originalLength = m_sourceCode.length();
         unsigned long bufferLength =
-            m_sourceCode.length() + 12 + (unsigned int)(m_sourceCode.length() * 0.001f);            // Refer to the compress2() function documentation.
+            m_sourceCode.length() + 12 + (unsigned int)(m_sourceCode.length() * 0.001f);  // Refer to the compress2() function documentation.
         char* compressedBuffer = new char[bufferLength];
         if (compress2((Bytef*)compressedBuffer, (uLongf*)&bufferLength, (const Bytef*)m_sourceCode.c_str(), m_sourceCode.length(), Z_BEST_COMPRESSION) != Z_OK)
         {

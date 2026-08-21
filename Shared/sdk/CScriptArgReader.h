@@ -5,7 +5,7 @@
  *  FILE:        CScriptArgReader.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,6 +17,7 @@
 #include <cfloat>
 #include "CStringMap.h"
 #include "CScriptDebugging.h"
+#include "CStringName.h"
 
 #ifndef MTA_CLIENT
     #include "CGame.h"
@@ -165,7 +166,7 @@ public:
                     return;
                 }
                 outValue = CVector2D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
             else if (NextIsUserDataOfType<CLuaVector3D>())
             {
@@ -178,7 +179,7 @@ public:
                     return;
                 }
                 outValue = CVector2D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
             else if (NextIsUserDataOfType<CLuaVector4D>())
             {
@@ -191,7 +192,7 @@ public:
                     return;
                 }
                 outValue = CVector2D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
         }
 
@@ -226,7 +227,7 @@ public:
                     return;
                 }
                 outValue = CVector2D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
             else if (NextIsUserDataOfType<CLuaVector3D>())
             {
@@ -239,7 +240,7 @@ public:
                     return;
                 }
                 outValue = CVector2D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
             else if (NextIsUserDataOfType<CLuaVector4D>())
             {
@@ -252,7 +253,7 @@ public:
                     return;
                 }
                 outValue = CVector2D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
         }
         else if (iArgument == LUA_TNIL || iArgument == LUA_TNONE)
@@ -291,7 +292,7 @@ public:
                     return;
                 }
                 outValue = CVector();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
             else if (NextIsUserDataOfType<CLuaVector4D>())
             {
@@ -304,7 +305,7 @@ public:
                     return;
                 }
                 outValue = CVector4D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
         }
 
@@ -340,7 +341,7 @@ public:
                     return;
                 }
                 outValue = CVector();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
             else if (NextIsUserDataOfType<CLuaVector4D>())
             {
@@ -353,7 +354,7 @@ public:
                     return;
                 }
                 outValue = CVector4D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
         }
         else if (iArgument == LUA_TNIL || iArgument == LUA_TNONE)
@@ -393,7 +394,7 @@ public:
                     return;
                 }
                 outValue = CVector4D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
         }
 
@@ -430,7 +431,7 @@ public:
                     return;
                 }
                 outValue = CVector4D();
-                return;            // Error set in ReadUserData
+                return;  // Error set in ReadUserData
             }
         }
         else if (iArgument == LUA_TNIL || iArgument == LUA_TNONE)
@@ -476,7 +477,7 @@ public:
                 return;
             }
             outValue = CMatrix();
-            return;            // Error set in ReadUserData
+            return;  // Error set in ReadUserData
         }
 
         outValue = CMatrix();
@@ -523,6 +524,22 @@ public:
         bOutValue = false;
         SetTypeError("bool");
         m_iIndex++;
+    }
+
+    //
+    // Read next bool or false if failed
+    // Intended for use in pair with NextIsBool()
+    //
+    bool ReadBool()
+    {
+        int iArgument = lua_type(m_luaVM, m_iIndex);
+        if (iArgument == LUA_TBOOLEAN)
+        {
+            return lua_toboolean(m_luaVM, m_iIndex++) ? true : false;
+        }
+
+        m_iIndex++;
+        return false;
     }
 
     //
@@ -595,6 +612,35 @@ public:
     }
 
     //
+    // Read next string name
+    //
+    void ReadStringName(CStringName& outValue)
+    {
+        const int iArgument = lua_type(m_luaVM, m_iIndex);
+        if (iArgument == LUA_TSTRING)
+        {
+            size_t      length;
+            const char* str = lua_tolstring(m_luaVM, m_iIndex, &length);
+            unsigned    hash = lua_tostringhash(m_luaVM, m_iIndex++);
+
+            try
+            {
+                outValue = CStringName::FromStringAndHash(std::string_view(str, length), hash);
+            }
+            catch (const std::bad_alloc&)
+            {
+                SetCustomError("out of memory", "Memory allocation");
+            }
+
+            return;
+        }
+
+        outValue.Clear();
+        SetTypeError("string");
+        m_iIndex++;
+    }
+
+    //
     // Force-reads next argument as string
     //
     void ReadAnyAsString(SString& outValue)
@@ -605,7 +651,7 @@ public:
             m_iIndex = -1;
             ReadAnyAsString(outValue);
 
-            lua_pop(m_luaVM, 1);            // Clean up stack
+            lua_pop(m_luaVM, 1);  // Clean up stack
             m_iIndex = oldIndex + 1;
             return;
         }
@@ -775,7 +821,7 @@ public:
             // If will be coercing a string to an enum, make sure string contains only digits
             size_t uiPos = strValue.find_first_not_of("0123456789");
             if (uiPos != SString::npos || strValue.empty())
-                iArgument = LUA_TNONE;            //  Force error
+                iArgument = LUA_TNONE;  //  Force error
         }
 
         if (iArgument == LUA_TSTRING || iArgument == LUA_TNUMBER)
@@ -912,10 +958,7 @@ public:
     void ReadLuaArguments(CLuaArguments& outValue)
     {
         outValue.ReadArguments(m_luaVM, m_iIndex);
-        for (int i = outValue.Count(); i > 0; i--)
-        {
-            m_iIndex++;
-        }
+        m_iIndex += outValue.Count();
     }
 
     //
@@ -1346,7 +1389,7 @@ public:
         if (NextIsNumber())
             ReadNumber(outValue, defaultValue);
         else
-            outValue = defaultValue;
+            outValue = static_cast<T>(defaultValue);
     }
 
     void ReadIfNextIsString(SString& outValue, const char* defaultValue)
@@ -1412,11 +1455,11 @@ public:
         // Output warning here (there's no better way to integrate it without huge code changes
         if (!m_bError && !m_strCustomWarning.empty())
         {
-            #ifdef MTA_CLIENT
+#ifdef MTA_CLIENT
             CLuaFunctionDefs::m_pScriptDebugging->LogWarning(m_luaVM, m_strCustomWarning);
-            #else
+#else
             g_pGame->GetScriptDebugging()->LogWarning(m_luaVM, m_strCustomWarning);
-            #endif
+#endif
 
             m_strCustomWarning.clear();
         }

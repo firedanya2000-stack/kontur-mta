@@ -1,183 +1,164 @@
 /*****************************************************************************
  *
- *  PROJECT:     Multi Theft Auto v1.0
+ *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
- *  FILE:        mods/deathmatch/logic/CHandlingManager.cpp
+ *  FILE:        Server/mods/deathmatch/logic/CHandlingManager.cpp
  *  PURPOSE:     Vehicle handling manager
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include "CHandlingManager.h"
 #include "CCommon.h"
+#include "CVehicleManager.h"
 
-SFixedArray<tHandlingData, HT_MAX> CHandlingManager::m_OriginalHandlingData;
+// Original handling data
+static tHandlingData                   m_OriginalHandlingData[HT_MAX];
+static std::unique_ptr<CHandlingEntry> m_OriginalEntries[HT_MAX];
 
-SFixedArray<CHandlingEntry*, HT_MAX> CHandlingManager::m_pOriginalEntries;
-SFixedArray<CHandlingEntry*, HT_MAX> CHandlingManager::m_pModelEntries;
+// Model handling data
+static std::unordered_map<std::size_t, std::unique_ptr<CHandlingEntry>> m_ModelEntries;
+static std::unordered_map<std::size_t, bool>                            m_bModelHandlingChanged;
+
+static std::map<std::string, eHandlingProperty> m_HandlingNames;
 
 CHandlingManager::CHandlingManager()
 {
     // Initialize all default handlings
     InitializeDefaultHandlings();
 
-    // Create a handling entry for every original handling data
-    for (int i = 0; i < HT_MAX; i++)
+    // Create a handling entry
+    for (std::size_t i = 0; i < HT_MAX; i++)
     {
-        m_pOriginalEntries[i] = new CHandlingEntry(&m_OriginalHandlingData[i]);
+        // For every original handling data
+        m_OriginalEntries[i] = std::make_unique<CHandlingEntry>(&m_OriginalHandlingData[i]);
     }
 
-    // Create a handling entry for every model
-    for (int i = 0; i < HT_MAX; i++)
-    {
-        m_pModelEntries[i] = new CHandlingEntry(&m_OriginalHandlingData[i]);
-        m_bModelHandlingChanged[i] = false;
-    }
+    // https://www.gtamodding.com/index.php?title=Handling.cfg#GTA_San_Andreas
+    // https://projectcerbera.com/gta/sa/tutorials/handling
 
-    // http://www.gtamodding.com/index.php?title=Handling.cfg#GTA_San_Andreas
-    // http://projectcerbera.com/gta/sa/tutorials/handling
-
-    m_HandlingNames["mass"] = HANDLING_MASS;                                                             // works (mass > 0)
-    m_HandlingNames["turnMass"] = HANDLING_TURNMASS;                                                     // works
-    m_HandlingNames["dragCoeff"] = HANDLING_DRAGCOEFF;                                                   // works
-    m_HandlingNames["centerOfMass"] = HANDLING_CENTEROFMASS;                                             // works
-    m_HandlingNames["percentSubmerged"] = HANDLING_PERCENTSUBMERGED;                                     // works
-    m_HandlingNames["tractionMultiplier"] = HANDLING_TRACTIONMULTIPLIER;                                 // works
-    m_HandlingNames["driveType"] = HANDLING_DRIVETYPE;                                                   // works
-    m_HandlingNames["engineType"] = HANDLING_ENGINETYPE;                                                 // works
-    m_HandlingNames["numberOfGears"] = HANDLING_NUMOFGEARS;                                              // works
-    m_HandlingNames["engineAcceleration"] = HANDLING_ENGINEACCELERATION;                                 // works
-    m_HandlingNames["engineInertia"] = HANDLING_ENGINEINERTIA;                                           // works
-    m_HandlingNames["maxVelocity"] = HANDLING_MAXVELOCITY;                                               // works
-    m_HandlingNames["brakeDeceleration"] = HANDLING_BRAKEDECELERATION;                                   // works
-    m_HandlingNames["brakeBias"] = HANDLING_BRAKEBIAS;                                                   // works
-    m_HandlingNames["ABS"] = HANDLING_ABS;                                                               // has no effect in vanilla gta either
-    m_HandlingNames["steeringLock"] = HANDLING_STEERINGLOCK;                                             // works
-    m_HandlingNames["tractionLoss"] = HANDLING_TRACTIONLOSS;                                             // works
-    m_HandlingNames["tractionBias"] = HANDLING_TRACTIONBIAS;                                             // works
-    m_HandlingNames["suspensionForceLevel"] = HANDLING_SUSPENSION_FORCELEVEL;                            // works
-    m_HandlingNames["suspensionDamping"] = HANDLING_SUSPENSION_DAMPING;                                  // works
-    m_HandlingNames["suspensionHighSpeedDamping"] = HANDLING_SUSPENSION_HIGHSPEEDDAMPING;                // works
-    m_HandlingNames["suspensionUpperLimit"] = HANDLING_SUSPENSION_UPPER_LIMIT;                           // works
-    m_HandlingNames["suspensionLowerLimit"] = HANDLING_SUSPENSION_LOWER_LIMIT;                           // works
-    m_HandlingNames["suspensionFrontRearBias"] = HANDLING_SUSPENSION_FRONTREARBIAS;                      // works
-    m_HandlingNames["suspensionAntiDiveMultiplier"] = HANDLING_SUSPENSION_ANTIDIVEMULTIPLIER;            // works
-    m_HandlingNames["collisionDamageMultiplier"] = HANDLING_COLLISIONDAMAGEMULTIPLIER;                   // works
-    m_HandlingNames["seatOffsetDistance"] = HANDLING_SEATOFFSETDISTANCE;                                 // works
-    m_HandlingNames["monetary"] = HANDLING_MONETARY;                      // useless as it only influences SP stats (value of damaged property)
-    m_HandlingNames["handlingFlags"] = HANDLING_HANDLINGFLAGS;            // works
-    m_HandlingNames["modelFlags"] = HANDLING_MODELFLAGS;                  // works
-    m_HandlingNames["headLight"] = HANDLING_HEADLIGHT;                    // doesn't work
-    m_HandlingNames["tailLight"] = HANDLING_TAILLIGHT;                    // doesn't seem to work*
-    m_HandlingNames["animGroup"] = HANDLING_ANIMGROUP;                    // works model based
+    m_HandlingNames["mass"] = HANDLING_MASS;                                                   // works (mass > 0)
+    m_HandlingNames["turnMass"] = HANDLING_TURNMASS;                                           // works
+    m_HandlingNames["dragCoeff"] = HANDLING_DRAGCOEFF;                                         // works
+    m_HandlingNames["centerOfMass"] = HANDLING_CENTEROFMASS;                                   // works
+    m_HandlingNames["percentSubmerged"] = HANDLING_PERCENTSUBMERGED;                           // works
+    m_HandlingNames["tractionMultiplier"] = HANDLING_TRACTIONMULTIPLIER;                       // works
+    m_HandlingNames["driveType"] = HANDLING_DRIVETYPE;                                         // works
+    m_HandlingNames["engineType"] = HANDLING_ENGINETYPE;                                       // works
+    m_HandlingNames["numberOfGears"] = HANDLING_NUMOFGEARS;                                    // works
+    m_HandlingNames["engineAcceleration"] = HANDLING_ENGINEACCELERATION;                       // works
+    m_HandlingNames["engineInertia"] = HANDLING_ENGINEINERTIA;                                 // works
+    m_HandlingNames["maxVelocity"] = HANDLING_MAXVELOCITY;                                     // works
+    m_HandlingNames["brakeDeceleration"] = HANDLING_BRAKEDECELERATION;                         // works
+    m_HandlingNames["brakeBias"] = HANDLING_BRAKEBIAS;                                         // works
+    m_HandlingNames["ABS"] = HANDLING_ABS;                                                     // has no effect in vanilla gta either
+    m_HandlingNames["steeringLock"] = HANDLING_STEERINGLOCK;                                   // works
+    m_HandlingNames["tractionLoss"] = HANDLING_TRACTIONLOSS;                                   // works
+    m_HandlingNames["tractionBias"] = HANDLING_TRACTIONBIAS;                                   // works
+    m_HandlingNames["suspensionForceLevel"] = HANDLING_SUSPENSION_FORCELEVEL;                  // works
+    m_HandlingNames["suspensionDamping"] = HANDLING_SUSPENSION_DAMPING;                        // works
+    m_HandlingNames["suspensionHighSpeedDamping"] = HANDLING_SUSPENSION_HIGHSPEEDDAMPING;      // works
+    m_HandlingNames["suspensionUpperLimit"] = HANDLING_SUSPENSION_UPPER_LIMIT;                 // works
+    m_HandlingNames["suspensionLowerLimit"] = HANDLING_SUSPENSION_LOWER_LIMIT;                 // works
+    m_HandlingNames["suspensionFrontRearBias"] = HANDLING_SUSPENSION_FRONTREARBIAS;            // works
+    m_HandlingNames["suspensionAntiDiveMultiplier"] = HANDLING_SUSPENSION_ANTIDIVEMULTIPLIER;  // works
+    m_HandlingNames["collisionDamageMultiplier"] = HANDLING_COLLISIONDAMAGEMULTIPLIER;         // works
+    m_HandlingNames["seatOffsetDistance"] = HANDLING_SEATOFFSETDISTANCE;                       // works
+    m_HandlingNames["monetary"] = HANDLING_MONETARY;            // useless as it only influences SP stats (value of damaged property)
+    m_HandlingNames["handlingFlags"] = HANDLING_HANDLINGFLAGS;  // works
+    m_HandlingNames["modelFlags"] = HANDLING_MODELFLAGS;        // works
+    m_HandlingNames["headLight"] = HANDLING_HEADLIGHT;          // doesn't work
+    m_HandlingNames["tailLight"] = HANDLING_TAILLIGHT;          // doesn't seem to work*
+    m_HandlingNames["animGroup"] = HANDLING_ANIMGROUP;          // works model based
 }
 //* needs testing by someone who knows more about handling
 
 CHandlingManager::~CHandlingManager()
 {
-    // Destroy all original handling entries
-    for (int i = 0; i < HT_MAX; i++)
-    {
-        delete m_pOriginalEntries[i];
-    }
-
-    // Destroy all model handling entries
-    for (int i = 0; i < HT_MAX; i++)
-    {
-        delete m_pModelEntries[i];
-    }
 }
 
-CHandlingEntry* CHandlingManager::CreateHandlingData()
+std::unique_ptr<CHandlingEntry> CHandlingManager::CreateHandlingData() const noexcept
 {
-    CHandlingEntry* pHandlingEntry = new CHandlingEntry();
-    return pHandlingEntry;
+    return std::make_unique<CHandlingEntry>();
 }
 
-bool CHandlingManager::ApplyHandlingData(eVehicleTypes eModel, CHandlingEntry* pEntry)
+bool CHandlingManager::ApplyHandlingData(std::uint32_t model, CHandlingEntry* pEntry) const noexcept
+{
+    CHandlingEntry* pHandling = GetModelHandlingData(model);
+    if (!pHandling)
+        return false;
+
+    pHandling->ApplyHandlingData(pEntry);
+    return true;
+}
+
+const CHandlingEntry* CHandlingManager::GetOriginalHandlingData(std::uint32_t model) const noexcept
 {
     // Within range?
-    if (eModel >= 400 && eModel < VT_MAX)
-    {
-        // Get our Handling ID
-        eHandlingTypes eHandling = GetHandlingID(eModel);
-        // Apply the data and return success
-        m_pModelEntries[eHandling]->ApplyHandlingData(pEntry);
-        return true;
-    }
+    if (!CVehicleManager::IsValidModel(model))
+        return nullptr;
 
-    // Failed
-    return false;
-}
-
-const CHandlingEntry* CHandlingManager::GetOriginalHandlingData(eVehicleTypes eModel)
-{
-    // Within range?
-    if (eModel >= 400 && eModel < VT_MAX)
-    {
-        // Get our Handling ID
-        eHandlingTypes eHandling = GetHandlingID(eModel);
-        // Return it
-        return m_pOriginalEntries[eHandling];
-    }
-
-    return NULL;
-}
-
-const CHandlingEntry* CHandlingManager::GetModelHandlingData(eVehicleTypes eModel)
-{
-    // Within range?
-    if (eModel >= 400 && eModel < VT_MAX)
-    {
-        // Get our Handling ID
-        eHandlingTypes eHandling = GetHandlingID(eModel);
-        // Return it
-        return m_pModelEntries[eHandling];
-    }
-
-    return NULL;
-}
-
-eHandlingProperty CHandlingManager::GetPropertyEnumFromName(std::string strName)
-{
-    std::map<std::string, eHandlingProperty>::iterator it;
-    it = m_HandlingNames.find(strName);
-
-    if (it != m_HandlingNames.end())
-    {
-        return it->second;
-    }
-
-    return HANDLING_MAX;
-}
-
-bool CHandlingManager::HasModelHandlingChanged(eVehicleTypes eModel)
-{
-    // Within range?
-    if (eModel >= 400 && eModel < VT_MAX)
-    {
-        // Get our Handling ID
-        eHandlingTypes eHandling = GetHandlingID(eModel);
-        // Return if we have changed
-        return m_bModelHandlingChanged[eHandling];
-    }
-    return false;
-}
-
-void CHandlingManager::SetModelHandlingHasChanged(eVehicleTypes eModel, bool bChanged)
-{
     // Get our Handling ID
-    eHandlingTypes eHandling = GetHandlingID(eModel);
+    const eHandlingTypes eHandling = GetHandlingID(model);
+
+    // Return it
+    return m_OriginalEntries[eHandling].get();
+}
+
+CHandlingEntry* CHandlingManager::GetModelHandlingData(std::uint32_t model) const noexcept
+{
+    // Within range?
+    if (!CVehicleManager::IsValidModel(model))
+        return nullptr;
+
+    auto entries = m_ModelEntries.find(model);
+    if (entries == m_ModelEntries.end())
+    {
+        // Get our Handling ID
+        const eHandlingTypes eHandling = GetHandlingID(model);
+
+        m_ModelEntries[model] = std::make_unique<CHandlingEntry>(&m_OriginalHandlingData[eHandling]);
+        if (!m_ModelEntries[model])
+            return nullptr;
+
+        entries = m_ModelEntries.find(model);
+    }
+
+    return entries->second.get();
+}
+
+eHandlingProperty CHandlingManager::GetPropertyEnumFromName(const std::string& name) const noexcept
+{
+    const auto it = m_HandlingNames.find(name);
+    return it != m_HandlingNames.end() ? it->second : HANDLING_MAX;
+}
+
+bool CHandlingManager::HasModelHandlingChanged(std::uint32_t model) const noexcept
+{
+    // Within range?
+    if (!CVehicleManager::IsValidModel(model))
+        return false;
+
+    // Return if we have changed
+    return m_bModelHandlingChanged[model];
+}
+
+void CHandlingManager::SetModelHandlingHasChanged(std::uint32_t model, bool bChanged) const noexcept
+{
+    // Within range?
+    if (!CVehicleManager::IsValidModel(model))
+        return;
+
     // Return if we have changed.
-    m_bModelHandlingChanged[eHandling] = bChanged;
+    m_bModelHandlingChanged[model] = bChanged;
 }
 
 // Return the handling manager id
-eHandlingTypes CHandlingManager::GetHandlingID(eVehicleTypes eModel)
+eHandlingTypes CHandlingManager::GetHandlingID(std::uint32_t model) const noexcept
 {
-    switch (eModel)
+    switch (model)
     {
         case VT_LANDSTAL:
             return HT_LANDSTAL;
@@ -609,7 +590,7 @@ eHandlingTypes CHandlingManager::GetHandlingID(eVehicleTypes eModel)
     return HT_LANDSTAL;
 }
 
-void CHandlingManager::InitializeDefaultHandlings()
+void CHandlingManager::InitializeDefaultHandlings() noexcept
 {
     // Reset
     memset(&m_OriginalHandlingData[0], 0, sizeof(m_OriginalHandlingData));
@@ -8176,27 +8157,18 @@ void CHandlingManager::InitializeDefaultHandlings()
     m_OriginalHandlingData[209].ucTailLight = 1;
     m_OriginalHandlingData[209].ucAnimGroup = 0;
 
-    m_OriginalHandlingData[210] = m_OriginalHandlingData[69];            // HT_HOTRINA = HT_HOTRING
-    m_OriginalHandlingData[210].iVehicleID = 210;
-
-    m_OriginalHandlingData[211] = m_OriginalHandlingData[69];            // HT_HOTRINB = HT_HOTRING
-    m_OriginalHandlingData[211].iVehicleID = 211;
-
-    m_OriginalHandlingData[212] = m_OriginalHandlingData[103];            // HT_SADLSHIT = HT_SADLER
-    m_OriginalHandlingData[212].iVehicleID = 212;
-
-    m_OriginalHandlingData[213] = m_OriginalHandlingData[52];            // HT_GLENSHIT = HT_GLENDALE
-    m_OriginalHandlingData[213].iVehicleID = 213;
-
-    m_OriginalHandlingData[214] = m_OriginalHandlingData[163];            // HT_FAGGIO = HT_PIZZABOY
-    m_OriginalHandlingData[214].iVehicleID = 214;
-
-    m_OriginalHandlingData[215] = m_OriginalHandlingData[7];            // HT_FIRELA = HT_FIRETRUK
-    m_OriginalHandlingData[215].iVehicleID = 215;
-
-    m_OriginalHandlingData[216] = m_OriginalHandlingData[65];            // HT_RNCHLURE = HT_RANCHER
-    m_OriginalHandlingData[216].iVehicleID = 216;
-
-    m_OriginalHandlingData[217] = m_OriginalHandlingData[126];            // HT_FREIBOX = HT_FREIFLAT
-    m_OriginalHandlingData[217].iVehicleID = 217;
+    // These vehicles share handling lines with other models in the original game.
+    // We give them separate MTA entries so scripts can customize each independently,
+    // but we preserve the source entry's iVehicleID because GTA:SA engine code may
+    // use it to index into the global handling array (which only has 210 entries).
+    // Using out-of-range IDs (210+) would cause out-of-bounds reads and incorrect
+    // vehicle physics (e.g. wrong reverse speed).
+    m_OriginalHandlingData[210] = m_OriginalHandlingData[69];   // HT_HOTRINA = HT_HOTRING
+    m_OriginalHandlingData[211] = m_OriginalHandlingData[69];   // HT_HOTRINB = HT_HOTRING
+    m_OriginalHandlingData[212] = m_OriginalHandlingData[103];  // HT_SADLSHIT = HT_SADLER
+    m_OriginalHandlingData[213] = m_OriginalHandlingData[52];   // HT_GLENSHIT = HT_GLENDALE
+    m_OriginalHandlingData[214] = m_OriginalHandlingData[163];  // HT_FAGGIO = HT_PIZZABOY
+    m_OriginalHandlingData[215] = m_OriginalHandlingData[7];    // HT_FIRELA = HT_FIRETRUK
+    m_OriginalHandlingData[216] = m_OriginalHandlingData[65];   // HT_RNCHLURE = HT_RANCHER
+    m_OriginalHandlingData[217] = m_OriginalHandlingData[126];  // HT_FREIBOX = HT_FREIFLAT
 }

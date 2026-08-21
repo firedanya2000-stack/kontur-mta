@@ -37,6 +37,7 @@ public:
 
     bool Load(bool isRaw, SString input);
 
+    bool AddClothingModel(const std::string& modelName);
     bool ReplaceModel(unsigned short usModel, bool bAlphaTransparency);
 
     bool HasReplaced(unsigned short usModel);
@@ -47,9 +48,9 @@ public:
     static bool IsDFFData(const SString& strData);
 
     // Sorta a hack that these are required by CClientEntity...
-    void Unlink(){};
+    void Unlink() {};
     void GetPosition(CVector& vecPosition) const {};
-    void SetPosition(const CVector& vecPosition){};
+    void SetPosition(const CVector& vecPosition) {};
 
 private:
     bool LoadFromFile(SString filePath);
@@ -59,6 +60,7 @@ private:
     void UnloadDFF();
     void InternalRestoreModel(unsigned short usModel);
 
+    bool ReplaceClothes(ushort usModel);
     bool ReplaceObjectModel(RpClump* pClump, ushort usModel, bool bAlphaTransparency);
     bool ReplaceVehicleModel(RpClump* pClump, ushort usModel, bool bAlphaTransparency);
     bool ReplaceWeaponModel(RpClump* pClump, ushort usModel, bool bAlphaTransparency);

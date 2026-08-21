@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CPointLightsSA.h
  *  PURPOSE:     Header file for PointLights entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -26,6 +26,9 @@ public:
 
     virtual void PreRenderHeliLights() override;
     virtual void PostRenderHeliLights() override;
-    virtual void RenderHeliLight(const CVector& vecStart, const CVector& vecEnd, float startRadius, float endRadius, bool renderSpot) override;
+    virtual void RenderHeliLight(const CVector& vecStart, const CVector& vecEnd, float startRadius, float endRadius, bool renderSpot,
+                                 const SharedUtil::SColor& color) override;
     ;
+
+    static void StaticSetHooks();
 };

@@ -1,75 +1,87 @@
 /*****************************************************************************
  *
- *  PROJECT:     Multi Theft Auto v1.0
+ *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include "SimHeaders.h"
+#include "CWeaponStatManager.h"
+#include "packets/CBulletsyncPacket.h"
 
-CSimBulletsyncPacket::CSimBulletsyncPacket(ElementID PlayerID) : m_PlayerID(PlayerID)
+CSimBulletsyncPacket::CSimBulletsyncPacket(ElementID id) : m_id(id)
 {
-    m_Cache.ucOrderCounter = 0;
-    m_Cache.fDamage = 0;
-    m_Cache.ucHitZone = 0;
-    m_Cache.DamagedPlayerID = INVALID_ELEMENT_ID;
+    m_cache.damage.data.fValue = 0.0f;
 }
 
-//
-// Should do the same this as what CBulletsyncPacket::Read() does
-//
-bool CSimBulletsyncPacket::Read(NetBitStreamInterface& BitStream)
+bool CSimBulletsyncPacket::Read(NetBitStreamInterface& stream)
 {
-    char cWeaponType;
-    BitStream.Read(cWeaponType);
-    m_Cache.weaponType = (eWeaponType)cWeaponType;
-
-    BitStream.Read((char*)&m_Cache.vecStart, sizeof(CVector));
-    BitStream.Read((char*)&m_Cache.vecEnd, sizeof(CVector));
-
-    // Duplicate packet protection
-    if (!BitStream.Read(m_Cache.ucOrderCounter))
+    std::uint8_t weaponType = 0;
+    if (!stream.Read(weaponType) || !CWeaponStatManager::HasWeaponBulletSync(weaponType))
         return false;
 
-    if (BitStream.ReadBit())
+    m_cache.weapon = static_cast<eWeaponType>(weaponType);
+
+    if (!stream.Read(&m_cache.start) || !stream.Read(&m_cache.end))
+        return false;
+
+    if (!m_cache.start.data.vecPosition.IsValid() || !m_cache.end.data.vecPosition.IsValid())
+        return false;
+
+    // Huge coordinates can crash other players
+    if (!m_cache.start.data.vecPosition.IsInWorldBounds(true) || !m_cache.end.data.vecPosition.IsInWorldBounds(true))
+        return false;
+
+    if (!CBulletsyncPacket::ValidateTrajectory(m_cache.start.data.vecPosition, m_cache.end.data.vecPosition))
+        return false;
+
+    if (stream.ReadBit())
     {
-        BitStream.Read(m_Cache.fDamage);
-        BitStream.Read(m_Cache.ucHitZone);
-        BitStream.Read(m_Cache.DamagedPlayerID);
+        if (!stream.Read(&m_cache.damage))
+            return false;
+
+        if (!std::isfinite(m_cache.damage.data.fValue))
+            return false;
+
+        if (m_cache.damage.data.fValue < 0.0f || m_cache.damage.data.fValue > CBulletsyncPacket::MAX_DAMAGE)
+            return false;
+
+        if (!stream.Read(m_cache.zone))
+            return false;
+
+        if (m_cache.zone > CBulletsyncPacket::MAX_BODY_ZONE)
+            return false;
+
+        if (!stream.Read(m_cache.damaged))
+            return false;
+
+        // The main path checks that a damaged target still exists. Doing that
+        // here would dereference the element table from the sim thread while
+        // the main thread can free entries, so the relay relies on the main
+        // path check and on the receiving client ignoring unknown targets.
     }
 
     return true;
 }
 
-//
-// Should do the same this as what CBulletsyncPacket::Write() does
-//
-bool CSimBulletsyncPacket::Write(NetBitStreamInterface& BitStream) const
+bool CSimBulletsyncPacket::Write(NetBitStreamInterface& stream) const
 {
-    // Write the source player id
-    BitStream.Write(m_PlayerID);
+    stream.Write(m_id);
+    stream.Write(static_cast<std::uint8_t>(m_cache.weapon));
+    stream.Write(&m_cache.start);
+    stream.Write(&m_cache.end);
 
-    // Write the bulletsync data
-    BitStream.Write((char)m_Cache.weaponType);
-    BitStream.Write((const char*)&m_Cache.vecStart, sizeof(CVector));
-    BitStream.Write((const char*)&m_Cache.vecEnd, sizeof(CVector));
+    bool hasDamaged = m_cache.damage.data.fValue > 0.0f && m_cache.damaged != INVALID_ELEMENT_ID;
 
-    // Duplicate packet protection
-    BitStream.Write(m_Cache.ucOrderCounter);
-
-    if (m_Cache.fDamage > 0 && m_Cache.DamagedPlayerID != INVALID_ELEMENT_ID)
+    stream.WriteBit(hasDamaged);
+    if (hasDamaged)
     {
-        BitStream.WriteBit(true);
-        BitStream.Write(m_Cache.fDamage);
-        BitStream.Write(m_Cache.ucHitZone);
-        BitStream.Write(m_Cache.DamagedPlayerID);
-    }
-    else
-    {
-        BitStream.WriteBit(false);
+        stream.Write(&m_cache.damage);
+        stream.Write(m_cache.zone);
+        stream.Write(m_cache.damaged);
     }
 
     return true;

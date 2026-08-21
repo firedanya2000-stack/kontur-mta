@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPlayerManager.h
  *  PURPOSE:     Player ped entity manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -40,6 +40,7 @@ public:
 
     CPlayer* Get(const NetServerPlayerID& PlayerSocket);
     CPlayer* Get(const char* szNick, bool bCaseSensitive = false);
+    CPlayer* GetBySerial(const std::string_view serial) const noexcept;
 
     std::list<CPlayer*>::const_iterator IterBegin() { return m_Players.begin(); };
     std::list<CPlayer*>::const_iterator IterEnd() { return m_Players.end(); };
@@ -55,7 +56,7 @@ public:
 
     static bool IsValidPlayerModel(unsigned short model);
 
-    void ClearElementData(CElement* pElement, const std::string& name);
+    void ClearElementData(CElement* pElement, CStringName name);
     void ClearElementData(CElement* pElement);
 
     void               ResetAll();

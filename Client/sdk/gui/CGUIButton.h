@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIButton.h
  *  PURPOSE:     Button widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,5 +17,5 @@
 class CGUIButton : public CGUIElement
 {
 public:
-    virtual ~CGUIButton(){};
+    virtual ~CGUIButton() {};
 };

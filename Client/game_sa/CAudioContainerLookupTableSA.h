@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CAudioContainerLookupTableSA.h
  *  PURPOSE:     Audio container lookup table reader
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -34,5 +34,5 @@ struct SAudioLookupEntrySA
     uint8  filter[3];
     uint32 offset;
     uint32 length;
-};            // size = 12 = 0xC
+};  // size = 12 = 0xC
 static_assert(sizeof(SAudioLookupEntrySA) == 0xC, "Invalid size for SAudioLookupEntrySA");

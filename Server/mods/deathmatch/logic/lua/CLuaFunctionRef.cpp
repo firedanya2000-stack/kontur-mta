@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/lua/CLuaFunctionRef.cpp
  *  PURPOSE:     Lua function reference
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,7 +15,7 @@
 #include "CGame.h"
 
 #ifdef WIN32
-    #pragma warning( disable : 4355 )   // warning C4355: 'this' : used in base member initializer list
+    #pragma warning(disable : 4355)  // warning C4355: 'this' : used in base member initializer list
 #endif
 
 struct lua_State;

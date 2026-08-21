@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/CServer.cpp
  *  PURPOSE:     Server interface handler class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -43,9 +43,9 @@ void CServer::ServerInitialize(CServerInterface* pServerInterface)
     g_pServerInterface = pServerInterface;
     g_pNetServer = pServerInterface->GetNetwork();
     g_pRealNetServer = g_pNetServer;
-    #if defined(MTA_DEBUG)
+#if defined(MTA_DEBUG)
     SharedUtil_Tests();
-    #endif
+#endif
 }
 
 bool CServer::ServerStartup(int iArgumentCount, char* szArguments[])
@@ -94,6 +94,11 @@ void CServer::DoPulse()
         UNCLOCK(" Top", "Game->DoPulse");
     }
     CLOCK(" Top", " Idle");
+}
+
+bool CServer::IsReadyToAcceptConnections() const noexcept
+{
+    return (m_pGame != nullptr) && m_pGame->IsServerFullyUp();
 }
 
 bool CServer::IsFinished()

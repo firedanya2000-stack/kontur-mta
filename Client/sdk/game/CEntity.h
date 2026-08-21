@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CEntity.h
  *  PURPOSE:     Base entity interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -46,14 +46,14 @@ enum eEntityStatus
     STATUS_PLANE,
     STATUS_REMOTE_CONTROLLED,
     STATUS_PLAYER_DISABLED,
-    STATUS_TRAILER,                  // ToDo: Check this. I can't reproduce that this is set for trailers
-    STATUS_SIMPLE_TRAILER            // Same here
+    STATUS_TRAILER,        // ToDo: Check this. I can't reproduce that this is set for trailers
+    STATUS_SIMPLE_TRAILER  // Same here
 };
 
 class CEntity
 {
 public:
-    virtual ~CEntity(){};
+    virtual ~CEntity() {};
 
     //  virtual VOID                        SetModelAlpha ( int iAlpha )=0;
     virtual class CEntitySAInterface* GetInterface() = 0;
@@ -112,7 +112,12 @@ public:
     virtual bool      SetBoneMatrix(eBone boneId, const CMatrix& matrix) = 0;
 
     virtual bool GetBoneRotation(eBone boneId, float& yaw, float& pitch, float& roll) = 0;
+    virtual bool GetBoneRotationQuat(eBone boneId, float& x, float& y, float& z, float& w) = 0;
     virtual bool SetBoneRotation(eBone boneId, float yaw, float pitch, float roll) = 0;
+    virtual bool SetBoneRotationQuat(eBone boneId, float x, float y, float z, float w) = 0;
     virtual bool GetBonePosition(eBone boneId, CVector& position) = 0;
     virtual bool SetBonePosition(eBone boneId, const CVector& position) = 0;
+
+    virtual bool IsOnFire() = 0;
+    virtual bool SetOnFire(bool onFire) = 0;
 };

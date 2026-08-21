@@ -5,7 +5,7 @@
  *  FILE:        core/CCommands.cpp
  *  PURPOSE:     Management for dynamically added commands
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -85,6 +85,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
 {
     // Copy szParametersIn so the contents can be changed
     char* szParameters = NULL;
+    char  empyParameters[1] = {0};
     if (szParametersIn)
     {
         size_t sizeParameters = strlen(szParametersIn) + 1;
@@ -101,7 +102,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
             // His line starts with '/'?
             if (*szParameters == '/')
             {
-                // Copy the characters after the slash to the 0 terminator to a seperate buffer
+                // Copy the characters after the slash to the 0 terminator to a separate buffer
                 char szBuffer[256];
                 strncpy(szBuffer, szParameters + 1, 256);
                 szBuffer[255] = 0;
@@ -115,7 +116,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
                 }
                 if (szParameters == NULL)
                 {
-                    szParameters = "";
+                    szParameters = empyParameters;
                 }
             }
         }
@@ -125,6 +126,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
 
     // Grab the command
     tagCOMMANDENTRY* pEntry = Get(szCommand);
+    bool             wasHandled = false;
     if (pEntry)
     {
         // If its a core command, or if its enabled
@@ -133,7 +135,8 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
             // Execute it
             if (!bIsScriptedBind || pEntry->bAllowScriptedBind)
                 ExecuteHandler(pEntry->pfnCmdFunc, szParameters);
-            return true;
+
+            wasHandled = true;
         }
     }
 
@@ -141,6 +144,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
     std::string val = std::string(szCommand) + " " + std::string(szParameters ? szParameters : "");
 
     // Is it a cvar? (syntax: cvar[ = value])
+    if (!wasHandled)
     {
         // Check to see if '=' exists
         unsigned int nOpIndex = val.find('=');
@@ -168,10 +172,19 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
                 CVARS_SET(key, val);
 
                 // HACK: recalculate frame rate limit on cvar change
-                if (key == "fps_limit" && m_FpsLimitTimer.Get() >= 500 && CCore::GetSingleton().IsConnected())
+                if (key == "fps_limit")
                 {
-                    CCore::GetSingleton().RecalculateFrameRateLimit(-1, true);
-                    m_FpsLimitTimer.Reset();
+                    int fpsVal = 0;
+                    CVARS_GET("fps_limit", fpsVal);
+                    CCore::GetSingleton().GetFPSLimiter()->SetUserDefinedFPS(static_cast<std::uint16_t>(fpsVal));
+                }
+
+                // HACK: Foul dirty hack to force vsync (Rework on #4427)
+                if (key == "vsync")
+                {
+                    bool vSync;
+                    CVARS_GET("vsync", vSync);
+                    CCore::GetSingleton().GetFPSLimiter()->SetDisplayVSync(vSync);
                 }
             }
             else
@@ -188,7 +201,7 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
 
     // HACK: if its a 'nick' command, save it here
     bool bIsNickCommand = !stricmp(szCommand, "nick");
-    if (bIsNickCommand && szParameters && !bIsScriptedBind)
+    if (!wasHandled && bIsNickCommand && szParameters && !bIsScriptedBind)
     {
         if (CCore::GetSingleton().IsValidNick(szParameters))
         {
@@ -208,9 +221,13 @@ bool CCommands::Execute(const char* szCommand, const char* szParametersIn, bool 
     // Try to execute the handler
     if (m_pfnExecuteHandler)
     {
-        if (m_pfnExecuteHandler(szCommand, szParameters, bHandleRemotely, (pEntry != NULL), bIsScriptedBind))
+        bool bAllowScriptedBind = (!pEntry || pEntry->bAllowScriptedBind);
+        if (m_pfnExecuteHandler(szCommand, szParameters, bHandleRemotely, wasHandled, bIsScriptedBind, bAllowScriptedBind))
             return true;
     }
+
+    if (wasHandled)
+        return true;
 
     // Unknown command
     val = _("Unknown command or cvar: ") + szCommand;

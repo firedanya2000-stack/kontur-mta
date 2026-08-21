@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <string>
 
+class CResourceFile;
+
 class CScriptFile final : public CClientEntity
 {
     DECLARE_CLASS(CScriptFile, CClientEntity)
@@ -30,11 +32,11 @@ public:
 
     // Functions required for linking
     void GetPosition(CVector& vecPosition) const {};
-    void SetPosition(const CVector& vecPosition){};
+    void SetPosition(const CVector& vecPosition) {};
 
     // Functions required by CClientEntity
     eClientEntityType GetType() const { return SCRIPTFILE; };
-    void              Unlink(){};
+    void              Unlink() {};
 
     // Load and unload routines
     bool           Load(CResource* pResourceForFilePath, eMode Mode);
@@ -46,6 +48,14 @@ public:
     // Get the owning resource
     CResource* GetResource();
 
+    // Get the respective resource file (null if not found).
+
+    /**
+     * @brief Returns a pointer to CResourceFile if the script file points to one.
+     * @return A pointer to CResourceFile on success, null otherwise
+     */
+    CResourceFile* GetResourceFile() const;
+
     // Only call functions below this if you're sure that the file is loaded.
     // Or you will crash.
     bool IsEOF();
@@ -56,7 +66,10 @@ public:
 
     void Flush();
     long Read(unsigned long ulSize, SString& outBuffer);
+    long ReadToBuffer(unsigned char* buffer, unsigned long bufferSize);
     long Write(unsigned long ulSize, const char* pData);
+
+    long GetContents(std::string& buffer);
 
     // Debug info for garbage collected files
     const SLuaDebugInfo& GetLuaDebugInfo() { return m_LuaDebugInfo; };
@@ -66,8 +79,8 @@ private:
     void DoResourceFileCheck();
 
     CBinaryFileInterface* m_pFile;
-    SString               m_strFilename;            // Resource relative
-    SString               m_strAbsPath;             // Absolute
+    SString               m_strFilename;  // Resource relative
+    SString               m_strAbsPath;   // Absolute
     unsigned long         m_ulMaxSize;
     bool                  m_bDoneResourceFileCheck;
     unsigned int          m_uiScriptId;

@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUITabList.h
  *  PURPOSE:     Tab-able Elements list class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,8 +16,8 @@ typedef std::list<CGUITabListItem*>::const_iterator CGUITabIterator;
 class CGUITabList
 {
 public:
-    CGUITabList(){};
-    ~CGUITabList(){};
+    CGUITabList() {};
+    ~CGUITabList() {};
 
     void AddItem(CGUITabListItem* pItem) { m_Items.push_back(pItem); };
     void RemoveItem(CGUITabListItem* pItem) { m_Items.remove(pItem); };

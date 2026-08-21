@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPedSync.cpp
  *  PURPOSE:     Ped entity synchronization class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -82,9 +82,21 @@ void CPedSync::OverrideSyncer(CPed* pPed, CPlayer* pPlayer, bool bPersist)
 
 void CPedSync::UpdateAllSyncer()
 {
+    auto currentTimestamp = GetTimestamp();
+
     // Update all the ped's sync states
     for (auto iter = m_pPedManager->IterBegin(); iter != m_pPedManager->IterEnd(); iter++)
     {
+        // Has the duration of the ped's animation already elapsed?
+        const SPlayerAnimData& animData = (*iter)->GetAnimationData();
+        if (animData.IsAnimating())
+        {
+            const std::int64_t elapsedMs = currentTimestamp >= animData.startTime ? (currentTimestamp - animData.startTime) : 0;
+            const float        deltaTime = static_cast<float>(elapsedMs);
+            if (!animData.freezeLastFrame && animData.time > 0 && deltaTime >= animData.time)
+                (*iter)->SetAnimationData({});
+        }
+
         // It is a ped, yet not a player
         if (IS_PED(*iter) && !IS_PLAYER(*iter))
             UpdateSyncer(*iter);
@@ -152,7 +164,7 @@ void CPedSync::StartSync(CPlayer* pPlayer, CPed* pPed)
 
     // Call the onElementStartSync event
     CLuaArguments Arguments;
-    Arguments.PushElement(pPlayer);            // New syncer
+    Arguments.PushElement(pPlayer);  // New syncer
     pPed->CallEvent("onElementStartSync", Arguments);
 }
 
@@ -169,7 +181,7 @@ void CPedSync::StopSync(CPed* pPed)
 
     // Call the onElementStopSync event
     CLuaArguments Arguments;
-    Arguments.PushElement(pSyncer);            // Old syncer
+    Arguments.PushElement(pSyncer);  // Old syncer
     pPed->CallEvent("onElementStopSync", Arguments);
 }
 
@@ -234,13 +246,13 @@ void CPedSync::Packet_PedSync(CPedSyncPacket& Packet)
         // Apply the data to the ped
         if (Data.ucFlags & 0x01)
         {
-            pPed->SetPosition(Data.vecPosition);
+            pPed->SetPosition(Data.position.data.vecPosition);
             g_pGame->GetColManager()->DoHitDetection(pPed->GetPosition(), pPed);
         }
         if (Data.ucFlags & 0x02)
-            pPed->SetRotation(Data.fRotation);
+            pPed->SetRotation(Data.rotation.data.fRotation);
         if (Data.ucFlags & 0x04)
-            pPed->SetVelocity(Data.vecVelocity);
+            pPed->SetVelocity(Data.velocity.data.vecVelocity);
 
         if (Data.ucFlags & 0x08)
         {
@@ -266,11 +278,22 @@ void CPedSync::Packet_PedSync(CPedSyncPacket& Packet)
         if (Data.ucFlags & 0x10)
             pPed->SetArmor(Data.fArmor);
 
+        if (Data.flags2 & 0x01)
+            pPed->SetCameraRotation(Data.cameraRotation);
+
         if (Data.ucFlags & 0x20)
             pPed->SetOnFire(Data.bOnFire);
 
         if (Data.ucFlags & 0x40)
             pPed->SetInWater(Data.bIsInWater);
+
+        if (Data.ucFlags & 0x60)
+        {
+            pPed->SetReloadingWeapon(Data.isReloadingWeapon);
+        }
+
+        if (Data.ucFlags & 0x80)
+            pPed->SetAnimationData({});
 
         // Is it time to sync to everyone
         bool bDoFarSync = llTickCountNow - pPed->GetLastFarSyncTick() >= g_TickRateSettings.iPedFarSync;

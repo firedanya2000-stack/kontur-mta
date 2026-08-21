@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIListItem.h
  *  PURPOSE:     List widget item interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUIListItem
 {
 public:
-    virtual ~CGUIListItem(){};
+    virtual ~CGUIListItem() {};
 
     virtual std::string GetText() const = 0;
     virtual void        SetText(const char* pszText, const char* pszSortText = NULL) = 0;

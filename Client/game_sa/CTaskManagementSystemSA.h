@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CTaskManagementSystemSA.h
  *  PURPOSE:     Header file for task management system class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,7 +14,7 @@
 class CTaskSA;
 class CTaskSAInterface;
 
-#define FUNC_CTask_Operator_Delete          0x61A5B0
+#define FUNC_CTask_Operator_Delete 0x61A5B0
 
 class CTaskManagementSystemSA
 {

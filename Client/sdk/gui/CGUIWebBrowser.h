@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIWebBrowser.h
  *  PURPOSE:     Web browser widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -16,7 +16,7 @@
 class CGUIWebBrowser : public CGUIElement
 {
 public:
-    virtual ~CGUIWebBrowser(){};
+    virtual ~CGUIWebBrowser() {};
 
     virtual void LoadFromWebView(class CWebViewInterface* pWebView) = 0;
 

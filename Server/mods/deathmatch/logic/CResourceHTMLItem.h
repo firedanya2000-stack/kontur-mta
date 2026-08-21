@@ -5,17 +5,17 @@
  *  FILE:        mods/deathmatch/logic/CResourceHTMLItem.h
  *  PURPOSE:     Resource server-side HTML item class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
 #include "CResourceFile.h"
-#include "ehs/ehs.h"
+#include "httpd/Types.h"
 
 #ifndef MAX_PATH
-#define MAX_PATH        260
+    #define MAX_PATH 260
 #endif
 
 class CResourceHTMLItem : public CResourceFile
@@ -25,10 +25,10 @@ public:
                       bool bIsRaw, bool bRestricted, bool bOOPEnabled);
     ~CResourceHTMLItem();
 
-    bool         Start();
-    bool         Stop();
-    ResponseCode Request(HttpRequest* ipoHttpRequest, HttpResponse* ipoHttpResponse, class CAccount* account);
-    bool         AppendToPageBuffer(const char* szText, size_t length = 0);
+    bool           Start();
+    bool           Stop();
+    HttpStatusCode Request(HttpRequest* ipoHttpRequest, HttpResponse* ipoHttpResponse, class CAccount* account);
+    bool           AppendToPageBuffer(const char* szText, size_t length = 0);
 
     void SetResponseHeader(const char* szHeaderName, const char* szHeaderValue);
     void SetResponseCode(int responseCode);
@@ -43,16 +43,16 @@ private:
     char ReadChar(FILE* pFile) { return (unsigned char)fgetc(pFile); }
     void GetMimeType(const char* szFilename);
 
-    bool        m_bIsBeingRequested;            // crude mutex
+    bool        m_bIsBeingRequested;  // crude mutex
     bool        m_bIsRaw;
     CLuaMain*   m_pVM;
-    std::string m_strPageBuffer;            // contains what we're sending
-    bool        m_bDefault;                 // is this the default page for this resource?
+    std::string m_strPageBuffer;  // contains what we're sending
+    bool        m_bDefault;       // is this the default page for this resource?
     std::string m_strMime;
     bool        m_bRestricted;
 
     bool m_bOOPEnabled;
 
-    ResponseCode  m_responseCode;
-    HttpResponse* m_currentResponse;
+    HttpStatusCode m_responseCode;
+    HttpResponse*  m_currentResponse;
 };

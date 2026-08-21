@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CRPCFunctions.h
  *  PURPOSE:     Remote procedure call functionality class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -19,7 +19,7 @@
 class CPlayer;
 class CGame;
 
-#define DECLARE_RPC(a) static void a ( NetBitStreamInterface& bitStream );
+#define DECLARE_RPC(a) static void a(NetBitStreamInterface& bitStream);
 
 class CRPCFunctions
 {

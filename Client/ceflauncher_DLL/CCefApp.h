@@ -9,17 +9,17 @@
  *****************************************************************************/
 #include <cef3/cef/include/cef_app.h>
 #include <string>
-#include <sstream>
 #include "V8Helpers.h"
+#include "CCefAppAuth.h"  // IPC message append helpers
 using V8Helpers::CV8Handler;
 
 class CCefApp : public CefApp, public CefRenderProcessHandler
 {
 public:
-    CCefApp() {}
+    CCefApp() = default;
     virtual CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; };
 
-    // http://magpcss.org/ceforum/apidocs3/projects/(default)/CefRenderProcessHandler.html#OnFocusedNodeChanged(CefRefPtr%3CCefBrowser%3E,CefRefPtr%3CCefFrame%3E,CefRefPtr%3CCefDOMNode%3E)
+    // https://magpcss.org/ceforum/apidocs3/projects/(default)/CefRenderProcessHandler.html#OnFocusedNodeChanged(CefRefPtr%3CCefBrowser%3E,CefRefPtr%3CCefFrame%3E,CefRefPtr%3CCefDOMNode%3E)
     virtual void OnFocusedNodeChanged(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefDOMNode> node) override
     {
         if (m_bHasInputFocus)
@@ -41,7 +41,12 @@ public:
             if (!node)
                 return;
 
+#ifdef MTA_MAETRO
             if (node->GetType() == CefDOMNode::Type::DOM_NODE_TYPE_ELEMENT && !node->GetFormControlElementType().empty())
+#else
+            if (node->GetType() == CefDOMNode::Type::DOM_NODE_TYPE_ELEMENT &&
+                node->GetFormControlElementType() != CefDOMNode::FormControlType::DOM_FORM_CONTROL_TYPE_UNSUPPORTED)
+#endif
             {
                 auto message = CefProcessMessage::Create("InputFocus");
                 message->GetArgumentList()->SetBool(0, true);
@@ -53,7 +58,7 @@ public:
         }
     }
 
-    // http://magpcss.org/ceforum/apidocs3/projects/(default)/CefRenderProcessHandler.html#OnContextCreated(CefRefPtr%3CCefBrowser%3E,CefRefPtr%3CCefFrame%3E,CefRefPtr%3CCefV8Context%3E)
+    // https://magpcss.org/ceforum/apidocs3/projects/(default)/CefRenderProcessHandler.html#OnContextCreated(CefRefPtr%3CCefBrowser%3E,CefRefPtr%3CCefFrame%3E,CefRefPtr%3CCefV8Context%3E)
     // //
     virtual void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context) override
     {
@@ -73,11 +78,22 @@ public:
 
     static void Javascript_triggerEvent(CefRefPtr<CefFrame> frame, const CefV8ValueList& arguments)
     {
-        if (arguments.size() == 0)
+        if (arguments.empty()) [[unlikely]]
             return;
 
         CefRefPtr<CefProcessMessage> message = V8Helpers::SerialiseV8Arguments("TriggerLuaEvent", arguments);
+        if (!CefAppAuth::AppendAuthCodeToMessage(message)) [[unlikely]]  // AUTH: race condition check
+            return;
         frame->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_BROWSER, message);
+    }
+
+    void OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) override
+    {
+        const auto authCode = command_line->GetSwitchValue("kgfiv8n");
+        if (!authCode.empty())
+        {
+            CefAppAuth::AuthCodeStorage() = authCode;
+        }
     }
 
 public:

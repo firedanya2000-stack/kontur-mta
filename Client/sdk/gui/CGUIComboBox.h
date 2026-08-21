@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIComboBox.h
  *  PURPOSE:     Combobox widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUIComboBox : public CGUIElement
 {
 public:
-    virtual ~CGUIComboBox(){};
+    virtual ~CGUIComboBox() {};
 
     virtual void          SetReadOnly(bool bRead) = 0;
     virtual CGUIListItem* AddItem(const char* szText) = 0;

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CSyncDebug.cpp
  *  PURPOSE:     Sync debugger
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -27,8 +27,8 @@ CSyncDebug::CSyncDebug(CClientManager* pManager)
     m_ulLastUpdateTime = CClientTime::GetTime();
     m_uiLastPacketsSent = m_uiPacketsSent = stats.packetsSent;
     m_uiLastPacketsReceived = m_uiPacketsReceived = stats.packetsReceived;
-    m_uiLastBitsReceived = m_uiBitsReceived = (uint)stats.bytesReceived * 8;            //  stats.runningTotal [ NS_ACTUAL_BYTES_RECEIVED ] * 8;
-    m_uiLastBitsSent = m_uiBitsSent = (uint)stats.bytesSent * 8;                        // stats.runningTotal [ NS_ACTUAL_BYTES_SENT ] * 8;
+    m_uiLastBitsReceived = m_uiBitsReceived = (uint)stats.bytesReceived * 8;  //  stats.runningTotal [ NS_ACTUAL_BYTES_RECEIVED ] * 8;
+    m_uiLastBitsSent = m_uiBitsSent = (uint)stats.bytesSent * 8;              // stats.runningTotal [ NS_ACTUAL_BYTES_SENT ] * 8;
 
     m_usFakeLagVariance = 0;
     m_usFakeLagPing = 0;

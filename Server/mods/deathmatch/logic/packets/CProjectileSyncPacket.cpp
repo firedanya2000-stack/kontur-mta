@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CProjectileSyncPacket.cpp
  *  PURPOSE:     Projectile synchronization packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -39,18 +39,15 @@ bool CProjectileSyncPacket::Read(NetBitStreamInterface& BitStream)
         return false;
     m_ucWeaponType = weaponType.data.ucWeaponType;
 
-    if (BitStream.Version() >= 0x4F)
-    {
-        if (!BitStream.Read(m_usModel))
-            return false;
-    }
+    if (!BitStream.Read(m_usModel))
+        return false;
 
     switch (m_ucWeaponType)
     {
-        case 16:            // WEAPONTYPE_GRENADE
-        case 17:            // WEAPONTYPE_TEARGAS
-        case 18:            // WEAPONTYPE_MOLOTOV
-        case 39:            // WEAPONTYPE_REMOTE_SATCHEL_CHARGE
+        case 16:  // WEAPONTYPE_GRENADE
+        case 17:  // WEAPONTYPE_TEARGAS
+        case 18:  // WEAPONTYPE_MOLOTOV
+        case 39:  // WEAPONTYPE_REMOTE_SATCHEL_CHARGE
         {
             SFloatSync<7, 17> projectileForce;
             if (!BitStream.Read(&projectileForce))
@@ -64,15 +61,14 @@ bool CProjectileSyncPacket::Read(NetBitStreamInterface& BitStream)
 
             break;
         }
-        case 19:            // WEAPONTYPE_ROCKET
-        case 20:            // WEAPONTYPE_ROCKET_HS
+        case 19:  // WEAPONTYPE_ROCKET
+        case 20:  // WEAPONTYPE_ROCKET_HS
         {
-            bool bHasTarget;
-            if (!BitStream.ReadBit(bHasTarget))
+            if (!BitStream.ReadBit(m_bHasTarget))
                 return false;
 
             m_TargetID = INVALID_ELEMENT_ID;
-            if (bHasTarget && !BitStream.Read(m_TargetID))
+            if (m_bHasTarget && !BitStream.Read(m_TargetID))
                 return false;
 
             SVelocitySync velocity;
@@ -87,8 +83,8 @@ bool CProjectileSyncPacket::Read(NetBitStreamInterface& BitStream)
 
             break;
         }
-        case 58:            // WEAPONTYPE_FLARE
-        case 21:            // WEAPONTYPE_FREEFALL_BOMB
+        case 58:  // WEAPONTYPE_FLARE
+        case 21:  // WEAPONTYPE_FREEFALL_BOMB
             break;
 
         default:
@@ -105,7 +101,8 @@ bool CProjectileSyncPacket::Write(NetBitStreamInterface& BitStream) const
         BitStream.WriteBit(true);
         BitStream.Write(m_pSourceElement->GetID());
 
-        unsigned short usLatency = static_cast<CPlayer*>(m_pSourceElement)->GetPing();
+        const unsigned int   uiPing = static_cast<CPlayer*>(m_pSourceElement)->GetPing();
+        const unsigned short usLatency = uiPing <= 0xFFFF ? static_cast<unsigned short>(uiPing) : 0xFFFF;
         BitStream.WriteCompressed(usLatency);
     }
     else
@@ -127,17 +124,14 @@ bool CProjectileSyncPacket::Write(NetBitStreamInterface& BitStream) const
     weaponType.data.ucWeaponType = m_ucWeaponType;
     BitStream.Write(&weaponType);
 
-    if (BitStream.Version() >= 0x4F)
-    {
-        BitStream.Write(m_usModel);
-    }
+    BitStream.Write(m_usModel);
 
     switch (m_ucWeaponType)
     {
-        case 16:            // WEAPONTYPE_GRENADE
-        case 17:            // WEAPONTYPE_TEARGAS
-        case 18:            // WEAPONTYPE_MOLOTOV
-        case 39:            // WEAPONTYPE_REMOTE_SATCHEL_CHARGE
+        case 16:  // WEAPONTYPE_GRENADE
+        case 17:  // WEAPONTYPE_TEARGAS
+        case 18:  // WEAPONTYPE_MOLOTOV
+        case 39:  // WEAPONTYPE_REMOTE_SATCHEL_CHARGE
         {
             SFloatSync<7, 17> projectileForce;
             projectileForce.data.fValue = m_fForce;
@@ -149,8 +143,8 @@ bool CProjectileSyncPacket::Write(NetBitStreamInterface& BitStream) const
 
             break;
         }
-        case 19:            // WEAPONTYPE_ROCKET
-        case 20:            // WEAPONTYPE_ROCKET_HS
+        case 19:  // WEAPONTYPE_ROCKET
+        case 20:  // WEAPONTYPE_ROCKET_HS
         {
             if (m_TargetID != INVALID_ELEMENT_ID)
             {
@@ -170,7 +164,7 @@ bool CProjectileSyncPacket::Write(NetBitStreamInterface& BitStream) const
 
             break;
         }
-        case 58:            // WEAPONTYPE_FLARE
+        case 58:  // WEAPONTYPE_FLARE
             break;
     }
 

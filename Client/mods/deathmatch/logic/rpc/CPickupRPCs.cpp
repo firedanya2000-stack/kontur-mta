@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/rpc/CPickupRPCs.cpp
  *  PURPOSE:     Pickup remote procedure calls
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -69,7 +69,6 @@ void CPickupRPCs::SetPickupType(CClientEntity* pSource, NetBitStreamInterface& b
                 {
                     pPickup->SetModel(usModel);
                     pPickup->m_ucType = ucType;
-                    pPickup->SetModel(usModel);
                 }
             }
         }

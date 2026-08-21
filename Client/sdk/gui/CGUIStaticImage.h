@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIStaticImage.h
  *  PURPOSE:     Static image widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUIStaticImage : public CGUIElement
 {
 public:
-    virtual ~CGUIStaticImage(){};
+    virtual ~CGUIStaticImage() {};
 
     virtual bool LoadFromFile(const char* szFilename) = 0;
     virtual bool LoadFromTexture(CGUITexture* pTexture) = 0;

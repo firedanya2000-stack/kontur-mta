@@ -5,7 +5,7 @@
  *  FILE:        core/CLanguage.h
  *  PURPOSE:     Class to abstract a translation file to translated strings
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -31,6 +31,6 @@ public:
 
 private:
     Dictionary m_Dict;
-    SString    m_strCode;            // Language code
-    SString    m_strName;            // Human readable name
+    SString    m_strCode;  // Language code
+    SString    m_strName;  // Human readable name
 };

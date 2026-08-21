@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPerfStatManager.cpp
  *  PURPOSE:     Performance stats manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -312,12 +312,12 @@ SString CPerfStatManager::GetScaledBitString(long long Amount)
 SString CPerfStatManager::GetScaledFloatString(float fValue)
 {
     if (fValue < 1)
-        return SString("%.2f", fValue);            // 0.00 to 0.99
+        return SString("%.2f", fValue);  // 0.00 to 0.99
 
     if (fValue < 5)
-        return SString("%.1f", fValue);            // 1.0 to 4.9
+        return SString("%.1f", fValue);  // 1.0 to 4.9
 
-    return SString("%.0f", fValue);            // 5 to inf. and beyond
+    return SString("%.0f", fValue);  // 5 to inf. and beyond
 }
 
 ///////////////////////////////////////////////////////////////

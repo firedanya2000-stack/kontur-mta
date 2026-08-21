@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/rpc/CWeaponRPCs.cpp
  *  PURPOSE:     Weapon remote procedure calls
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -127,7 +127,7 @@ void CWeaponRPCs::TakeWeapon(CClientEntity* pSource, NetBitStreamInterface& bitS
         CClientPed* pPed = m_pPedManager->Get(pSource->GetID(), true);
         if (pPed)
         {
-            // Is the weapon id valid? (may not be neccessary, just being safe)
+            // Is the weapon id valid? (may not be necessary, just being safe)
             if (CClientPickupManager::IsValidWeaponID(ucWeaponID))
             {
                 // Have we ammo in packet? If so, we need to take the ammo, not weapon

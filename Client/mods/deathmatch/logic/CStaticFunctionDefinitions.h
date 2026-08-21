@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CStaticFunctionDefinitions.h
  *  PURPOSE:     Header for static function definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,12 +16,18 @@ class CStaticFunctionDefinitions;
 #include <gui/CGUI.h>
 #include <gui/CGUIElement.h>
 
+#include "enums/HandlingProperty.h"
+#include "enums/WeaponProperty.h"
+#include "enums/ObjectProperty.h"
+
 class CStaticFunctionDefinitions
 {
 public:
     CStaticFunctionDefinitions(class CLuaManager* pLuaManager, CEvents* pEvents, CCoreInterface* pCore, CGame* pGame, CClientGame* pClientGame,
                                CClientManager* pManager);
     ~CStaticFunctionDefinitions();
+
+    static void PreInitialize(CCoreInterface* pCore, CGame* pGame, CClientGame* pClientGame, CEvents* pEvents);
 
     static bool AddEvent(CLuaMain& LuaMain, const char* szName, bool bAllowRemoteTrigger);
     static bool AddEventHandler(CLuaMain& LuaMain, const char* szName, CClientEntity& Entity, const CLuaFunctionRef& iLuaFunction, bool bPropagated,
@@ -65,7 +71,6 @@ public:
     static bool           GetElementDistanceFromCentreOfMassToBaseOfModel(CClientEntity& Entity, float& fDistance);
     static bool           GetElementAttachedOffsets(CClientEntity& Entity, CVector& vecPosition, CVector& vecRotation);
     static bool           GetElementAlpha(CClientEntity& Entity, unsigned char& ucAlpha);
-    static bool           IsElementOnScreen(CClientEntity& Entity, bool& bOnScreen);
     static bool           GetElementHealth(CClientEntity& Entity, float& fHealth);
     static bool           GetElementModel(CClientEntity& Entity, unsigned short& usModel);
     static bool           IsElementInWater(CClientEntity& Entity, bool& bInWater);
@@ -81,8 +86,8 @@ public:
     static CClientDummy* CreateElement(CResource& Resource, const char* szTypeName, const char* szID);
     static bool          DestroyElement(CClientEntity& Entity);
     static bool          SetElementID(CClientEntity& Entity, const char* szID);
-    static bool          SetElementData(CClientEntity& Entity, const char* szName, CLuaArgument& Variable, bool bSynchronize);
-    static bool          RemoveElementData(CClientEntity& Entity, const char* szName);
+    static bool          SetElementData(CClientEntity& Entity, CStringName name, CLuaArgument& Variable, bool bSynchronize);
+    static bool          RemoveElementData(CClientEntity& Entity, CStringName name);
     static bool          SetElementMatrix(CClientEntity& Entity, const CMatrix& matrix);
     static bool          SetElementPosition(CClientEntity& Entity, const CVector& vecPosition, bool bWarp = true);
     static bool          SetElementRotation(CClientEntity& Entity, const CVector& vecRotation, eEulerRotationOrder rotationOrder, bool bNewWay);
@@ -137,7 +142,7 @@ public:
     static bool           IsPedDoingTask(CClientPed& Ped, const char* szTaskName, bool& bIsDoingTask);
     static bool           GetPedBonePosition(CClientPed& Ped, eBone bone, CVector& vecPosition);
     static bool           GetPedClothes(CClientPed& Ped, unsigned char ucType, SString& strOutTexture, SString& strOutModel);
-    static bool           GetPedControlState(CClientPed& Ped, const char* szControl, bool& bState);
+    static bool           GetPedControlState(CClientPed& ped, const std::string& control, bool& state) noexcept;
     static bool           GetPedAnalogControlState(CClientPed& Ped, const char* szControl, float& fState, bool bRawInput);
     static bool           IsPedDoingGangDriveby(CClientPed& Ped, bool& bDoingGangDriveby);
     static bool           GetPedFightingStyle(CClientPed& Ped, unsigned char& ucStyle);
@@ -151,14 +156,14 @@ public:
     static bool           GetPedWeaponMuzzlePosition(CClientPed& Ped, CVector& vecPosition);
     static bool           IsPedOnFire(CClientPed& Ped, bool& bOnFire);
     static bool           IsPedInVehicle(CClientPed& Ped, bool& bInVehicle);
-    static bool           GetWeaponProperty(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, float& fData);
-    static bool           GetWeaponProperty(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, int& sData);
-    static bool           GetWeaponProperty(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, CVector& vecData);
-    static bool           GetWeaponPropertyFlag(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, bool& bEnable);
-    static bool           GetOriginalWeaponProperty(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, float& fData);
-    static bool           GetOriginalWeaponProperty(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, int& sData);
-    static bool           GetOriginalWeaponProperty(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, CVector& vecData);
-    static bool           GetOriginalWeaponPropertyFlag(eWeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, bool& bEnable);
+    static bool           GetWeaponProperty(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, float& fData);
+    static bool           GetWeaponProperty(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, int& sData);
+    static bool           GetWeaponProperty(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, CVector& vecData);
+    static bool           GetWeaponPropertyFlag(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, bool& bEnable);
+    static bool           GetOriginalWeaponProperty(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, float& fData);
+    static bool           GetOriginalWeaponProperty(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, int& sData);
+    static bool           GetOriginalWeaponProperty(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, CVector& vecData);
+    static bool           GetOriginalWeaponPropertyFlag(WeaponProperty eProperty, eWeaponType eWeapon, eWeaponSkill eSkillLevel, bool& bEnable);
     static bool           GetPedOxygenLevel(CClientPed& Ped, float& fOxygen);
 
     static bool SetPedWeaponSlot(CClientEntity& Entity, int iSlot);
@@ -166,13 +171,15 @@ public:
     static bool SetPedRotation(CClientEntity& Entity, float fRotation, bool bNewWay);
     static bool SetPedCanBeKnockedOffBike(CClientEntity& Entity, bool bCanBeKnockedOffBike);
     static bool SetPedAnimation(CClientEntity& Entity, const SString& strBlockName, const char* szAnimName, int iTime, int iBlend, bool bLoop,
-                                bool bUpdatePosition, bool bInterruptable, bool bFreezeLastFrame);
+                                bool bUpdatePosition, bool bInterruptible, bool bFreezeLastFrame);
+
     static bool SetPedAnimationProgress(CClientEntity& Entity, const SString& strAnimName, float fProgress);
     static bool SetPedAnimationSpeed(CClientEntity& Entity, const SString& strAnimName, float fSpeed);
+
     static bool SetPedMoveAnim(CClientEntity& Entity, unsigned int iMoveAnim);
     static bool AddPedClothes(CClientEntity& Entity, const char* szTexture, const char* szModel, unsigned char ucType);
     static bool RemovePedClothes(CClientEntity& Entity, unsigned char ucType);
-    static bool SetPedControlState(CClientEntity& Entity, const char* szControl, bool bState);
+    static bool SetPedControlState(CClientPed& ped, const std::string& control, bool state) noexcept;
     static bool SetPedAnalogControlState(CClientEntity& Entity, const char* szControl, float fState);
     static bool SetPedDoingGangDriveby(CClientEntity& Entity, bool bGangDriveby);
     static bool SetPedFightingStyle(CClientEntity& Entity, unsigned char ucStyle);
@@ -221,9 +228,9 @@ public:
     static bool            IsVehicleWindowOpen(CClientVehicle& Vehicle, uchar ucWindow);
     static bool            SetVehicleModelExhaustFumesPosition(unsigned short usModel, CVector& vecPosition);
     static bool            GetVehicleModelExhaustFumesPosition(unsigned short usModel, CVector& vecPosition);
-    static bool            SetVehicleModelDummyPosition(unsigned short usModel, eVehicleDummies eDummy, CVector& vecPosition);
-    static bool            GetVehicleModelDummyPosition(unsigned short usModel, eVehicleDummies eDummy, CVector& vecPosition);
-    static bool            GetVehicleModelDummyDefaultPosition(unsigned short usModel, eVehicleDummies eDummy, CVector& vecPosition);
+    static bool            SetVehicleModelDummyPosition(unsigned short usModel, VehicleDummies eDummy, CVector& vecPosition);
+    static bool            GetVehicleModelDummyPosition(unsigned short usModel, VehicleDummies eDummy, CVector& vecPosition);
+    static bool            GetVehicleModelDummyDefaultPosition(unsigned short usModel, VehicleDummies eDummy, CVector& vecPosition);
 
     // Vehicle set functions
     static bool FixVehicle(CClientEntity& Entity);
@@ -241,7 +248,8 @@ public:
     static bool SetVehicleDoorState(CClientEntity& Entity, unsigned char ucDoor, unsigned char ucState, bool spawnFlyingComponent);
     static bool SetVehicleWheelStates(CClientEntity& Entity, int iFrontLeft, int iRearLeft = -1, int iFrontRight = -1, int iRearRight = -1);
     static bool SetVehicleLightState(CClientEntity& Entity, unsigned char ucLight, unsigned char ucState);
-    static bool SetVehiclePanelState(CClientEntity& Entity, unsigned char ucPanel, unsigned char ucState);
+    static bool SetVehiclePanelState(CClientEntity& Entity, unsigned char ucPanel, unsigned char ucState, bool spawnFlyingComponent = true,
+                                     bool breakGlass = false);
     static bool SetVehicleOverrideLights(CClientEntity& Entity, unsigned char ucLights);
     static bool AttachTrailerToVehicle(CClientVehicle& Vehicle, CClientVehicle& Trailer, const CVector& vecRotationOffsetDegrees);
     static bool DetachTrailerFromVehicle(CClientVehicle& Vehicle, CClientVehicle* pTrailer = NULL);
@@ -366,7 +374,8 @@ public:
     static bool SetBlipVisibleDistance(CClientEntity& Entity, unsigned short usVisibleDistance);
 
     // Marker create/destroy funcs
-    static CClientMarker* CreateMarker(CResource& Resource, const CVector& vecPosition, const char* szType, float fSize, const SColor color);
+    static CClientMarker* CreateMarker(CResource& Resource, const CVector& vecPosition, const char* szType, float fSize, const SColor color,
+                                       bool ignoreAlphaLimits);
 
     // Marker get funcs
     static bool GetMarkerTarget(CClientMarker& Marker, CVector& vecTarget);
@@ -377,6 +386,7 @@ public:
     static bool SetMarkerColor(CClientEntity& Entity, const SColor color);
     static bool SetMarkerTarget(CClientEntity& Entity, const CVector* pTarget);
     static bool SetMarkerIcon(CClientEntity& Entity, const char* szIcon);
+    static bool SetMarkerTargetArrowProperties(CClientEntity& Entity, const SColor color, float size);
 
     // Camera get funcs
     static bool           GetCameraMatrix(CVector& vecPosition, CVector& vecLookAt, float& fRoll, float& fFOV);
@@ -533,7 +543,12 @@ public:
     };
     static inline void GUIGridListSetItemColor(CClientGUIElement& GUIElement, int iRow, int iColumn, int iRed, int iGreen, int iBlue, int iAlpha)
     {
-        static_cast<CGUIGridList*>(GUIElement.GetCGUIElement())->SetItemColor(iRow, iColumn, iRed, iGreen, iBlue, iAlpha);
+        const unsigned char ucRed = static_cast<unsigned char>(Clamp<int>(0, iRed, 255));
+        const unsigned char ucGreen = static_cast<unsigned char>(Clamp<int>(0, iGreen, 255));
+        const unsigned char ucBlue = static_cast<unsigned char>(Clamp<int>(0, iBlue, 255));
+        const unsigned char ucAlpha = static_cast<unsigned char>(Clamp<int>(0, iAlpha, 255));
+
+        static_cast<CGUIGridList*>(GUIElement.GetCGUIElement())->SetItemColor(iRow, iColumn, ucRed, ucGreen, ucBlue, ucAlpha);
     };
     static void GUIGridListSetHorizontalScrollPosition(CClientEntity& Element, float fPosition);
     static void GUIGridListSetVerticalScrollPosition(CClientEntity& Element, float fPosition);
@@ -561,7 +576,7 @@ public:
     static bool GetTime(unsigned char& ucHour, unsigned char& ucMin);
     static bool ProcessLineOfSight(const CVector& vecStart, const CVector& vecEnd, bool& bCollision, CColPoint** pColPoint, CClientEntity** pColEntity,
                                    const SLineOfSightFlags& flags = SLineOfSightFlags(), CEntity* pIgnoredEntity = NULL,
-                                   SLineOfSightBuildingResult* pBuildingResult = NULL);
+                                   SLineOfSightBuildingResult* pBuildingResult = NULL, SProcessLineOfSightMaterialInfoResult* outMatInfo = nullptr);
     static bool IsLineOfSightClear(const CVector& vecStart, const CVector& vecEnd, bool& bIsClear, const SLineOfSightFlags& flags = SLineOfSightFlags(),
                                    CEntity* pIgnoredEntity = NULL);
     static bool TestLineAgainstWater(CVector& vecStart, CVector& vecEnd, CVector& vecCollision);
@@ -589,7 +604,6 @@ public:
     static bool          GetGaragePosition(unsigned char ucGarageID, CVector& vecPosition);
     static bool          GetGarageSize(unsigned char ucGarageID, float& fHeight, float& fWidth, float& fDepth);
     static bool          GetGarageBoundingBox(unsigned char ucGarageID, float& fLeft, float& fRight, float& fFront, float& fBack);
-    static bool          IsWorldSpecialPropertyEnabled(const char* szPropName);
     static bool          SetCloudsEnabled(bool bEnabled);
     static bool          GetCloudsEnabled();
     static bool          GetTrafficLightState(unsigned char& ucState);
@@ -617,7 +631,6 @@ public:
     static bool SetWaveHeight(float fHeight);
     static bool SetMinuteDuration(unsigned long ulDelay);
     static bool SetGarageOpen(unsigned char ucGarageID, bool bIsOpen);
-    static bool SetWorldSpecialPropertyEnabled(const char* szPropName, bool bEnabled);
     static bool SetBlurLevel(unsigned char ucLevel);
     static bool SetJetpackMaxHeight(float fHeight);
     static bool SetTrafficLightState(unsigned char ucState);
@@ -632,8 +645,11 @@ public:
     static bool SetBirdsEnabled(bool bEnabled);
     static bool GetBirdsEnabled();
     static bool SetMoonSize(int iSize);
-    static bool SetFPSLimit(int iLimit);
-    static bool GetFPSLimit(int& iLimit);
+
+    // FPS Limiter
+    static void GetFPSLimit(std::uint16_t& fps) noexcept;
+    static void SetClientFPSLimit(std::uint16_t fps);
+    static void SetServerFPSLimit(std::uint16_t fps);
 
     static bool ResetAllSurfaceInfo();
     static bool ResetSurfaceInfo(short sSurfaceID);
@@ -685,12 +701,12 @@ public:
     static bool           GetWeaponIDFromName(const char* szName, unsigned char& ucID);
     static CClientWeapon* CreateWeapon(CResource& Resource, eWeaponType weaponType, CVector vecPosition);
     static bool           FireWeapon(CClientWeapon* pWeapon);
-    static bool           SetWeaponProperty(CClientWeapon* pWeapon, eWeaponProperty eProperty, short sData);
-    static bool           GetWeaponProperty(CClientWeapon* pWeapon, eWeaponProperty eProperty, short& sData);
-    static bool           GetWeaponProperty(CClientWeapon* pWeapon, eWeaponProperty eProperty, float& fData);
-    static bool           SetWeaponProperty(CClientWeapon* pWeapon, eWeaponProperty eProperty, float fData);
-    static bool           SetWeaponProperty(CClientWeapon* pWeapon, eWeaponProperty eProperty, const CVector& vecData);
-    static bool           GetWeaponProperty(CClientWeapon* pWeapon, eWeaponProperty eProperty, CVector& vecData);
+    static bool           SetWeaponProperty(CClientWeapon* pWeapon, WeaponProperty eProperty, short sData);
+    static bool           GetWeaponProperty(CClientWeapon* pWeapon, WeaponProperty eProperty, short& sData);
+    static bool           GetWeaponProperty(CClientWeapon* pWeapon, WeaponProperty eProperty, float& fData);
+    static bool           SetWeaponProperty(CClientWeapon* pWeapon, WeaponProperty eProperty, float fData);
+    static bool           SetWeaponProperty(CClientWeapon* pWeapon, WeaponProperty eProperty, const CVector& vecData);
+    static bool           GetWeaponProperty(CClientWeapon* pWeapon, WeaponProperty eProperty, CVector& vecData);
     static bool           SetWeaponState(CClientWeapon* pWeapon, eWeaponState weaponState);
     static bool           SetWeaponTarget(CClientWeapon* pWeapon, CClientEntity* pTarget, int boneTarget);
     static bool           SetWeaponTarget(CClientWeapon* pWeapon, CVector vecTarget);
@@ -731,6 +747,8 @@ public:
     static bool           FxAddWaterSplash(CVector& vecPosition);
     static bool           FxAddBulletSplash(CVector& vecPosition);
     static bool           FxAddFootSplash(CVector& vecPosition);
+    static bool           FxCreateParticle(FxParticleSystems eFxParticle, CVector& vecPosition, CVector& vecDirection, float fR, float fG, float fB, float fA,
+                                           bool bRandomizeColors, std::uint32_t iCount, float fBrightness, float fSize, bool bRandomizeSizes, float fLife);
     static CClientEffect* CreateEffect(CResource& Resource, const SString& strFxName, const CVector& vecPosition, bool bSoundEnable);
 
     // Sound funcs
@@ -784,29 +802,29 @@ public:
     static bool   GetSoundPan(CClientPlayer& Player, float& fPan);
 
     // Handling funcs
-    static eHandlingProperty GetVehicleHandlingEnum(std::string strProperty);
-    static bool              GetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, float& fValue);
-    static bool              GetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, CVector& vecValue);
-    static bool              GetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, std::string& strValue);
-    static bool              GetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, unsigned int& uiValue);
-    static bool              GetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, unsigned char& ucValue);
-    static bool              GetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, float& fValue);
-    static bool              GetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, CVector& vecValue);
-    static bool              GetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, std::string& strValue);
-    static bool              GetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, unsigned int& uiValue);
-    static bool              GetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, unsigned char& ucValue);
-    static bool              ResetVehicleHandling(CClientVehicle* pVehicle);
-    static bool              ResetVehicleHandlingProperty(CClientVehicle* pVehicle, eHandlingProperty eProperty);
-    static bool              SetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, float fValue);
-    static bool              SetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, CVector vecValue);
-    static bool              SetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, std::string strValue);
-    static bool              SetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, unsigned int uiValue);
-    static bool              SetVehicleHandling(CClientVehicle* pVehicle, eHandlingProperty eProperty, unsigned char ucValue);
-    static bool              SetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, float fValue);
-    static bool              SetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, CVector vecValue);
-    static bool              SetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, std::string strValue);
-    static bool              SetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, unsigned int uiValue);
-    static bool              SetEntryHandling(CHandlingEntry* pEntry, eHandlingProperty eProperty, unsigned char ucValue);
+    static HandlingProperty GetVehicleHandlingEnum(std::string strProperty);
+    static bool             GetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, float& fValue);
+    static bool             GetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, CVector& vecValue);
+    static bool             GetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, std::string& strValue);
+    static bool             GetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, unsigned int& uiValue);
+    static bool             GetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, unsigned char& ucValue);
+    static bool             GetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, float& fValue);
+    static bool             GetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, CVector& vecValue);
+    static bool             GetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, std::string& strValue);
+    static bool             GetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, unsigned int& uiValue);
+    static bool             GetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, unsigned char& ucValue);
+    static bool             ResetVehicleHandling(CClientVehicle* pVehicle);
+    static bool             ResetVehicleHandlingProperty(CClientVehicle* pVehicle, HandlingProperty eProperty);
+    static bool             SetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, float fValue);
+    static bool             SetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, CVector vecValue);
+    static bool             SetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, std::string strValue);
+    static bool             SetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, unsigned int uiValue);
+    static bool             SetVehicleHandling(CClientVehicle* pVehicle, HandlingProperty eProperty, unsigned char ucValue);
+    static bool             SetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, float fValue);
+    static bool             SetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, CVector vecValue);
+    static bool             SetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, std::string strValue);
+    static bool             SetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, unsigned int uiValue);
+    static bool             SetEntryHandling(CHandlingEntry* pEntry, HandlingProperty eProperty, unsigned char ucValue);
 
     // Version funcs
     static unsigned long GetVersion();

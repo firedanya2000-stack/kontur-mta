@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUITexture_Impl.h
  *  PURPOSE:     Texture handling class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@ namespace CEGUI
 {
     class Texture;
     class Renderer;
-}            // namespace CEGUI
+}  // namespace CEGUI
 
 class CGUITexture_Impl : public CGUITexture
 {

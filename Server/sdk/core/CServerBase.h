@@ -5,7 +5,7 @@
  *  FILE:        sdk/core/CServerBase.h
  *  PURPOSE:     Core server base interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -24,6 +24,7 @@ public:
     virtual void HandleInput(char* szCommand) = 0;
     virtual void GetTag(char* szInfoTag, int iInfoTag) = 0;
 
+    virtual bool IsReadyToAcceptConnections() const noexcept = 0;
     virtual bool IsFinished() = 0;
     virtual bool PendingWorkToDo() = 0;
     virtual bool GetSleepIntervals(int& iSleepBusyMs, int& iSleepIdleMs, int& iLogicFpsLimit) = 0;

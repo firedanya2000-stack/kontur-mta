@@ -18,7 +18,7 @@ class CLuaFunctionDefinitions;
 
 class CRegisteredCommands;
 
-#define LUA_DECLARE(x) static int x ( lua_State * luaVM );
+#define LUA_DECLARE(x) static int x(lua_State* luaVM);
 
 class CLuaFunctionDefs
 {
@@ -61,6 +61,8 @@ public:
     LUA_DECLARE(GetClothesByTypeIndex);
     LUA_DECLARE(GetTypeIndexFromClothes);
     LUA_DECLARE(GetClothesTypeName);
+    LUA_DECLARE(AddClothingModel);
+    LUA_DECLARE(RemoveClothingModel);
 
     // Cursor funcs
     LUA_DECLARE(GetCursorPosition);
@@ -139,4 +141,5 @@ private:
     static CClientColModelManager*    m_pColModelManager;
     static CRegisteredCommands*       m_pRegisteredCommands;
     static CClientIMGManager*         m_pImgManager;
+    static CClientBuildingManager*    m_pBuildingManager;
 };

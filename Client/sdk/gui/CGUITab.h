@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUITab.h
  *  PURPOSE:     Tab widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 class CGUITab : public CGUIElement
 {
 public:
-    virtual ~CGUITab(){};
+    virtual ~CGUITab() {};
 
     virtual void SetCaption(const char* szCaption) = 0;
 };

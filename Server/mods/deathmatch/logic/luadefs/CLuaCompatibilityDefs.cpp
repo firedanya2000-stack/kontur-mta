@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,6 +13,7 @@
 #include "CLuaVehicleDefs.h"
 #include "CLuaPedDefs.h"
 #include "CLuaPlayerDefs.h"
+#include "luadefs/CLuaCryptDefs.h"
 #include "luadefs/CLuaXMLDefs.h"
 #include <lua/CLuaFunctionParser.h>
 
@@ -30,7 +31,7 @@ void CLuaCompatibilityDefs::LoadFunctions()
         {"getVehicleIDFromName", CLuaVehicleDefs::GetVehicleModelFromName},
         {"getVehicleNameFromID", CLuaVehicleDefs::GetVehicleNameFromModel},
         {"getPlayerWeaponSlot", CLuaPedDefs::GetPedWeaponSlot},
-        {"getPlayerArmor", CLuaPedDefs::GetPedArmor},
+        {"getPlayerArmor", ArgumentParserWarn<false, CLuaPedDefs::GetPedArmor>},
         {"getPlayerRotation", CLuaPedDefs::GetPedRotation},
         {"isPlayerChoking", CLuaPedDefs::IsPedChoking},
         {"isPlayerDead", CLuaPedDefs::IsPedDead},
@@ -45,7 +46,7 @@ void CLuaCompatibilityDefs::LoadFunctions()
         {"getPlayerFightingStyle", CLuaPedDefs::GetPedFightingStyle},
         {"getPlayerGravity", CLuaPedDefs::GetPedGravity},
         {"getPlayerContactElement", CLuaPedDefs::GetPedContactElement},
-        {"setPlayerArmor", CLuaPedDefs::SetPedArmor},
+        {"setPlayerArmor", ArgumentParserWarn<false, CLuaPedDefs::SetPedArmor>},
         {"setPlayerWeaponSlot", CLuaPedDefs::SetPedWeaponSlot},
         {"killPlayer", CLuaPedDefs::KillPed},
         {"setPlayerRotation", CLuaPedDefs::SetPedRotation},
@@ -84,7 +85,8 @@ void CLuaCompatibilityDefs::LoadFunctions()
 
         // Old Discord implementation (see #2499)
         {"setPlayerDiscordJoinParams",
-         [](lua_State* luaVM) -> int {
+         [](lua_State* luaVM) -> int
+         {
              lua_pushboolean(luaVM, false);
              return 1;
          }},

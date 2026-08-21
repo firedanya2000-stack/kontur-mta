@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CAEVehicleAudioEntity.h
  *  PURPOSE:        Vehicle audio interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -19,10 +19,10 @@ enum eVehicleAudioType
     VEHICLE_AUDIO_BOAT,
     VEHICLE_AUDIO_HELI,
     VEHICLE_AUDIO_PLANE,
-    VEHICLE_AUDIO_SEAPLANE,            // unused?
+    VEHICLE_AUDIO_SEAPLANE,  // unused?
 
     VEHICLE_AUDIO_TRAIN = 8,
-    VEHICLE_AUDIO_SPECIAL,            // RC vehicles, vortex, caddy, few trailers
+    VEHICLE_AUDIO_SPECIAL,  // RC vehicles, vortex, caddy, few trailers
     VEHICLE_AUDIO_SILENT
 };
 

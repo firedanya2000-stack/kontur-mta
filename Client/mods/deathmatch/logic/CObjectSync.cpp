@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CObjectSync.cpp
  *  PURPOSE:     Object sync class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 
 using std::list;
 
-#define OBJECT_SYNC_RATE   ( g_TickRateSettings.iObjectSync )
+    #define OBJECT_SYNC_RATE (g_TickRateSettings.iObjectSync)
 
 CObjectSync::CObjectSync(CClientObjectManager* pObjectManager)
 {
@@ -97,10 +97,10 @@ void CObjectSync::Packet_ObjectStartSync(NetBitStreamInterface& BitStream)
             SRotationRadiansSync rotation;
             if (BitStream.Read(&position) && BitStream.Read(&rotation))
             {
-                // Disabled due to problem when attached in the editor - issue #5886
-                #if 0
+    // Disabled due to problem when attached in the editor - issue #5886
+    #if 0
                 pObject->SetOrientation ( position.data.vecPosition, rotation.data.vecRotation );
-                #endif
+    #endif
             }
             // No velocity due to issue #3522
 

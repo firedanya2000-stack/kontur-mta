@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIEdit_Impl.h
  *  PURPOSE:     Edit box widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -47,7 +47,7 @@ public:
 
     eCGUIType GetType() { return CGUI_EDIT; };
 
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 
 protected:
     bool Event_OnTextChanged(const CEGUI::EventArgs& e);

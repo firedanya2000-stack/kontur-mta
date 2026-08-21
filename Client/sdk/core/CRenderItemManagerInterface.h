@@ -5,9 +5,11 @@
  *  FILE:        CRenderItemManagerInterface.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
+
+#pragma once
 
 #include <CVector.h>
 #include <CVector2D.h>
@@ -41,12 +43,14 @@ class CWebViewInterface;
 class CEffectTemplate;
 class CVectorGraphicItem;
 
-#define RDEFAULT ((uint)-1)
+#define RDEFAULT ((uint) - 1)
 
 enum ERenderFormat
 {
     RFORMAT_UNKNOWN,
-    RFORMAT_ARGB = 21,            // D3DFMT_A8R8G8B8
+    RFORMAT_ARGB = 21,  // D3DFMT_A8R8G8B8
+    RFORMAT_XRGB = 22,  // D3DFMT_X8R8G8B8
+    RFORMAT_RGB = 23,   // D3DFMT_R5G6B5
     RFORMAT_DXT1 = '1TXD',
     RFORMAT_DXT2 = '2TXD',
     RFORMAT_DXT3 = '3TXD',
@@ -157,7 +161,8 @@ public:
                                               ETextureType textureType = TTYPE_TEXTURE, uint uiVolumeDepth = 1) = 0;
     virtual CShaderItem*        CreateShader(const SString& strFile, const SString& strRootPath, bool bIsRawData, SString& strOutStatus, float fPriority,
                                              float fMaxDistance, bool bLayered, bool bDebug, int iTypeMask, const EffectMacroList& macros) = 0;
-    virtual CRenderTargetItem*  CreateRenderTarget(uint uiSizeX, uint uiSizeY, bool bWithAlphaChannel, bool bForce = false) = 0;
+    virtual CRenderTargetItem*  CreateRenderTarget(uint uiSizeX, uint uiSizeY, bool bHasSurfaceFormat, bool bWithAlphaChannel, int surfaceFormat,
+                                                   bool bForce = false) = 0;
     virtual CScreenSourceItem*  CreateScreenSource(uint uiSizeX, uint uiSizeY) = 0;
     virtual CWebBrowserItem*    CreateWebBrowser(uint uiSizeX, uint uiSizeY) = 0;
     virtual CVectorGraphicItem* CreateVectorGraphic(uint uiSizeX, uint uiSizeY) = 0;
@@ -182,7 +187,8 @@ public:
     virtual ERenderFormat  GetDepthBufferFormat() = 0;
     virtual void           SaveReadableDepthBuffer() = 0;
     virtual void           FlushNonAARenderTarget() = 0;
-    virtual void           HandleStretchRect(IDirect3DSurface9* pSourceSurface, CONST RECT* pSourceRect, IDirect3DSurface9* pDestSurface, CONST RECT* pDestRect,
+    virtual bool           IsUsingDefaultRenderTarget() = 0;
+    virtual HRESULT        HandleStretchRect(IDirect3DSurface9* pSourceSurface, CONST RECT* pSourceRect, IDirect3DSurface9* pDestSurface, CONST RECT* pDestRect,
                                              int Filter) = 0;
 };
 
@@ -329,7 +335,7 @@ class CEffectWrap : public CRenderItem
     virtual void OnLostDevice();
     virtual void OnResetDevice();
     HRESULT      Begin(UINT* pPasses, DWORD Flags, bool bWorldRender = true);
-    HRESULT      End();
+    HRESULT      End(bool bDeviceOperational = true);
     bool         ApplyCommonHandles();
     bool         ApplyMappedHandles();
 
@@ -345,12 +351,17 @@ class CEffectWrap : public CRenderItem
 class CMaterialItem : public CRenderItem
 {
     DECLARE_CLASS(CMaterialItem, CRenderItem)
-    CMaterialItem() : ClassInit(this), m_TextureAddress(TADDRESS_WRAP), m_uiBorderColor(0) {}
+    CMaterialItem() : ClassInit(this), m_TextureAddress(TADDRESS_WRAP), m_uiBorderColor(0), m_bPremultipliedAlpha(false) {}
 
     uint            m_uiSizeX;
     uint            m_uiSizeY;
     ETextureAddress m_TextureAddress;
     uint            m_uiBorderColor;
+    // True if the texture pixels are stored with premultiplied alpha. When set,
+    // the default dxDrawImage blend ("blend") is internally routed through the
+    // (ONE, INVSRCALPHA) pipeline so compositing is mathematically correct
+    // without losing precision to a per-pixel integer unpremultiply.
+    bool m_bPremultipliedAlpha;
 };
 
 ////////////////////////////////////////////////////////////////
@@ -477,18 +488,21 @@ class CFileTextureItem : public CTextureItem
 class CVectorGraphicItem : public CTextureItem
 {
     DECLARE_CLASS(CVectorGraphicItem, CTextureItem)
-    CVectorGraphicItem() : ClassInit(this) {}
+    CVectorGraphicItem() : ClassInit(this), m_uiLastEnsureAttempt(0), m_uiEnsureDelayMs(0) {}
     virtual void PostConstruct(CRenderItemManager* pRenderItemManager, uint width, uint height);
     virtual void PreDestruct();
     virtual bool IsValid();
     virtual void OnLostDevice();
     virtual void OnResetDevice();
+    bool         TryEnsureValid();
     void         CreateUnderlyingData();
     void         ReleaseUnderlyingData();
     void         UpdateTexture();
     virtual void Resize(const CVector2D& size);
 
     IDirect3DSurface9* m_pD3DRenderTargetSurface;
+    uint               m_uiLastEnsureAttempt;
+    uint               m_uiEnsureDelayMs;
 };
 
 ////////////////////////////////////////////////////////////////
@@ -499,20 +513,26 @@ class CVectorGraphicItem : public CTextureItem
 class CRenderTargetItem : public CTextureItem
 {
     DECLARE_CLASS(CRenderTargetItem, CTextureItem)
-    CRenderTargetItem() : ClassInit(this) {}
-    virtual void PostConstruct(CRenderItemManager* pManager, uint uiSizeX, uint uiSizeY, bool bWithAlphaChannel, bool bIncludeInMemoryStats);
+    CRenderTargetItem() : ClassInit(this), m_uiLastEnsureAttempt(0), m_uiEnsureDelayMs(0) {}
+    virtual void PostConstruct(CRenderItemManager* pManager, uint uiSizeX, uint uiSizeY, bool bHasSurfaceFormat, bool bWithAlphaChannel, int surfaceFormat,
+                               bool bIncludeInMemoryStats);
     virtual void PreDestruct();
     virtual bool IsValid();
     virtual void OnLostDevice();
     virtual void OnResetDevice();
+    bool         TryEnsureValid();
     void         CreateUnderlyingData();
     void         ReleaseUnderlyingData();
     bool         ReadPixels(CBuffer& outBuffer, SString& strOutError);
 
     bool               m_bWithAlphaChannel;
+    bool               m_bHasSurfaceFormat;
+    int                m_eSurfaceFormat;
     IDirect3DSurface9* m_pD3DRenderTargetSurface;
     IDirect3DSurface9* m_pD3DZStencilSurface;
     IDirect3DSurface9* m_pD3DReadSurface;
+    uint               m_uiLastEnsureAttempt;
+    uint               m_uiEnsureDelayMs;
 };
 
 ////////////////////////////////////////////////////////////////
@@ -523,17 +543,20 @@ class CRenderTargetItem : public CTextureItem
 class CScreenSourceItem : public CTextureItem
 {
     DECLARE_CLASS(CScreenSourceItem, CTextureItem)
-    CScreenSourceItem() : ClassInit(this) {}
+    CScreenSourceItem() : ClassInit(this), m_uiLastEnsureAttempt(0), m_uiEnsureDelayMs(0) {}
     virtual void PostConstruct(CRenderItemManager* pRenderItemManager, uint uiSizeX, uint uiSizeY);
     virtual void PreDestruct();
     virtual bool IsValid();
     virtual void OnLostDevice();
     virtual void OnResetDevice();
+    bool         TryEnsureValid();
     void         CreateUnderlyingData();
     void         ReleaseUnderlyingData();
 
     IDirect3DSurface9* m_pD3DRenderTargetSurface;
     uint               m_uiRevision;
+    uint               m_uiLastEnsureAttempt;
+    uint               m_uiEnsureDelayMs;
 };
 
 ////////////////////////////////////////////////////////////////
@@ -555,4 +578,5 @@ class CWebBrowserItem : public CTextureItem
     virtual void Resize(const CVector2D& size);
 
     IDirect3DSurface9* m_pD3DRenderTargetSurface;
+    bool               m_bTextureWasRecreated = false;  // Set after device reset to force full repaint
 };

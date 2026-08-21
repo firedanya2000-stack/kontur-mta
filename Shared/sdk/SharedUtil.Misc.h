@@ -5,7 +5,7 @@
  *  FILE:        SharedUtil.Misc.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -16,34 +16,115 @@
 #include <list>
 #include <map>
 #include <set>
+#include <type_traits>
+#include <mutex>
+#include <utility>
+#include <functional>
 
 #include "SString.h"
 #include "WString.h"
 #include "SharedUtil.Defines.h"
 #include "SharedUtil.Map.h"
+#include "SharedUtil.Logging.h"
+
+#if __cplusplus >= 201703L  // C++17
+    #ifndef __GLIBCXX__
+namespace std
+{
+    namespace filesystem
+    {
+        class path;
+    }
+}
+    #else
+namespace std
+{
+    namespace filesystem
+    {
+        inline namespace __cxx11 __attribute__((__abi_tag__("cxx11"))) {
+        }
+        inline _GLIBCXX_BEGIN_NAMESPACE_CXX11
+
+            class path;
+
+        _GLIBCXX_END_NAMESPACE_CXX11
+    }
+}
+    #endif
+#endif
+
+#ifdef WIN32
+    // Forward declare basic windows types to avoid including windows.h here
+    #ifdef STRICT
+struct HGLOBAL__;
+using WinHGlobalHandle = struct HGLOBAL__*;
+    #else
+using WinHGlobalHandle = void*;
+    #endif
+
+struct HWND__;
+    #ifndef _WINDOWS_
+typedef HWND__*      HWND;
+typedef unsigned int UINT;
+        #ifndef HINSTANCE__
+struct HINSTANCE__;
+        #endif
+typedef HINSTANCE__* HINSTANCE;
+typedef HINSTANCE    HMODULE;
+        #ifndef BOOL
+typedef int BOOL;
+        #endif
+        #ifndef WINAPI
+            #define WINAPI __stdcall
+        #endif
+        #ifndef NO_ERROR
+            #define NO_ERROR 0L
+        #endif
+extern "C" __declspec(dllimport) void WINAPI  SetLastError(DWORD dwErrCode);
+extern "C" __declspec(dllimport) DWORD WINAPI GetLastError(void);
+extern "C" __declspec(dllimport) BOOL WINAPI  GlobalUnlock(WinHGlobalHandle hMem);
+    #endif
+#endif
 
 namespace SharedUtil
 {
     class CArgMap;
 #ifdef WIN32
 
+    namespace Details
+    {
+        inline void* GetProcAddressRaw(HMODULE hModule, const char* functionName) noexcept
+        {
+    #ifdef _WINDOWS_
+            if (hModule != nullptr)
+            {
+                return reinterpret_cast<void*>(::GetProcAddress(hModule, functionName));
+            }
+    #else
+            (void)hModule;
+            (void)functionName;
+    #endif
+            return nullptr;
+        }
+    }
+
     SString GetMajorVersionString();
 
     // Get a system registry value
-    SString GetSystemRegistryValue(uint hKey, const SString& strPath, const SString& strName);
+    SString GetSystemRegistryValue(uint hKey, const SString& strPath, const SString& strName, int* iResult = nullptr);
 
     // Get/set registry values for the current version
     void    SetRegistryValue(const SString& strPath, const SString& strName, const SString& strValue, bool bFlush = false);
-    SString GetRegistryValue(const SString& strPath, const SString& strName);
+    SString GetRegistryValue(const SString& strPath, const SString& strName, int* iResult = nullptr);
     bool    RemoveRegistryKey(const SString& strPath);
 
     // Get/set registry values for a particular version
     void    SetVersionRegistryValue(const SString& strVersion, const SString& strPath, const SString& strName, const SString& strValue);
-    SString GetVersionRegistryValue(const SString& strVersion, const SString& strPath, const SString& strName);
+    SString GetVersionRegistryValue(const SString& strVersion, const SString& strPath, const SString& strName, int* iResult = nullptr);
 
     // Get/set registry values for all versions (Common)
     void    SetCommonRegistryValue(const SString& strPath, const SString& strName, const SString& strValue);
-    SString GetCommonRegistryValue(const SString& strPath, const SString& strName);
+    SString GetCommonRegistryValue(const SString& strPath, const SString& strName, int* iResult = nullptr);
 
     bool ShellExecuteBlocking(const SString& strAction, const SString& strFile, const SString& strParameters = "", const SString& strDirectory = "",
                               int nShowCmd = 1);
@@ -54,14 +135,20 @@ namespace SharedUtil
     // Output a UTF8 encoded messagebox
     // Used in the Win32 Client only
     //
-    #ifdef _WINDOWS_
     int MessageBoxUTF8(HWND hWnd, SString lpText, SString lpCaption, UINT uType);
-    #endif
 
     //
     // Return full path and filename of parent exe
     //
     SString GetParentProcessPathFilename(int pid);
+
+    //
+    // Set the MTASA base dir manually
+    //
+    void SetMTASABaseDirOverride(const SString& strPath);
+
+    bool IsUsableMtasaInstallRoot(const SString& strPath);
+    bool IsTemporaryUpdateLaunchPath(const SString& strLaunchPath);
 
     //
     // Get startup directory as saved in the registry by the launcher
@@ -77,6 +164,165 @@ namespace SharedUtil
 
     // Returns true if current process is GTA (i.e not MTA process)
     bool IsGTAProcess();
+
+    // Returns true if the pointer points to committed, readable memory
+    bool IsReadablePointer(const void* ptr, size_t size);
+
+    // GTA:SA executable memory bounds for validating vtable/function pointers.
+    // .text (code):     0x401000 - 0x857000 (VA 0x1000, size 0x456000)
+    // .rdata (vtables): 0x858000 - 0x8A4000 (VA 0x458000, size 0x4C000)
+    constexpr std::uint32_t GTA_SA_VALID_PTR_START = 0x401000;
+    constexpr std::uint32_t GTA_SA_VALID_PTR_END = 0x8A4000;
+
+    // Fast address range check for GTA:SA code/rdata pointers (vtables, functions).
+    // Used to validate pointers before dereferencing, avoiding expensive SEH volatile reads.
+    inline bool IsValidGtaSaPtr(std::uint32_t addr) noexcept
+    {
+        return addr >= GTA_SA_VALID_PTR_START && addr < GTA_SA_VALID_PTR_END;
+    }
+
+    [[nodiscard]] const SString& GetMTAProcessBaseDir();
+
+    template <typename TFunction>
+    [[nodiscard]] inline bool TryGetProcAddress(HMODULE hModule, const char* functionName, TFunction& outExport) noexcept
+    {
+        static_assert(std::is_pointer_v<TFunction>, "TryGetProcAddress expects a pointer type");
+
+        void* address = nullptr;
+
+    #if defined(_WIN32)
+        address = Details::GetProcAddressRaw(hModule, functionName);
+    #else
+        (void)hModule;
+        (void)functionName;
+    #endif
+
+        if (address != nullptr)
+        {
+            outExport = reinterpret_cast<TFunction>(address);
+            return true;
+        }
+
+        outExport = nullptr;
+        return false;
+    }
+
+    class GlobalUnlockGuard
+    {
+    public:
+        using MutexGuard = std::scoped_lock<std::mutex>;
+
+        GlobalUnlockGuard() noexcept = default;
+        explicit GlobalUnlockGuard(WinHGlobalHandle handle) noexcept : m_handle(handle) {}
+        ~GlobalUnlockGuard() { UnlockAndLog("during destruction"); }
+
+        GlobalUnlockGuard(const GlobalUnlockGuard&) = delete;
+        GlobalUnlockGuard& operator=(const GlobalUnlockGuard&) = delete;
+
+        GlobalUnlockGuard(GlobalUnlockGuard&& other) noexcept : m_handle(other.release()) {}
+
+        GlobalUnlockGuard& operator=(GlobalUnlockGuard&& other) noexcept
+        {
+            if (this != &other)
+            {
+                WithLock(
+                    [&]() noexcept
+                    {
+                        DWORD errorCode = NO_ERROR;
+                        UnlockLocked("during move assignment", &errorCode);
+                        m_handle = other.release();
+                    });
+            }
+            return *this;
+        }
+
+        [[nodiscard]] bool UnlockChecked(DWORD* failureCode = nullptr) noexcept
+        {
+            return WithLock([&]() noexcept { return UnlockInternal(failureCode); });
+        }
+
+        void reset(WinHGlobalHandle handle = nullptr) noexcept
+        {
+            WithLock(
+                [&]() noexcept
+                {
+                    DWORD errorCode = NO_ERROR;
+                    UnlockLocked("during reset", &errorCode);
+                    m_handle = handle;
+                });
+        }
+
+        [[nodiscard]] WinHGlobalHandle release() noexcept
+        {
+            return WithLock([&]() noexcept { return std::exchange(m_handle, nullptr); });
+        }
+
+        [[nodiscard]] WinHGlobalHandle get() const noexcept
+        {
+            return WithLock([&]() noexcept { return m_handle; });
+        }
+
+        [[nodiscard]] explicit operator bool() const noexcept { return get() != nullptr; }
+
+    private:
+        void UnlockAndLog(const char* context) noexcept
+        {
+            WithLock(
+                [&]() noexcept
+                {
+                    DWORD errorCode = NO_ERROR;
+                    UnlockLocked(context, &errorCode);
+                });
+        }
+
+        template <typename Fn>
+        decltype(auto) WithLock(Fn&& fn) const noexcept(noexcept(std::invoke(std::forward<Fn>(fn))))
+        {
+            MutexGuard lock(m_mutex);
+            return std::invoke(std::forward<Fn>(fn));
+        }
+
+        template <typename Fn>
+        decltype(auto) WithLock(Fn&& fn) noexcept(noexcept(static_cast<const GlobalUnlockGuard*>(this)->WithLock(std::forward<Fn>(fn))))
+        {
+            return static_cast<const GlobalUnlockGuard*>(this)->WithLock(std::forward<Fn>(fn));
+        }
+
+        bool UnlockLocked(const char* context, DWORD* failureCode) noexcept
+        {
+            const bool ok = UnlockInternal(failureCode);
+            if (!ok && context && failureCode && *failureCode != NO_ERROR)
+                OutputDebugLine(SString("[GlobalUnlockGuard] GlobalUnlock %s failed (error %lu)", context, static_cast<unsigned long>(*failureCode)));
+            return ok;
+        }
+
+        bool UnlockInternal(DWORD* failureCode) noexcept
+        {
+            if (!m_handle)
+            {
+                if (failureCode)
+                    *failureCode = NO_ERROR;
+                return true;
+            }
+
+            SetLastError(NO_ERROR);
+            const BOOL  unlocked = GlobalUnlock(m_handle);
+            const DWORD lastError = GetLastError();
+            const bool  failed = (unlocked == 0 && lastError != NO_ERROR);
+            if (failureCode)
+                *failureCode = failed ? lastError : NO_ERROR;
+            m_handle = nullptr;
+            return !failed;
+        }
+
+        WinHGlobalHandle   m_handle = nullptr;
+        mutable std::mutex m_mutex;
+    };
+
+    [[nodiscard]] inline GlobalUnlockGuard MakeGlobalUnlockGuard(WinHGlobalHandle handle) noexcept
+    {
+        return GlobalUnlockGuard(handle);
+    }
 
     //
     // Run ShellExecute with these parameters after exit
@@ -146,18 +392,18 @@ namespace SharedUtil
     // BrowseToSolution flags
     enum
     {
-        EXIT_GAME_FIRST = 1,             // Exit from game before showing message - Useful only if game has started and has control of the screen
-        ASK_GO_ONLINE = 2,               // Ask user if he wants to go online (otherwise, always go online)
-        TERMINATE_IF_YES = 4,            // What to do at the end. Only relevant if EXIT_GAME_FIRST is not used
-        TERMINATE_IF_NO = 8,             //    ''
+        EXIT_GAME_FIRST = 1,   // Exit from game before showing message - Useful only if game has started and has control of the screen
+        ASK_GO_ONLINE = 2,     // Ask user if he wants to go online (otherwise, always go online)
+        TERMINATE_IF_YES = 4,  // What to do at the end. Only relevant if EXIT_GAME_FIRST is not used
+        TERMINATE_IF_NO = 8,   //    ''
         TERMINATE_IF_YES_OR_NO = TERMINATE_IF_YES | TERMINATE_IF_NO,
         TERMINATE_PROCESS = TERMINATE_IF_YES_OR_NO,
-        ICON_ERROR = 0x10,               // MB_ICONERROR
-        ICON_QUESTION = 0x20,            // MB_ICONQUESTION
-        ICON_WARNING = 0x30,             // MB_ICONWARNING
-        ICON_INFO = 0x40,                // MB_ICONINFORMATION
+        ICON_ERROR = 0x10,     // MB_ICONERROR
+        ICON_QUESTION = 0x20,  // MB_ICONQUESTION
+        ICON_WARNING = 0x30,   // MB_ICONWARNING
+        ICON_INFO = 0x40,      // MB_ICONINFORMATION
         ICON_MASK_VALUE = ICON_ERROR | ICON_QUESTION | ICON_WARNING | ICON_INFO,
-        SHOW_MESSAGE_ONLY = 0x80,            // Just show message without going online
+        SHOW_MESSAGE_ONLY = 0x80,  // Just show message without going online
     };
     void BrowseToSolution(const SString& strType, int uiFlags = 0, const SString& strMessageBoxMessage = "", const SString& strErrorCode = "");
     bool ProcessPendingBrowseToSolution();
@@ -167,12 +413,8 @@ namespace SharedUtil
     void    SetClipboardText(const SString& strText);
     SString GetClipboardText();
 
-    // Version checks
-    bool IsWindowsVersionOrGreater(WORD wMajorVersion, WORD wMinorVersion, WORD wServicePackMajor);
-    bool IsWindowsXPSP3OrGreater();
-    bool IsWindowsVistaOrGreater();
-    bool IsWindows7OrGreater();
-    bool IsWindows8OrGreater();
+    // Version check
+    bool IsWindows10OrGreater();
 
     bool QueryThreadEntryPointAddress(void* thread, DWORD* entryPointAddress);
 
@@ -215,8 +457,6 @@ namespace SharedUtil
     SString UnescapeString(const SString& strText, char cSpecialChar = '#');
     SString EscapeURLArgument(const SString& strText);
 
-    SString ExpandEnvString(const SString& strInput);
-
     // Version string things
     bool    IsValidVersionString(const SString& strVersion);
     SString ExtractVersionStringBuildNumber(const SString& strVersion);
@@ -230,10 +470,15 @@ namespace SharedUtil
     // string stuff
     //
 
+#if __cplusplus >= 201703L  // C++17
+    std::string UTF8FilePath(const std::filesystem::path& input);
+#endif
+
     std::wstring MbUTF8ToUTF16(const SString& s);
 
     std::string UTF16ToMbUTF8(const std::wstring& ws);
     std::string UTF16ToMbUTF8(const wchar_t* ws);
+    std::string UTF16ToMbUTF8(const char16_t* ws);
 
     std::wstring ANSIToUTF16(const SString& s);
 
@@ -284,7 +529,10 @@ namespace SharedUtil
     }
 
     // Unlerp avoiding extrapolation
-    inline const float UnlerpClamped(const double dFrom, const double dPos, const double dTo) { return Clamp(0.0f, Unlerp(dFrom, dPos, dTo), 1.0f); }
+    inline const float UnlerpClamped(const double dFrom, const double dPos, const double dTo)
+    {
+        return Clamp(0.0f, Unlerp(dFrom, dPos, dTo), 1.0f);
+    }
 
     template <class T>
     int Round(T value)
@@ -343,13 +591,14 @@ namespace SharedUtil
     template <class TL, class T>
     bool ListContains(const TL& itemList, const T& item)
     {
+        if (itemList.empty())
+            return false;
         typename TL ::const_iterator it = itemList.begin();
         for (; it != itemList.end(); ++it)
             if (item == *it)
                 return true;
         return false;
     }
-
     // Add item if it does not aleady exist in itemList
     template <class TL, class T>
     void ListAddUnique(TL& itemList, const T& item)
@@ -410,6 +659,24 @@ namespace SharedUtil
                 it = itemList.erase(it);
             else
                 ++it;
+        }
+    }
+
+    // Remove all occurrences of item from unordered itemList (swap-and-pop)
+    // Only use when element order within the vector does not matter.
+    template <class T>
+    void ListRemoveUnordered(std::vector<T>& itemList, const T& item)
+    {
+        for (std::size_t i = 0; i < itemList.size();)
+        {
+            if (item == itemList[i])
+            {
+                if (i != itemList.size() - 1)
+                    itemList[i] = std::move(itemList.back());
+                itemList.pop_back();
+            }
+            else
+                ++i;
         }
     }
 
@@ -537,15 +804,53 @@ namespace SharedUtil
     //
     typedef SColor RGBA;
 
-    inline unsigned char COLOR_RGBA_R(SColor color) { return color.R; }
-    inline unsigned char COLOR_RGBA_G(SColor color) { return color.G; }
-    inline unsigned char COLOR_RGBA_B(SColor color) { return color.B; }
-    inline unsigned char COLOR_RGBA_A(SColor color) { return color.A; }
-    inline unsigned char COLOR_ARGB_A(SColor color) { return color.A; }
+    inline unsigned char COLOR_RGBA_R(SColor color)
+    {
+        return color.R;
+    }
+    inline unsigned char COLOR_RGBA_G(SColor color)
+    {
+        return color.G;
+    }
+    inline unsigned char COLOR_RGBA_B(SColor color)
+    {
+        return color.B;
+    }
+    inline unsigned char COLOR_RGBA_A(SColor color)
+    {
+        return color.A;
+    }
+    inline unsigned char COLOR_ARGB_A(SColor color)
+    {
+        return color.A;
+    }
 
-    inline SColor COLOR_RGBA(unsigned char R, unsigned char G, unsigned char B, unsigned char A) { return SColorRGBA(R, G, B, A); }
-    inline SColor COLOR_ARGB(unsigned char A, unsigned char R, unsigned char G, unsigned char B) { return SColorRGBA(R, G, B, A); }
-    inline SColor COLOR_ABGR(unsigned char A, unsigned char B, unsigned char G, unsigned char R) { return SColorRGBA(R, G, B, A); }
+    inline SColor COLOR_RGBA(unsigned char R, unsigned char G, unsigned char B, unsigned char A)
+    {
+        return SColorRGBA(R, G, B, A);
+    }
+    inline SColor COLOR_ARGB(unsigned char A, unsigned char R, unsigned char G, unsigned char B)
+    {
+        return SColorRGBA(R, G, B, A);
+    }
+    inline SColor COLOR_ABGR(unsigned char A, unsigned char B, unsigned char G, unsigned char R)
+    {
+        return SColorRGBA(R, G, B, A);
+    }
+
+    //
+    // Convert tocolor value to SColor
+    //
+    inline SColor TOCOLOR2SCOLOR(std::uint32_t colorValue)
+    {
+        SColor color;
+        color.R = static_cast<std::uint8_t>((colorValue >> 16) & BYTE_MASK(8));
+        color.G = static_cast<std::uint8_t>((colorValue >> 8) & BYTE_MASK(8));
+        color.B = static_cast<std::uint8_t>((colorValue >> 0) & BYTE_MASK(8));
+        color.A = static_cast<std::uint8_t>((colorValue >> 24) & BYTE_MASK(8));
+
+        return color;
+    }
 
     //
     // Cross platform critical section
@@ -579,9 +884,8 @@ namespace SharedUtil
         CCriticalSection& m_CS;
     };
 
-    // Macro for instantiating automatic critical section locking procedure
-    #define LOCK_SCOPE( cs ) \
-                volatile CAutoCSLock _lock ( cs )
+// Macro for instantiating automatic critical section locking procedure
+#define LOCK_SCOPE(cs) volatile CAutoCSLock _lock(cs)
 
     //
     // Expiry stuff
@@ -733,16 +1037,16 @@ namespace SharedUtil
         void    RemoveMultiValues();
         SString Escape(const SString& strIn) const;
         SString Unescape(const SString& strIn) const;
-        void    Set(const SString& strInCmd, const SString& strInValue);                                    // Set a unique key string value
-        void    Set(const SString& strInCmd, int iValue);                                                   // Set a unique key int value
-        void    Insert(const SString& strInCmd, int iValue);                                                // Insert a key int value
-        void    Insert(const SString& strInCmd, const SString& strInValue);                                 // Insert a key string value
-        bool    Contains(const SString& strInCmd) const;                                                    // Test if key exists
-        bool    Get(const SString& strInCmd, SString& strOut, const char* szDefault = "") const;            // First result as string
-        SString Get(const SString& strInCmd) const;                                                         // First result as string
-        bool    Get(const SString& strInCmd, std::vector<SString>& outList) const;                          // All results as strings
-        bool    Get(const SString& strInCmd, int& iValue, int iDefault = 0) const;                          // First result as int
-        void    GetKeys(std::vector<SString>& outList) const;                                               // All keys
+        void    Set(const SString& strInCmd, const SString& strInValue);                          // Set a unique key string value
+        void    Set(const SString& strInCmd, int iValue);                                         // Set a unique key int value
+        void    Insert(const SString& strInCmd, int iValue);                                      // Insert a key int value
+        void    Insert(const SString& strInCmd, const SString& strInValue);                       // Insert a key string value
+        bool    Contains(const SString& strInCmd) const;                                          // Test if key exists
+        bool    Get(const SString& strInCmd, SString& strOut, const char* szDefault = "") const;  // First result as string
+        SString Get(const SString& strInCmd) const;                                               // First result as string
+        bool    Get(const SString& strInCmd, std::vector<SString>& outList) const;                // All results as strings
+        bool    Get(const SString& strInCmd, int& iValue, int iDefault = 0) const;                // First result as int
+        void    GetKeys(std::vector<SString>& outList) const;                                     // All keys
     };
 
     // Some templated accessors for CArgMap derived classes
@@ -913,16 +1217,16 @@ namespace SharedUtil
     };
 
     template <class T>
-    class CMappedList : public CMappedContainer<T, std::list<T> >
+    class CMappedList : public CMappedContainer<T, std::list<T>>
     {
     };
 
     template <class T>
-    class CMappedArray : public CMappedContainer<T, std::vector<T> >
+    class CMappedArray : public CMappedContainer<T, std::vector<T>>
     {
     public:
-        const T& operator[](int idx) const { return CMappedContainer<T, std::vector<T> >::m_List[idx]; }
-        T&       operator[](int idx) { return CMappedContainer<T, std::vector<T> >::m_List[idx]; }
+        const T& operator[](int idx) const { return CMappedContainer<T, std::vector<T>>::m_List[idx]; }
+        T&       operator[](int idx) { return CMappedContainer<T, std::vector<T>>::m_List[idx]; }
     };
 
     // Returns true if the item is in the itemList
@@ -968,7 +1272,7 @@ namespace SharedUtil
 
         CIntrusiveListNode(T* pOuterItem) : m_pOuterItem(pOuterItem), m_pPrev(NULL), m_pNext(NULL) {}
 
-        T*    m_pOuterItem;            // Item this node is inside
+        T*    m_pOuterItem;  // Item this node is inside
         Node* m_pPrev;
         Node* m_pNext;
     };
@@ -983,7 +1287,7 @@ namespace SharedUtil
     template <typename T>
     class CIntrusiveList
     {
-        void operator=(const CIntrusiveList& other);            // Copy will probably not work as expected
+        void operator=(const CIntrusiveList& other);  // Copy will probably not work as expected
         // CIntrusiveList ( const CIntrusiveList& other );       // Default copy constructor is required by dense_hash for some reason
 
     public:
@@ -995,8 +1299,8 @@ namespace SharedUtil
         size_t m_Size;
         Node*  m_pFirst;
         Node*  m_pLast;
-        Node T::*                  m_pNodePtr;                   // Pointer to the CIntrusiveListNode member variable in T
-        std::vector<IteratorBase*> m_ActiveIterators;            // Keep track of iterators
+        Node T::*                  m_pNodePtr;         // Pointer to the CIntrusiveListNode member variable in T
+        std::vector<IteratorBase*> m_ActiveIterators;  // Keep track of iterators
 
     public:
         //
@@ -1054,9 +1358,9 @@ namespace SharedUtil
         //
         // Constructor
         //
-        CIntrusiveList(Node T::*pNodePtr) : m_pNodePtr(pNodePtr)
+        CIntrusiveList(Node T::* pNodePtr) : m_pNodePtr(pNodePtr)
         {
-            assert(m_pNodePtr);            // This must be set upon construction
+            assert(m_pNodePtr);  // This must be set upon construction
             m_Size = 0;
             m_pFirst = NULL;
             m_pLast = NULL;
@@ -1085,7 +1389,7 @@ namespace SharedUtil
             Node* pNode = &(pItem->*m_pNodePtr);
 
             if (!pNode->m_pPrev && !pNode->m_pNext && m_pFirst != pNode)
-                return;            // Not in list
+                return;  // Not in list
 
             // Keep active iterators valid
             for (int i = m_ActiveIterators.size() - 1; i >= 0; i--)
@@ -1182,9 +1486,9 @@ namespace SharedUtil
 
         // Allow use of std iterator names
         typedef Iterator        iterator;
-        typedef Iterator        const_iterator;            // TODO
+        typedef Iterator        const_iterator;  // TODO
         typedef ReverseIterator reverse_iterator;
-        typedef ReverseIterator const_reverse_iterator;            // TODO
+        typedef ReverseIterator const_reverse_iterator;  // TODO
     };
 
     ///////////////////////////////////////////////////////////////
@@ -1194,7 +1498,7 @@ namespace SharedUtil
     // Uses the member variable pointer declared in the template
     //
     ///////////////////////////////////////////////////////////////
-    template <typename T, CIntrusiveListNode<T> T::*member_ptr>
+    template <typename T, CIntrusiveListNode<T> T::* member_ptr>
     class CIntrusiveListExt : public CIntrusiveList<T>
     {
     public:
@@ -1249,10 +1553,6 @@ namespace SharedUtil
     //
     // enum reflection shenanigans
     //
-    enum eDummy
-    {
-    };
-
     template <class T>
     struct CEnumInfo
     {
@@ -1262,7 +1562,7 @@ namespace SharedUtil
             const char* szName;
         };
 
-        CEnumInfo(const SString& strTypeName, const SEnumItem* pItemList, uint uiAmount, eDummy defaultValue, const SString& strDefaultName)
+        CEnumInfo(const SString& strTypeName, const SEnumItem* pItemList, uint uiAmount, T defaultValue, const SString& strDefaultName)
         {
             m_strTypeName = strTypeName;
             m_strDefaultName = strDefaultName;
@@ -1270,23 +1570,23 @@ namespace SharedUtil
             for (uint i = 0; i < uiAmount; i++)
             {
                 const SEnumItem& item = pItemList[i];
-                m_ValueMap[item.szName] = (eDummy)item.iValue;
-                m_NameMap[(eDummy)item.iValue] = item.szName;
+                m_ValueMap[item.szName] = item.iValue;
+                m_NameMap[item.iValue] = item.szName;
             }
         }
 
-        bool ValueValid(eDummy value) const { return MapContains(m_NameMap, value); }
+        bool ValueValid(T value) const { return MapContains(m_NameMap, value); }
 
-        const SString& FindName(eDummy value) const
+        const SString& FindName(T value) const
         {
             if (const SString* pName = MapFind(m_NameMap, value))
                 return *pName;
             return m_strDefaultName;
         }
 
-        bool FindValue(const SString& strName, eDummy& outResult) const
+        bool FindValue(const SString& strName, T& outResult) const
         {
-            const eDummy* pValue;
+            const T* pValue;
             if ((pValue = MapFind(m_ValueMap, strName)) || (pValue = MapFind(m_ValueMap, strName.ToLower())))
             {
                 outResult = *pValue;
@@ -1298,47 +1598,54 @@ namespace SharedUtil
 
         const SString& GetTypeName() const { return m_strTypeName; }
 
-        SString                   m_strTypeName;
-        SString                   m_strDefaultName;
-        eDummy                    m_DefaultValue;
-        std::map<SString, eDummy> m_ValueMap;
-        std::map<eDummy, SString> m_NameMap;
+        SString              m_strTypeName;
+        SString              m_strDefaultName;
+        T                    m_DefaultValue;
+        std::map<SString, T> m_ValueMap;
+        std::map<T, SString> m_NameMap;
     };
 
-    #define DECLARE_ENUM2(T, U) \
-        CEnumInfo<U>*          GetEnumInfo     ( const T* ); \
-        inline const SString&  EnumToString    ( const T& value )                           { return GetEnumInfo ( (T*)0 )->FindName    ( (eDummy)value ); }\
-        inline bool            StringToEnum    ( const SString& strName, T& outResult )     { return GetEnumInfo ( (T*)0 )->FindValue   ( strName, (eDummy&)outResult ); }\
-        inline const SString&  GetEnumTypeName ( const T& )                                 { return GetEnumInfo ( (T*)0 )->GetTypeName (); }\
-        inline bool            EnumValueValid  ( const T& value )                           { return GetEnumInfo ( (T*)0 )->ValueValid  ( (eDummy)value ); }\
+#define DECLARE_ENUM(T) \
+    CEnumInfo<T>*         GetEnumInfo(const T*); \
+    inline const SString& EnumToString(const T& value) \
+    { \
+        return GetEnumInfo((T*)0)->FindName(value); \
+    } \
+    inline bool StringToEnum(const SString& strName, T& outResult) \
+    { \
+        return GetEnumInfo((T*)0)->FindValue(strName, outResult); \
+    } \
+    inline const SString& GetEnumTypeName(const T&) \
+    { \
+        return GetEnumInfo((T*)0)->GetTypeName(); \
+    } \
+    inline bool EnumValueValid(const T& value) \
+    { \
+        return GetEnumInfo((T*)0)->ValueValid(value); \
+    }
 
-    #define IMPLEMENT_ENUM_BEGIN2(T, U) \
-        CEnumInfo<U>* GetEnumInfo( const T* ) \
-        { \
-            using CEnumInfo = CEnumInfo<U>; \
-            static const CEnumInfo::SEnumItem items[] = {
+#define IMPLEMENT_ENUM_BEGIN(T) \
+    CEnumInfo<T>* GetEnumInfo(const T*) \
+    { \
+        using CEnumInfo = CEnumInfo<T>; \
+        static const CEnumInfo::SEnumItem items[] = {
+#define IMPLEMENT_ENUM_END(name) \
+    IMPLEMENT_ENUM_END_DEFAULTS(name, static_cast<std::remove_reference_t<decltype(std::declval<CEnumInfo::SEnumItem>().iValue)>>(0), "")
 
-    #define IMPLEMENT_ENUM_END(name) \
-        IMPLEMENT_ENUM_END_DEFAULTS(name,0,"")
+#define IMPLEMENT_ENUM_END_DEFAULTS(name, defvalue, defname) \
+    } \
+    ; \
+    static CEnumInfo info(name, items, NUMELMS(items), defvalue, defname); \
+    return &info; \
+    }
 
-    #define IMPLEMENT_ENUM_END_DEFAULTS(name,defvalue,defname) \
-                            }; \
-            static CEnumInfo info( name, items, NUMELMS(items),(eDummy)(defvalue),defname ); \
-            return &info; \
-        }
+#define ADD_ENUM(value, name) {value, name},
+#define ADD_ENUM1(value)      {value, #value},
 
-    #define ADD_ENUM(value,name) {value, name},
-    #define ADD_ENUM1(value)     {value, #value},
-
-    // enum
-    #define DECLARE_ENUM(T)                                             DECLARE_ENUM2(T, int)
-    #define IMPLEMENT_ENUM_BEGIN(T)                                     IMPLEMENT_ENUM_BEGIN2(T, int)
-
-    // enum class
-    #define DECLARE_ENUM_CLASS(T)                                       DECLARE_ENUM2(T, T)
-    #define IMPLEMENT_ENUM_CLASS_BEGIN(T)                               IMPLEMENT_ENUM_BEGIN2(T, T)
-    #define IMPLEMENT_ENUM_CLASS_END(name)                              IMPLEMENT_ENUM_END(name)
-    #define IMPLEMENT_ENUM_CLASS_END_DEFAULTS(name,defvalue,defname)    IMPLEMENT_ENUM_END_DEFAULTS(name,defvalue,defname)
+// enum class
+#define DECLARE_ENUM_CLASS(T)          DECLARE_ENUM(T)
+#define IMPLEMENT_ENUM_CLASS_BEGIN(T)  IMPLEMENT_ENUM_BEGIN(T)
+#define IMPLEMENT_ENUM_CLASS_END(name) IMPLEMENT_ENUM_END(name)
 
     //
     // Fast wildcard matching
@@ -1463,7 +1770,10 @@ namespace SharedUtil
         }
     }
 
-    inline void ReadCommaSeparatedList(const SString& strInput, std::vector<SString>& outList) { return ReadTokenSeparatedList(",", strInput, outList); }
+    inline void ReadCommaSeparatedList(const SString& strInput, std::vector<SString>& outList)
+    {
+        return ReadTokenSeparatedList(",", strInput, outList);
+    }
 
     ///////////////////////////////////////////////////////////////
     //
@@ -1553,7 +1863,7 @@ namespace SharedUtil
     class CRefCountable
     {
         int                     m_iRefCount;
-        CCriticalSection*       m_pCS;            // Use a pointer incase the static variable exists more than once
+        CCriticalSection*       m_pCS;  // Use a pointer incase the static variable exists more than once
         static CCriticalSection ms_CS;
 
     protected:
@@ -1620,9 +1930,8 @@ namespace SharedUtil
         }
     };
 
-    // Use this macro if the size of the initializer list is unknown
-    #define IMPLEMENT_FIXED_ARRAY( vartype, varname ) \
-        SFixedArrayInit < vartype, NUMELMS( _##varname ) > varname ( _##varname, NUMELMS( _##varname ) )
+// Use this macro if the size of the initializer list is unknown
+#define IMPLEMENT_FIXED_ARRAY(vartype, varname) SFixedArrayInit<vartype, NUMELMS(_##varname)> varname(_##varname, NUMELMS(_##varname))
 
     //
     //  Ranges of numbers. i.e. 100-4000, 5000-6999, 7000-7010
@@ -1632,7 +1941,7 @@ namespace SharedUtil
     public:
         void SetRange(uint uiStart, uint uiLength);
         void UnsetRange(uint uiStart, uint uiLength);
-        bool IsRangeSet(uint uiStart, uint uiLength);            // Returns true if any part of the range already exists in the map
+        bool IsRangeSet(uint uiStart, uint uiLength);  // Returns true if any part of the range already exists in the map
 
     protected:
         typedef std::map<uint, uint>::iterator IterType;
@@ -1650,11 +1959,11 @@ namespace SharedUtil
     class CRefedPointer : public CRefCountable
     {
     private:
-        T* pData;            // Target
+        T* pData;  // Target
 
         virtual ~CRefedPointer() { SAFE_DELETE(pData); }
         CRefedPointer(const CRefedPointer<T>& other);
-        CRefedPointer<T>& operator=(const CRefedPointer<T>& other);
+        CRefedPointer<T>& operator*(const CRefedPointer<T>& other);
 
     public:
         CRefedPointer() { pData = new T(); }
@@ -1685,7 +1994,7 @@ namespace SharedUtil
         CAutoRefedPointer<T>& operator=(const CAutoRefedPointer<T>& other)
         {
             // Assignment operator
-            if (this != &other)            // Avoid self assignment
+            if (this != &other)  // Avoid self assignment
             {
                 CRefedPointer<T>* pOldPointer = pPointer;
 
@@ -1704,7 +2013,7 @@ namespace SharedUtil
 
         const T* operator->() const { return pPointer->GetData(); }
     };
-};            // namespace SharedUtil
+};  // namespace SharedUtil
 
 using namespace SharedUtil;
 

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CConsoleCommands.cpp
  *  PURPOSE:     Server console command definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -24,6 +24,7 @@
 #include "CDatabaseManager.h"
 #include "CGame.h"
 #include "CMainConfig.h"
+#include "CMapManager.h"
 
 extern CGame* g_pGame;
 
@@ -31,7 +32,7 @@ extern CGame* g_pGame;
 static std::string GetAdminNameForLog(CClient* pClient)
 {
     std::string strName = pClient->GetNick();
-    std::string strAccountName = pClient->GetAccount() ? pClient->GetAccount()->GetName() : "no account";
+    std::string strAccountName = pClient->GetAccount() ? pClient->GetAccount()->GetName() : SStringX("no account");
     if (strName == strAccountName)
         return strName;
     return SString("%s(%s)", strName.c_str(), strAccountName.c_str());
@@ -61,85 +62,104 @@ static void EndConsoleOutputCapture(CClient* pClient, const SString& strIfNoOutp
 
 bool CConsoleCommands::StartResource(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
 {
-    SString strResponse;
-
-    if (szArguments && szArguments[0])
+    if (!szArguments || !szArguments[0])
     {
-        CResource* resource = g_pGame->GetResourceManager()->GetResource(szArguments);
-        if (resource)
-        {
-            if (pClient->GetNick())
-                CLogger::LogPrintf("start: Requested by %s\n", GetAdminNameForLog(pClient).c_str());
+        pEchoClient->SendConsole("* Syntax: start <resource1> <resource2> ...");
+        return false;
+    }
 
-            if (resource->IsLoaded())
-            {
-                if (!resource->IsActive())
-                {
-                    if (g_pGame->GetResourceManager()->StartResource(resource, NULL, true))
-                    {
-                        strResponse = SString("start: Resource '%s' started", szArguments);
-                    }
-                    else
-                    {
-                        strResponse = SString("start: Resource '%s' start was requested (%s)", szArguments, resource->GetFailureReason().c_str());
-                    }
-                }
-                else
-                    strResponse = "start: Resource is already running";
-            }
-            else
-                strResponse = SString("start: Resource is loaded, but has errors (%s)", resource->GetFailureReason().c_str());
+    if (pClient->GetNick())
+        CLogger::LogPrintf("start: Requested by %s\n", GetAdminNameForLog(pClient).c_str());
+
+    CSplitString      resourceNames(szArguments, " ");
+    CResourceManager* resourceManager = g_pGame->GetResourceManager();
+
+    for (const std::string& resourceName : resourceNames)
+    {
+        CResource* resource = resourceManager->GetResource(resourceName.c_str());
+
+        if (!resource)
+        {
+            pEchoClient->SendConsole(SString("start: Resource '%s' could not be found", resourceName.c_str()));
+            continue;
+        }
+
+        if (!resource->IsLoaded())
+        {
+            pEchoClient->SendConsole(SString("start: Resource '%s' is not loaded (%s)", resourceName.c_str(), resource->GetFailureReason().c_str()));
+            continue;
+        }
+
+        if (resource->IsActive())
+        {
+            pEchoClient->SendConsole(SString("start: Resource '%s' is already running", resourceName.c_str()));
+            continue;
+        }
+
+        if (resourceManager->StartResource(resource, nullptr, true))
+        {
+            pEchoClient->SendConsole(SString("start: Resource '%s' started", resourceName.c_str()));
         }
         else
-            strResponse = "start: Resource could not be found";
+        {
+            pEchoClient->SendConsole(SString("start: Resource '%s' start was requested (%s)", resourceName.c_str(), resource->GetFailureReason().c_str()));
+        }
     }
-    else
-        strResponse = "* Syntax: start <resource-name>";
 
-    pEchoClient->SendConsole(strResponse);
     return true;
 }
 
 bool CConsoleCommands::RestartResource(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
 {
-    if (szArguments && szArguments[0])
+    if (!szArguments || !szArguments[0])
     {
-        CResource* resource = g_pGame->GetResourceManager()->GetResource(szArguments);
-        if (resource)
-        {
-            if (pClient->GetNick())
-                CLogger::LogPrintf("restart: Requested by %s\n", GetAdminNameForLog(pClient).c_str());
-
-            if (resource->IsLoaded())
-            {
-                if (resource->IsActive())
-                {
-                    if (resource->IsProtected())
-                    {
-                        if (!g_pGame->GetACLManager()->CanObjectUseRight(pClient->GetNick(), CAccessControlListGroupObject::OBJECT_TYPE_USER,
-                                                                         "restart.protected", CAccessControlListRight::RIGHT_TYPE_COMMAND, false))
-                        {
-                            pEchoClient->SendConsole("restart: Resource could not be restarted as it is protected");
-                            return false;
-                        }
-                    }
-
-                    g_pGame->GetResourceManager()->QueueResource(resource, CResourceManager::QUEUE_RESTART, NULL);
-                    pEchoClient->SendConsole("restart: Resource restarting...");
-                }
-                else
-                    pEchoClient->SendConsole("restart: Resource is not running");
-            }
-            else
-                pEchoClient->SendConsole(SString("restart: Resource is loaded, but has errors (%s)", resource->GetFailureReason().c_str()));
-        }
-        else
-            pEchoClient->SendConsole("restart: Resource could not be found");
-        return true;
+        pEchoClient->SendConsole("* Syntax: restart <resource1> <resource2> ...");
+        return false;
     }
-    else
-        pEchoClient->SendConsole("* Syntax: restart <resource-name>");
-    return false;
+
+    if (pClient->GetNick())
+        CLogger::LogPrintf("restart: Requested by %s\n", GetAdminNameForLog(pClient).c_str());
+
+    CSplitString      resourceNames(szArguments, " ");
+    CResourceManager* resourceManager = g_pGame->GetResourceManager();
+
+    for (const std::string& resourceName : resourceNames)
+    {
+        CResource* resource = resourceManager->GetResource(resourceName.c_str());
+
+        if (!resource)
+        {
+            pEchoClient->SendConsole(SString("restart: Resource '%s' could not be found", resourceName.c_str()));
+            continue;
+        }
+
+        if (!resource->IsLoaded())
+        {
+            pEchoClient->SendConsole(SString("restart: Resource '%s' is not loaded (%s)", resourceName.c_str(), resource->GetFailureReason().c_str()));
+            continue;
+        }
+
+        if (!resource->IsActive())
+        {
+            pEchoClient->SendConsole(SString("restart: Resource '%s' is not running", resourceName.c_str()));
+            continue;
+        }
+
+        if (resource->IsProtected())
+        {
+            if (!g_pGame->GetACLManager()->CanObjectUseRight(pClient->GetNick(), CAccessControlListGroupObject::OBJECT_TYPE_USER, "restart.protected",
+                                                             CAccessControlListRight::RIGHT_TYPE_COMMAND, false))
+            {
+                pEchoClient->SendConsole(SString("restart: Resource '%s' could not be restarted as it is protected", resourceName.c_str()));
+                continue;
+            }
+        }
+
+        resourceManager->QueueResource(resource, CResourceManager::QUEUE_RESTART, nullptr);
+        pEchoClient->SendConsole(SString("restart: Resource '%s' restarting...", resourceName.c_str()));
+    }
+
+    return true;
 }
 
 bool CConsoleCommands::RefreshResources(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
@@ -194,45 +214,55 @@ bool CConsoleCommands::ResourceInfo(CConsole* pConsole, const char* szArguments,
 
 bool CConsoleCommands::StopResource(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
 {
-    if (szArguments && szArguments[0])
+    if (!szArguments || !szArguments[0])
     {
-        CResource* resource = g_pGame->GetResourceManager()->GetResource(szArguments);
-        if (resource)
-        {
-            if (pClient->GetNick())
-                CLogger::LogPrintf("stop: Requested by %s\n", GetAdminNameForLog(pClient).c_str());
-
-            if (resource->IsLoaded())
-            {
-                if (resource->IsActive())
-                {
-                    if (resource->IsProtected())
-                    {
-                        if (!g_pGame->GetACLManager()->CanObjectUseRight(pClient->GetNick(), CAccessControlListGroupObject::OBJECT_TYPE_USER, "stop.protected",
-                                                                         CAccessControlListRight::RIGHT_TYPE_COMMAND, false))
-                        {
-                            pEchoClient->SendConsole("stop: Resource could not be stopped as it is protected");
-                            return false;
-                        }
-                    }
-
-                    g_pGame->GetResourceManager()->QueueResource(resource, CResourceManager::QUEUE_STOP, NULL);
-                    pEchoClient->SendConsole("stop: Resource stopping");
-                }
-                else
-                    pEchoClient->SendConsole("stop: Resource is not running");
-            }
-            else
-                pEchoClient->SendConsole(SString("stop: Resource is loaded, but has errors (%s)", resource->GetFailureReason().c_str()));
-        }
-        else
-            pEchoClient->SendConsole("stop: Resource could not be found");
-        return true;
+        pEchoClient->SendConsole("* Syntax: stop <resource1> <resource2> ...");
+        return false;
     }
-    else
-        pEchoClient->SendConsole("* Syntax: stop <resource-name>");
 
-    return false;
+    if (pClient->GetNick())
+        CLogger::LogPrintf("stop: Requested by %s\n", GetAdminNameForLog(pClient).c_str());
+
+    CSplitString      resourceNames(szArguments, " ");
+    CResourceManager* resourceManager = g_pGame->GetResourceManager();
+
+    for (const std::string& resourceName : resourceNames)
+    {
+        CResource* resource = resourceManager->GetResource(resourceName.c_str());
+
+        if (!resource)
+        {
+            pEchoClient->SendConsole(SString("stop: Resource '%s' could not be found", resourceName.c_str()));
+            continue;
+        }
+
+        if (!resource->IsLoaded())
+        {
+            pEchoClient->SendConsole(SString("stop: Resource '%s' is not loaded (%s)", resourceName.c_str(), resource->GetFailureReason().c_str()));
+            continue;
+        }
+
+        if (!resource->IsActive())
+        {
+            pEchoClient->SendConsole(SString("stop: Resource '%s' is not running", resourceName.c_str()));
+            continue;
+        }
+
+        if (resource->IsProtected())
+        {
+            if (!g_pGame->GetACLManager()->CanObjectUseRight(pClient->GetNick(), CAccessControlListGroupObject::OBJECT_TYPE_USER, "stop.protected",
+                                                             CAccessControlListRight::RIGHT_TYPE_COMMAND, false))
+            {
+                pEchoClient->SendConsole(SString("stop: Resource '%s' could not be stopped as it is protected", resourceName.c_str()));
+                continue;
+            }
+        }
+
+        resourceManager->QueueResource(resource, CResourceManager::QUEUE_STOP, nullptr);
+        pEchoClient->SendConsole(SString("stop: Resource '%s' stopping...", resourceName.c_str()));
+    }
+
+    return true;
 }
 
 bool CConsoleCommands::StopAllResources(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
@@ -354,7 +384,7 @@ bool CConsoleCommands::Say(CConsole* pConsole, const char* szInArguments, CClien
                             // Send the chat message and player pointer to the script
                             CLuaArguments Arguments;
                             Arguments.PushString(szArguments);
-                            Arguments.PushNumber(MESSAGE_TYPE_PLAYER);            // Normal chat
+                            Arguments.PushNumber(MESSAGE_TYPE_PLAYER);  // Normal chat
                             bool bContinue = static_cast<CPlayer*>(pClient)->CallEvent("onPlayerChat", Arguments);
                             if (bContinue)
                             {
@@ -489,7 +519,7 @@ bool CConsoleCommands::TeamSay(CConsole* pConsole, const char* szInArguments, CC
                             // Send the chat message and player pointer to the script
                             CLuaArguments Arguments;
                             Arguments.PushString(szArguments);
-                            Arguments.PushNumber(MESSAGE_TYPE_TEAM);            // Team chat
+                            Arguments.PushNumber(MESSAGE_TYPE_TEAM);  // Team chat
                             bool bContinue = static_cast<CPlayer*>(pClient)->CallEvent("onPlayerChat", Arguments);
                             if (bContinue)
                             {
@@ -596,15 +626,17 @@ bool CConsoleCommands::Msg(CConsole* pConsole, const char* szInArguments, CClien
 
                                         // Send the message and player pointer to the script
                                         CLuaArguments Arguments;
-                                        Arguments.PushString(szArguments);
+                                        Arguments.PushString(szArguments);  // We don't want to remove this for backwards compatibility reasons
                                         Arguments.PushElement(pPlayer);
+                                        Arguments.PushString(szMessage);  // Fix #2135
+
                                         bool bContinue = pSender->CallEvent("onPlayerPrivateMessage", Arguments);
                                         if (bContinue)
                                         {
                                             // Send it to the player
                                             pPlayer->Send(CChatEchoPacket(strMessage, CHATCOLOR_INFO, false, MESSAGE_TYPE_PRIVATE));
 
-                                            // Send a reponse to the player who sent it
+                                            // Send a response to the player who sent it
                                             pEchoClient->SendEcho(SString("-> %s: %s", pPlayer->GetNick(), szMessage));
                                         }
                                         break;
@@ -694,8 +726,8 @@ bool CConsoleCommands::Me(CConsole* pConsole, const char* szArguments, CClient* 
                     if (pClient->GetClientType() == CClient::CLIENT_PLAYER)
                     {
                         CLuaArguments Arguments;
-                        Arguments.PushString(szArguments);                    // text
-                        Arguments.PushNumber(MESSAGE_TYPE_ACTION);            // Me chat
+                        Arguments.PushString(szArguments);          // text
+                        Arguments.PushNumber(MESSAGE_TYPE_ACTION);  // Me chat
                         bool bContinue = static_cast<CPlayer*>(pClient)->CallEvent("onPlayerChat", Arguments);
                         if (bContinue)
                         {
@@ -754,7 +786,7 @@ bool CConsoleCommands::Nick(CConsole* pConsole, const char* szArguments, CClient
                         const char* szNick = pClient->GetNick();
                         if (!szNick || strcmp(szNewNick, szNick) != 0)
                         {
-                            // Check that it doesn't already exist, or if it matches our current nick case-independantly (means we changed to the same nick but
+                            // Check that it doesn't already exist, or if it matches our current nick case-independently (means we changed to the same nick but
                             // in a different case)
                             if ((szNick && stricmp(szNick, szNewNick) == 0) || !pConsole->GetPlayerManager()->Get(szNewNick))
                             {
@@ -764,7 +796,7 @@ bool CConsoleCommands::Nick(CConsole* pConsole, const char* szArguments, CClient
                                 CLuaArguments Arguments;
                                 Arguments.PushString(pClient->GetNick());
                                 Arguments.PushString(szNewNick);
-                                Arguments.PushBoolean(true);            // manually changed
+                                Arguments.PushBoolean(true);  // manually changed
                                 if (pPlayer->CallEvent("onPlayerChangeNick", Arguments))
                                 {
                                     // Tell the console
@@ -1109,6 +1141,9 @@ bool CConsoleCommands::Shutdown(CConsole* pConsole, const char* szArguments, CCl
 {
     // shutdown <reason>
 
+    CLuaArguments arguments;
+    arguments.PushNil();
+
     if (szArguments && strlen(szArguments) > 0)
     {
         // Copy to a buffer and strip it for bad characters
@@ -1116,12 +1151,17 @@ bool CConsoleCommands::Shutdown(CConsole* pConsole, const char* szArguments, CCl
 
         // Output the action + reason to the console
         CLogger::LogPrintf("SHUTDOWN: Got shutdown command from %s (Reason: %s)\n", GetAdminNameForLog(pClient).c_str(), szBuffer);
+        arguments.PushString(szBuffer);
     }
     else
     {
         // Output the action to the console
         CLogger::LogPrintf("SHUTDOWN: Got shutdown command from %s (No reason specified)\n", GetAdminNameForLog(pClient).c_str());
+        arguments.PushString("No reason specified");
     }
+
+    // Call event
+    g_pGame->GetMapManager()->GetRootElement()->CallEvent("onShutdown", arguments);
 
     // Shut the server down asap
     g_pGame->SetIsFinished(true);
@@ -1236,62 +1276,51 @@ bool CConsoleCommands::WhoIs(CConsole* pConsole, const char* szArguments, CClien
     return false;
 }
 
-bool CConsoleCommands::DebugScript(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
+bool CConsoleCommands::DebugScript(CConsole* console, const char* arguments, CClient* client, CClient* echoClient)
 {
-    // Valid parameter?
-    if (szArguments && szArguments[0] != 0 && szArguments[1] == 0)
+    static constexpr const char* syntaxMessage = "debugscript: Syntax is 'debugscript <mode: 0 (None), 1 (Errors), 2 (Errors + Warnings), 3 (All)>'";
+
+    // Validate arguments
+    if (!arguments || std::strlen(arguments) != 1 || !std::isdigit(arguments[0]))
     {
-        // Player?
-        if (pClient->GetClientType() == CClient::CLIENT_PLAYER)
-        {
-            CPlayer* pPlayer = static_cast<CPlayer*>(pClient);
-
-            // Convert to number
-            int iLevel = atoi(szArguments);
-            if (iLevel == 0 && strcmp(szArguments, "0") != 0)
-            {
-                pEchoClient->SendEcho("debugscript: Syntax is 'debugscript <mode>'");
-                return false;
-            }
-            if (iLevel != (int)pPlayer->GetScriptDebugLevel())
-            {
-                // Between 0 and 3?
-                if (iLevel >= 0 && iLevel <= 3)
-                {
-                    // Set the new level
-                    pPlayer->SetScriptDebugLevel(iLevel);
-
-                    // Tell the player and the console
-                    pEchoClient->SendEcho(SString("debugscript: Your debug mode was set to %i", iLevel));
-                    CLogger::LogPrintf("SCRIPT: %s set their script debug mode to %i\n", GetAdminNameForLog(pClient).c_str(), iLevel);
-
-                    // Enable/Disable their debugger
-                    if (iLevel == 0)
-                        CStaticFunctionDefinitions::SetPlayerDebuggerVisible(pPlayer, false);
-                    else
-                        CStaticFunctionDefinitions::SetPlayerDebuggerVisible(pPlayer, true);
-                }
-                else
-                {
-                    pEchoClient->SendEcho("debugscript: Modes available are 0 (None), 1 (Errors), 2 (Errors + Warnings), 3 (All)");
-                }
-            }
-            else
-            {
-                pEchoClient->SendEcho("debugscript: Your debug mode is already that");
-            }
-        }
-        else
-        {
-            pEchoClient->SendConsole("debugscript: Incorrect client type for this command");
-        }
-    }
-    else
-    {
-        pEchoClient->SendEcho("debugscript: Syntax is 'debugscript <mode>'");
+        echoClient->SendEcho(syntaxMessage);
+        return false;
     }
 
-    return false;
+    // Check client type
+    if (client->GetClientType() != CClient::CLIENT_PLAYER)
+    {
+        echoClient->SendConsole("debugscript: Incorrect client type for this command");
+        return false;
+    }
+
+    CPlayer* player = static_cast<CPlayer*>(client);
+    int      debugLevel = arguments[0] - '0';  // Convert the character to an integer (e.g., '2' -> 2)
+    int      debugLevelCurrent = player->GetScriptDebugLevel();
+
+    // Check if the level is the same
+    if (debugLevel == debugLevelCurrent)
+    {
+        echoClient->SendEcho(("debugscript: Your debug mode is already set to " + std::to_string(debugLevel)).c_str());
+        return false;
+    }
+
+    // Check if the level is between 0 and 3
+    if (debugLevel < 0 || debugLevel > 3)
+    {
+        echoClient->SendEcho(syntaxMessage);
+        return false;
+    }
+
+    // Set the new level
+    player->SetScriptDebugLevel(static_cast<uint8_t>(debugLevel));
+    echoClient->SendEcho(("debugscript: Your debug mode was set to " + std::to_string(debugLevel)).c_str());
+    CLogger::LogPrintf("SCRIPT: %s set their script debug mode to %d\n", GetAdminNameForLog(client).c_str(), debugLevel);
+
+    // Enable or disable the debugger based on the level
+    CStaticFunctionDefinitions::SetPlayerDebuggerVisible(player, debugLevel != 0);
+
+    return true;
 }
 
 bool CConsoleCommands::Help(CConsole* pConsole, const char* szArguments, CClient* pClient, CClient* pEchoClient)
@@ -1541,7 +1570,7 @@ bool CConsoleCommands::OpenPortsTest(CConsole* pConsole, const char* szArguments
 {
     if (pClient->GetClientType() == CClient::CLIENT_CONSOLE)
     {
-#if MTASA_VERSION_TYPE < VERSION_TYPE_RELEASE
+#if MTASA_VERSION_TYPE < VERSION_TYPE_UNTESTED
         if (SStringX(szArguments) == "crashme")
         {
             // For testing crash handling
@@ -1596,9 +1625,9 @@ bool DoAclRequest(CConsole* pConsole, const char* szArguments, CClient* pClient,
 
     std::vector<SString> parts;
     SStringX(szArguments).Split(" ", parts);
-    const SString& strAction = parts.size() > 0 ? parts[0] : "";
-    const SString& strResourceName = parts.size() > 1 ? parts[1] : "";
-    const SString& strRightName = parts.size() > 2 ? parts[2] : "";
+    const SString& strAction = parts.size() > 0 ? parts[0] : SStringX("");
+    const SString& strResourceName = parts.size() > 1 ? parts[1] : SStringX("");
+    const SString& strRightName = parts.size() > 2 ? parts[2] : SStringX("");
 
     bool bList = strAction == "list";
     bool bAllow = strAction == "allow";
@@ -1666,8 +1695,8 @@ bool CConsoleCommands::AuthorizeSerial(CConsole* pConsole, const char* szArgumen
 
     std::vector<SString> parts;
     SStringX(szArguments).Split(" ", parts);
-    const SString& strAccountName = parts.size() > 0 ? parts[0] : "";
-    const SString& strAction = parts.size() > 1 ? parts[1] : "";
+    const SString& strAccountName = parts.size() > 0 ? parts[0] : SStringX("");
+    const SString& strAction = parts.size() > 1 ? parts[1] : SStringX("");
 
     bool bList = strAction == "list";
     bool bAllow = strAction == "";

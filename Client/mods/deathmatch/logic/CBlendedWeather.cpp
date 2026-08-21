@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CBlendedWeather.cpp
  *  PURPOSE:     Game weather blending
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -53,7 +53,18 @@ void CBlendedWeather::DoPulse()
         }
     }
 
-    // Force the weather
+    const auto ucPrimary = static_cast<unsigned char>(m_ucPrimaryWeather);
+    const auto ucSecondary = static_cast<unsigned char>(m_ucSecondaryWeather);
+
+    m_pWeather->Set(ucPrimary, ucSecondary);
+    // Set InterpolationValue to 0 so CWeather::Update's wrap branch cannot fire.
+    // The engine will compute its own InterpolationValue from the game clock and
+    // use it consistently for all weather globals.
+    m_pWeather->ResyncInterpolationWithGameClock(ucPrimary, ucSecondary);
+}
+
+void CBlendedWeather::ReapplyWeatherTypes()
+{
     m_pWeather->Set(static_cast<unsigned char>(m_ucPrimaryWeather), static_cast<unsigned char>(m_ucSecondaryWeather));
 }
 

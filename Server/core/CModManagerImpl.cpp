@@ -5,7 +5,7 @@
  *  FILE:        core/CModManagerImpl.cpp
  *  PURPOSE:     Mod manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -74,7 +74,10 @@ bool CModManagerImpl::Load(const char* szModName, int iArgumentCount, char* szAr
     }
 
     // Grab the initialization procedure
-    InitServer* pfnInitServer = (InitServer*)(m_Library.GetProcedureAddress("InitServer"));
+    InitServer* pfnInitServer = nullptr;
+    const auto  procAddr = m_Library.GetProcedureAddress("InitServer");
+    static_assert(sizeof(pfnInitServer) == sizeof(procAddr), "Unexpected function pointer size");
+    std::memcpy(&pfnInitServer, &procAddr, sizeof(pfnInitServer));
     if (!pfnInitServer)
     {
         // Unload the library
@@ -130,7 +133,6 @@ void CModManagerImpl::Unload(bool bKeyPressBeforeTerm)
                 Print("Press Q to shut down the server!\n");
                 WaitForKey('q');
             }
-            TerminateProcess(GetCurrentProcess(), GetExitCode());
         }
 #endif
         // Unload the library
@@ -146,6 +148,11 @@ void CModManagerImpl::DoPulse()
         // Pulse the mod
         m_pBase->DoPulse();
     }
+}
+
+bool CModManagerImpl::IsReadyToAcceptConnections() const noexcept
+{
+    return (m_pBase != nullptr) && m_pBase->IsReadyToAcceptConnections();
 }
 
 bool CModManagerImpl::IsFinished()

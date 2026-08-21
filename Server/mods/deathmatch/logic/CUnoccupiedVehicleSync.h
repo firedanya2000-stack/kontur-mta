@@ -5,14 +5,14 @@
  *  FILE:        mods/deathmatch/logic/CUnoccupiedVehicleSync.h
  *  PURPOSE:     Unoccupied vehicle entity synchronization class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
-#define MIN_ROTATION_DIFF   0.1
-#define MIN_PUSH_ANTISPAM_RATE  1500
+#define MIN_ROTATION_DIFF      0.1
+#define MIN_PUSH_ANTISPAM_RATE 1500
 
 class CVehicle;
 class CPlayer;

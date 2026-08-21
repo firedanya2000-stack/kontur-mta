@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/Server.cpp
  *  PURPOSE:     Deathmatch module entry point
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -42,7 +42,7 @@ MTAEXPORT void ReleaseServer(void)
     }
 }
 
-#ifdef WIN32    /* Win32 DllMain entry */
+#ifdef WIN32 /* Win32 DllMain entry */
 
 int WINAPI DllMain(HINSTANCE hModule, DWORD dwReason, PVOID pvNothing)
 {

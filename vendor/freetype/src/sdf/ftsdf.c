@@ -4,7 +4,7 @@
  *
  *   Signed Distance Field support for outline fonts (body).
  *
- * Copyright (C) 2020-2023 by
+ * Copyright (C) 2020-2026 by
  * David Turner, Robert Wilhelm, and Werner Lemberg.
  *
  * Written by Anuj Verma.
@@ -655,12 +655,6 @@
     FT_Memory  memory = shape->memory;
 
 
-    if ( !to || !user )
-    {
-      error = FT_THROW( Invalid_Argument );
-      goto Exit;
-    }
-
     FT_CALL( sdf_contour_new( memory, &contour ) );
 
     contour->last_pos = *to;
@@ -679,21 +673,14 @@
   sdf_line_to( const FT_26D6_Vec*  to,
                void*               user )
   {
-    SDF_Shape*    shape    = ( SDF_Shape* )user;
-    SDF_Edge*     edge     = NULL;
-    SDF_Contour*  contour  = NULL;
+    SDF_Shape*    shape   = ( SDF_Shape* )user;
+    SDF_Edge*     edge    = NULL;
+    SDF_Contour*  contour = shape->contours;
 
-    FT_Error      error    = FT_Err_Ok;
-    FT_Memory     memory   = shape->memory;
+    FT_Error   error  = FT_Err_Ok;
+    FT_Memory  memory = shape->memory;
 
 
-    if ( !to || !user )
-    {
-      error = FT_THROW( Invalid_Argument );
-      goto Exit;
-    }
-
-    contour = shape->contours;
 
     if ( contour->last_pos.x == to->x &&
          contour->last_pos.y == to->y )
@@ -722,21 +709,13 @@
                 const FT_26D6_Vec*  to,
                 void*               user )
   {
-    SDF_Shape*    shape    = ( SDF_Shape* )user;
-    SDF_Edge*     edge     = NULL;
-    SDF_Contour*  contour  = NULL;
+    SDF_Shape*    shape   = ( SDF_Shape* )user;
+    SDF_Edge*     edge    = NULL;
+    SDF_Contour*  contour = shape->contours;
 
     FT_Error   error  = FT_Err_Ok;
     FT_Memory  memory = shape->memory;
 
-
-    if ( !control_1 || !to || !user )
-    {
-      error = FT_THROW( Invalid_Argument );
-      goto Exit;
-    }
-
-    contour = shape->contours;
 
     /* If the control point coincides with any of the end points */
     /* then it is a line and should be treated as one to avoid   */
@@ -778,19 +757,11 @@
   {
     SDF_Shape*    shape   = ( SDF_Shape* )user;
     SDF_Edge*     edge    = NULL;
-    SDF_Contour*  contour = NULL;
+    SDF_Contour*  contour = shape->contours;
 
     FT_Error   error  = FT_Err_Ok;
     FT_Memory  memory = shape->memory;
 
-
-    if ( !control_2 || !control_1 || !to || !user )
-    {
-      error = FT_THROW( Invalid_Argument );
-      goto Exit;
-    }
-
-    contour = shape->contours;
 
     FT_CALL( sdf_edge_new( memory, &edge ) );
 
@@ -1391,7 +1362,7 @@
       SDF_Contour*  contour = contour_list;
 
 
-      FT_TRACE5(( "  Contour %d\n", num_contours ));
+      FT_TRACE5(( "  Contour %u\n", num_contours ));
 
       edge_list = contour->edges;
 
@@ -1400,7 +1371,7 @@
         SDF_Edge*  edge = edge_list;
 
 
-        FT_TRACE5(( "  %3d: ", num_edges ));
+        FT_TRACE5(( "  %3u: ", num_edges ));
 
         switch ( edge->edge_type )
         {
@@ -1443,11 +1414,11 @@
     }
 
     FT_TRACE5(( "\n" ));
-    FT_TRACE5(( "  total number of contours = %d\n", num_contours ));
-    FT_TRACE5(( "  total number of edges    = %d\n", total_edges ));
-    FT_TRACE5(( "    |__lines = %d\n", total_lines ));
-    FT_TRACE5(( "    |__conic = %d\n", total_conic ));
-    FT_TRACE5(( "    |__cubic = %d\n", total_cubic ));
+    FT_TRACE5(( "  total number of contours = %u\n", num_contours ));
+    FT_TRACE5(( "  total number of edges    = %u\n", total_edges ));
+    FT_TRACE5(( "    |__lines = %u\n", total_lines ));
+    FT_TRACE5(( "    |__conic = %u\n", total_conic ));
+    FT_TRACE5(( "    |__cubic = %u\n", total_cubic ));
   }
 
 #endif /* FT_DEBUG_LEVEL_TRACE */
@@ -2371,11 +2342,11 @@
      *     ```
      *
      * (6) Our task is to find a value of `t` such that the above equation
-     *     `Q(t)` becomes zero, this is, the point-to-curve vector makes
+     *     `Q(t)` becomes zero, that is, the point-to-curve vector makes
      *     90~degrees with the curve.  We solve this with the Newton-Raphson
      *     method.
      *
-     * (7) We first assume an arbitary value of factor `t`, which we then
+     * (7) We first assume an arbitrary value of factor `t`, which we then
      *     improve.
      *
      *     ```
@@ -2684,11 +2655,11 @@
      *     ```
      *
      * (6) Our task is to find a value of `t` such that the above equation
-     *     `Q(t)` becomes zero, this is, the point-to-curve vector makes
+     *     `Q(t)` becomes zero, that is, the point-to-curve vector makes
      *     90~degree with curve.  We solve this with the Newton-Raphson
      *     method.
      *
-     * (7) We first assume an arbitary value of factor `t`, which we then
+     * (7) We first assume an arbitrary value of factor `t`, which we then
      *     improve.
      *
      *     ```
@@ -2718,8 +2689,9 @@
 
     FT_Error  error = FT_Err_Ok;
 
-    FT_26D6_Vec   aA, bB, cC, dD; /* A, B, C in the above comment          */
-    FT_16D16_Vec  nearest_point;  /* point on curve nearest to `point`     */
+    FT_26D6_Vec   aA, bB, cC, dD; /* A, B, C, D in the above comment       */
+    FT_16D16_Vec  nearest_point = { 0, 0 };
+                                  /* point on curve nearest to `point`     */
     FT_16D16_Vec  direction;      /* direction of curve at `nearest_point` */
 
     FT_26D6_Vec  p0, p1, p2, p3;  /* control points of a cubic curve       */
@@ -3280,8 +3252,12 @@
       goto Exit;
     }
 
-    if ( FT_ALLOC( dists,
-                   bitmap->width * bitmap->rows * sizeof ( *dists ) ) )
+    if ( bitmap->rows > FT_INT_MAX / bitmap->width )
+    {
+      error = FT_THROW( Array_Too_Large );
+      goto Exit;
+    }
+    if ( FT_NEW_ARRAY( dists, bitmap->rows * bitmap->width ) )
       goto Exit;
 
     contours = shape->contours;
@@ -3455,7 +3431,7 @@
    *     A complete shape which is used to generate SDF.
    *
    *   spread ::
-   *     Maximum distances to be allowed inthe output bitmap.
+   *     Maximum distances to be allowed in the output bitmap.
    *
    * @Output:
    *   bitmap ::
@@ -3596,13 +3572,11 @@
     }
 
     /* allocate the bitmaps to generate SDF for separate contours */
-    if ( FT_ALLOC( bitmaps,
-                   (FT_UInt)num_contours * sizeof ( *bitmaps ) ) )
+    if ( FT_NEW_ARRAY( bitmaps, num_contours ) )
       goto Exit;
 
     /* allocate array to hold orientation for all contours */
-    if ( FT_ALLOC( orientations,
-                   (FT_UInt)num_contours * sizeof ( *orientations ) ) )
+    if ( FT_NEW_ARRAY( orientations, num_contours ) )
       goto Exit;
 
     contour = shape->contours;
@@ -3620,8 +3594,7 @@
       bitmaps[i].pixel_mode = bitmap->pixel_mode;
 
       /* allocate memory for the buffer */
-      if ( FT_ALLOC( bitmaps[i].buffer,
-                     bitmap->rows * (FT_UInt)bitmap->pitch ) )
+      if ( FT_ALLOC_MULT( bitmaps[i].buffer, bitmap->rows, bitmap->pitch ) )
         goto Exit;
 
       /* determine the orientation */
@@ -3761,9 +3734,13 @@
    */
 
   static FT_Error
-  sdf_raster_new( FT_Memory     memory,
-                  SDF_PRaster*  araster )
+  sdf_raster_new( void*       memory_,   /* FT_Memory    */
+                  FT_Raster*  araster_ ) /* SDF_PRaster* */
   {
+    FT_Memory     memory  = (FT_Memory)memory_;
+    SDF_PRaster*  araster = (SDF_PRaster*)araster_;
+
+
     FT_Error     error;
     SDF_PRaster  raster = NULL;
 
@@ -3832,7 +3809,7 @@
     }
 
     /* if the outline is empty, return */
-    if ( outline->n_points <= 0 || outline->n_contours <= 0 )
+    if ( outline->n_points == 0 || outline->n_contours == 0 )
       goto Exit;
 
     /* check whether the outline has valid fields */

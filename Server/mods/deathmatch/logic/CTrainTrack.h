@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,7 +23,7 @@ struct STrackNode
         position.fX = 8.0f * x;
         position.fY = 8.0f * y;
         position.fZ = 8.0f * z;
-        railDistance = 3.0f * distance;            // TODO(Jusonex, feature/custom-train-tracks/9063a3dc080): Remove distance
+        railDistance = 3.0f * distance;  // TODO(Jusonex, feature/custom-train-tracks/9063a3dc080): Remove distance
     }
 
     STrackNode(const CVector& pos) : position(pos) {}
@@ -57,6 +57,5 @@ private:
 
     std::vector<STrackNode> m_Nodes;
     bool                    m_LinkLastNodes;
-    bool                    m_Default;
     uchar                   m_DefaultTrackId;
 };

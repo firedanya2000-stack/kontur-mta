@@ -5,14 +5,14 @@
  *  FILE:        core/ErrorCodes.h
  *  PURPOSE:     Error code definitions
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
-#define ERROR_NO_ERROR 0
-#define ERROR_NO_NETWORK_LIBRARY 1
+#define ERROR_NO_ERROR               0
+#define ERROR_NO_NETWORK_LIBRARY     1
 #define ERROR_NETWORK_LIBRARY_FAILED 2
-#define ERROR_LOADING_MOD 3
-#define ERROR_OTHER 4
+#define ERROR_LOADING_MOD            3
+#define ERROR_OTHER                  4

@@ -5,7 +5,7 @@
  *  FILE:        core/CServerInfo.h
  *  PURPOSE:     Header file for server queue class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,14 +17,14 @@ class CServerInfo;
 #define SERVER_UPDATE_INTERVAL 2500
 
 // Dimensions for our window
-#define INFO_WINDOW_DEFAULTWIDTH 370.0f
+#define INFO_WINDOW_DEFAULTWIDTH  370.0f
 #define INFO_WINDOW_DEFAULTHEIGHT 400.0f
 
 #define INFO_WINDOW_HSPACING 20
-#define INFO_LABEL_VSPACING 0
+#define INFO_LABEL_VSPACING  0
 #define INFO_WINDOW_VSPACING 10
-#define INFO_BUTTON_HEIGHT 25
-#define INFO_BUTTON_WIDTH 110
+#define INFO_BUTTON_HEIGHT   25
+#define INFO_BUTTON_WIDTH    110
 
 #include "CServerList.h"
 #include "CSingleton.h"

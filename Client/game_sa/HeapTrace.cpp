@@ -5,7 +5,7 @@
  *  FILE:        game_sa/HeapTrace.cpp
  *  PURPOSE:     Heap trace handler
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,7 +13,7 @@
 #include "HeapTrace.h"
 
 #ifdef DETECT_LEAKS
-#include <list>
+    #include <list>
 using namespace std;
 
 struct ALLOC_INFO

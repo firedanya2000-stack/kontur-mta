@@ -5,15 +5,15 @@
  *  FILE:        mods/deathmatch/logic/CVoiceRecorder.h
  *  PURPOSE:     Header for voice class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
-#define VOICE_BUFFER_LENGTH             200000
-#define VOICE_FREQUENCY                 44100
-#define VOICE_SAMPLE_SIZE               2
+#define VOICE_BUFFER_LENGTH 200000
+#define VOICE_FREQUENCY     44100
+#define VOICE_SAMPLE_SIZE   2
 
 #define FRAME_OUTGOING_BUFFER_COUNT 100
 #define FRAME_INCOMING_BUFFER_COUNT 100
@@ -79,11 +79,12 @@ private:
     void*                 m_pSpeexEncoderState;
     SpeexPreprocessState* m_pSpeexPreprocState;
 
-    char*        m_pOutgoingBuffer;
-    int          m_iSpeexOutgoingFrameSampleCount;
-    unsigned int m_uiOutgoingReadIndex;
-    unsigned int m_uiOutgoingWriteIndex;
-    bool         m_bIsSendingVoiceData;
+    unsigned char* m_pOutgoingBuffer;
+    int            m_iSpeexOutgoingFrameSampleCount;
+    unsigned int   m_uiOutgoingReadIndex;
+    unsigned int   m_uiOutgoingWriteIndex;
+    bool           m_bIsSendingVoiceData;
+    bool           m_bOutgoingBufferFull;
 
     unsigned long m_ulTimeOfLastSend;
 

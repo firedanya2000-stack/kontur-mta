@@ -5,7 +5,7 @@
  *  FILE:        sdk/xml/CXMLNode.h
  *  PURPOSE:     XML node interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -19,7 +19,7 @@
 class CXMLNode : public CXMLCommon
 {
 public:
-    virtual ~CXMLNode(){};
+    virtual ~CXMLNode() {};
 
     virtual CXMLNode* CreateSubNode(const char* szTagName, CXMLNode* pInsertAfter = nullptr) = 0;
     virtual void      DeleteSubNode(CXMLNode* pNode) = 0;

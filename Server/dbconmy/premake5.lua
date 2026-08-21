@@ -3,12 +3,15 @@ project "Dbconmy"
 	kind "SharedLib"
 	targetname "dbconmy"
 	targetdir(buildpath("server/mods/deathmatch"))
+	clangtidy "On"
 
 	filter "system:windows"
 		includedirs {
 			"../../vendor/mysql/include",
 			"../../vendor/sparsehash/src/windows"
 		}
+		-- Server requires Windows 10+ (cpp-httplib)
+		defines { "_WIN32_WINNT=0x0A00" }
 
 	filter {}
 		includedirs {
@@ -35,39 +38,46 @@ project "Dbconmy"
 
 	filter "system:linux"
 		includedirs { "/usr/include/mysql" }
+		libdirs {
+			-- RHEL/Fedora distributions put MySQL client libraries of their mysql-devel
+			-- package under a subdirectory not picked up by Premake's default library
+			-- search path
+			os.findlib("mysqlclient", {
+				"/usr/lib/mysql",
+				"/usr/lib64/mysql",
+			})
+		}
 		links { "rt" }
 
 	filter "system:macosx"
+		-- brew install mysql-client libidn2
 		includedirs {
 			os.findheader("mysql.h", {
 				"/usr/local/opt/mysql/include/mysql",
-				"/opt/osxcross/macports/pkgs/opt/local/include/mysql8/mysql",
+				"/opt/homebrew/include/mysql",
+				"/opt/homebrew/opt/mysql-client/include/mysql",
 			})
 		}
 		libdirs {
-			os.findlib("libmysqlclient.a", "/opt/osxcross/macports/pkgs/opt/local/lib/mysql8/mysql")
+			os.findlib("libmysqlclient.a", {
+				"/usr/local/opt/mysql/lib",
+				"/opt/homebrew/lib",
+				"/opt/homebrew/opt/mysql-client/lib",
+			})
 		}
 
 	if GLIBC_COMPAT then
 		filter { "system:linux" }
 			buildoptions { "-pthread" }
-			linkoptions { "-l:libmysqlclient.a", "-pthread", "-lssl", "-lcrypto" }
-			links { "z", "dl", "m" }
+			linkoptions { "-pthread" }
+			links { "z", "dl", "m", "mysqlclient", "zstd", "ssl", "crypto", "resolv" }
 	else
 		filter "system:not windows"
 			links { "mysqlclient" }
-		filter {"system:linux", "platforms:x86"}
-			libdirs { "/usr/lib32/mysql" }
-		filter {"system:linux", "platforms:x64"}
-			libdirs { "/usr/lib64/mysql" }
 	end
 
 	filter { "system:windows", "platforms:x64" }
 		links { "../../vendor/mysql/lib/x64/libmysql.lib" }
-	filter { "system:windows", "platforms:x86" }
-		links { "../../vendor/mysql/lib/x86/libmysql.lib" }
-	filter { "system:windows", "platforms:arm" }
-		links { "../../vendor/mysql/lib/arm/libmysql.lib" }
 	filter { "system:windows", "platforms:arm64" }
 		links { "../../vendor/mysql/lib/arm64/libmysql.lib" }
 
@@ -79,3 +89,7 @@ project "Dbconmy"
 
 	filter "platforms:arm64"
 		targetdir(buildpath("server/arm64"))
+
+	-- 32-bit Windows server is no longer supported
+	filter { "system:windows", "platforms:x86" }
+		flags { "ExcludeFromBuild" }

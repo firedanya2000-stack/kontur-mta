@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CBmx.h
  *  PURPOSE:     BMX vehicle entity interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,5 +16,5 @@
 class CBmx : public virtual CBike
 {
 public:
-    virtual ~CBmx(){};
+    virtual ~CBmx() {};
 };

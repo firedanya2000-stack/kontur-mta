@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIScrollBar.h
  *  PURPOSE:     Scroll bar widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUIScrollBar : public CGUIElement
 {
 public:
-    virtual ~CGUIScrollBar(){};
+    virtual ~CGUIScrollBar() {};
 
     virtual void SetOnScrollHandler(const GUI_CALLBACK& Callback) = 0;
 

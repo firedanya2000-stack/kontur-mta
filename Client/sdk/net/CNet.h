@@ -5,7 +5,7 @@
  *  FILE:        sdk/net/cnet.h
  *  PURPOSE:     Network subsystem interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 #include "net/bitstream.h"
 #include "net/CNetHTTPDownloadManagerInterface.h"
 
-#define MAX_CALL_REMOTE_QUEUES  100
+#define MAX_CALL_REMOTE_QUEUES 100
 
 namespace EDownloadMode
 {
@@ -26,7 +26,7 @@ namespace EDownloadMode
         CORE_ASE_LIST,
         CORE_UPDATER,
         WEBBROWSER_LISTS,
-        CORE_LAST,            // Download modes after this one will be reset on server disconnect
+        CORE_LAST,  // Download modes after this one will be reset on server disconnect
         RESOURCE_INITIAL_FILES_INTERNAL,
         RESOURCE_INITIAL_FILES_EXTERNAL,
         RESOURCE_SINGULAR_FILES,
@@ -74,6 +74,7 @@ public:
 
     virtual void SetFakeLag(unsigned short usPacketLoss, unsigned short usMinExtraPing, unsigned short usExtraPingVariance, int iKBPSLimit) = 0;
 
+    virtual bool IsReady() = 0;
     virtual bool IsConnected() = 0;
 
     virtual void DoPulse() = 0;
@@ -115,7 +116,7 @@ public:
 
     virtual const char* GetNextBuffer() = 0;
     virtual const char* GetDiagnosticStatus() = 0;
-    virtual void        UpdatePingStatus(const char* szStatus, ushort& usDataRef) = 0;
+    virtual void        UpdatePingStatus(const char* status, size_t statusLength, ushort& usDataRef, bool& isVerified) = 0;
 
     virtual bool VerifySignature(const char* pData, unsigned long ulSize) = 0;
 

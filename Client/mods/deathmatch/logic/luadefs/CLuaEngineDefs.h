@@ -5,7 +5,7 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaEngineDefs.cpp
  *  PURPOSE:     Lua definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -58,12 +58,17 @@ public:
     LUA_DECLARE(EngineSetObjectGroupPhysicalProperty)
     LUA_DECLARE(EngineGetObjectGroupPhysicalProperty)
     LUA_DECLARE(EngineRestoreObjectGroupPhysicalProperties)
+
+    static bool                                            EngineAddClothingModel(CClientDFF* pDff, std::string strModelName);
+    static bool                                            EngineAddClothingTXD(CClientTXD* pTxd, std::string strModelName);
     static uint                                            EngineGetModelFlags(uint uiModelID);
     static bool                                            EngineSetModelFlags(uint uiModelID, uint uiFlags, std::optional<bool> bIdeFlags);
     static bool                                            EngineGetModelFlag(uint uiModelID, eModelIdeFlag eFlag);
     static bool                                            EngineSetModelFlag(uint uiModelID, eModelIdeFlag eFlag, bool state);
     static bool                                            EngineResetModelFlags(uint uiModelID);
     static uint                                            EngineGetModelTXDID(uint uiDffModelID);
+    static bool                                            EngineSetModelTXDID(uint uiDffModelID, unsigned short uiTxdId);
+    static bool                                            EngineResetModelTXDID(uint uiDffModelID);
     static CClientIMG*                                     EngineLoadIMG(lua_State* const luaVM, std::string strFilePath);
     static bool                                            EngineAddImage(CClientIMG* pImg);
     static bool                                            EngineRemoveImage(CClientIMG* pImg);
@@ -74,9 +79,25 @@ public:
     static bool                                            EngineRestoreTXDImage(uint uiModelID);
     static std::vector<std::string_view>                   EngineImageGetFileList(CClientIMG* pImg);
     static std::string                                     EngineImageGetFile(CClientIMG* pImg, std::variant<size_t, std::string_view> file);
-    static bool                                            EngineRestreamWorld(lua_State* const luaVM);
+    static bool                                            EngineRestreamWorld();
     static bool                                            EngineSetModelVisibleTime(std::string strModelId, char cHourOn, char cHourOff);
     static std::variant<bool, CLuaMultiReturn<char, char>> EngineGetModelVisibleTime(std::string strModelId);
+
+    static size_t EngineGetPoolCapacity(ePools pool);
+    static size_t EngineGetPoolDefaultCapacity(ePools pool);
+    static size_t EngineGetPoolUsedCapacity(ePools pool);
+    static bool   EngineSetPoolCapacity(lua_State* luaVM, ePools pool, size_t newSize);
+
+    static uint EngineRequestTXD(lua_State* const luaVM, std::string strTxdName);
+    static bool EngineFreeTXD(uint txdID);
+
+    static bool EngineStreamingRequestModel(lua_State* const luaVM, std::uint16_t modelId, std::optional<bool> addReference, std::optional<bool> blocking);
+    static bool EngineStreamingReleaseModel(lua_State* const luaVM, std::uint16_t modelId, std::optional<bool> removeReference);
+    static eModelLoadState EngineStreamingGetModelLoadState(std::uint16_t modelId);
+
+    static void EnginePreloadWorldArea(CVector position, std::optional<PreloadAreaOption> option);
+    static bool EngineRestreamModel(std::uint16_t modelId);
+    static void EngineRestream(std::optional<RestreamOption> option);
 
 private:
     static void AddEngineColClass(lua_State* luaVM);

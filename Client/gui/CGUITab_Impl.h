@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUITab_Impl.h
  *  PURPOSE:     Tab widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -26,7 +26,7 @@ public:
 
 #define SETVISIBLE_HACK
 #define SETENABLED_HACK
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 #undef SETENABLED_HACK
 #undef SETVISIBLE_HACK
 

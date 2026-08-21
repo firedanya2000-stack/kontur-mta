@@ -5,7 +5,7 @@
  *  FILE:        xml/CXMLArrayImpl.cpp
  *  PURPOSE:     XML array class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,7 +13,7 @@
 
 using namespace std;
 
-#define XML_ARRAY_BASE_ID    0x01000000
+#define XML_ARRAY_BASE_ID 0x01000000
 
 CStack<unsigned long, 1> CXMLArray::m_IDStack;
 std::vector<CXMLCommon*> CXMLArray::m_Elements;

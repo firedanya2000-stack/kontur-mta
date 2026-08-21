@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPlayerClothesPacket.cpp
  *  PURPOSE:     Player clothes packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -18,8 +18,8 @@ CPlayerClothesPacket::~CPlayerClothesPacket()
     std::vector<SPlayerClothes*>::iterator iter = m_List.begin();
     for (; iter != m_List.end(); ++iter)
     {
-        delete[](*iter)->szTexture;
-        delete[](*iter)->szModel;
+        delete[] (*iter)->szTexture;
+        delete[] (*iter)->szModel;
         delete *iter;
     }
     m_List.clear();

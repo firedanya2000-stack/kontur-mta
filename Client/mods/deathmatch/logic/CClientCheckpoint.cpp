@@ -11,6 +11,7 @@
 #include <StdInc.h>
 #include <game/CCheckpoint.h>
 #include <game/CCheckpoints.h>
+#include <game/C3DMarkers.h>
 
 CClientCheckpoint::CClientCheckpoint(CClientMarker* pThis)
 {
@@ -22,11 +23,14 @@ CClientCheckpoint::CClientCheckpoint(CClientMarker* pThis)
     m_bStreamedIn = false;
     m_bVisible = true;
     m_uiIcon = CClientCheckpoint::ICON_NONE;
-    m_Color = SColorRGBA(255, 0, 0, 255);
+    m_Color = SColorRGBA(255, 0, 0, 128);
     m_fSize = 4.0f;
     m_dwType = CHECKPOINT_EMPTYTUBE;
     m_vecDirection.fX = 1.0f;
     m_bHasTarget = false;
+    m_ignoreAlphaLimits = false;
+    m_TargetArrowColor = SColorRGBA(255, 64, 64, 255);
+    m_TargetArrowSize = m_fSize * 0.625f;
 }
 
 CClientCheckpoint::~CClientCheckpoint()
@@ -248,8 +252,14 @@ void CClientCheckpoint::SetColor(const SColor& color)
     // Different from our current color?
     if (m_Color != color)
     {
-        // Set it and recreate
+        // Set it
         m_Color = color;
+
+        // Default alpha
+        if (!m_ignoreAlphaLimits && GetCheckpointType() == CClientCheckpoint::TYPE_NORMAL)
+            m_Color.A = 128;
+
+        // Recreate
         ReCreate();
     }
 }
@@ -261,6 +271,8 @@ void CClientCheckpoint::SetSize(float fSize)
     {
         // Set the new size and recreate
         m_fSize = fSize;
+        m_TargetArrowSize = fSize * 0.625f;
+
         ReCreate();
     }
 }
@@ -352,6 +364,7 @@ void CClientCheckpoint::Create(unsigned long ulIdentifier)
         {
             // Set properties
             m_pCheckpoint->SetRotateRate(0);
+            ApplyCheckpointTargetArrowProperties();
         }
     }
 }
@@ -384,4 +397,27 @@ void CClientCheckpoint::ReCreateWithSameIdentifier()
         Destroy();
         Create(m_dwIdentifier);
     }
+}
+
+void CClientCheckpoint::SetTargetArrowProperties(const SColor& arrowColor, float size) noexcept
+{
+    if (m_TargetArrowColor == arrowColor && m_TargetArrowSize == size)
+        return;
+
+    m_TargetArrowColor = arrowColor;
+    m_TargetArrowSize = size;
+
+    ApplyCheckpointTargetArrowProperties();
+}
+
+RpAtomic* CClientCheckpoint::GetAtomic() const
+{
+    C3DMarker* marker = g_pGame->Get3DMarkers()->FindMarker(m_dwIdentifier);
+    return marker ? reinterpret_cast<RpAtomic*>(marker->GetRwObject()) : nullptr;
+}
+
+void CClientCheckpoint::ApplyCheckpointTargetArrowProperties() noexcept
+{
+    if (m_pCheckpoint && m_uiIcon == CClientCheckpoint::ICON_ARROW)
+        m_pCheckpoint->SetTargetArrowData(m_TargetArrowColor, m_TargetArrowSize);
 }

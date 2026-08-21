@@ -77,15 +77,22 @@ void CLuaShared::LoadFunctions()
     CLuaCryptDefs::LoadFunctions();
     CLuaFileDefs::LoadFunctions();
     CLuaXMLDefs::LoadFunctions();
-    CLuaTrainTrackDefs::LoadFunctions();
+    CLuaPathDefs::LoadFunctions();
     CLuaUTFDefs::LoadFunctions();
     CLuaUtilDefs::LoadFunctions();
+
+    if (CustomTrainTracks)
+        CLuaTrainTrackDefs::LoadFunctions();
 }
 
 void CLuaShared::AddClasses(lua_State* luaVM)
 {
     CLuaFileDefs::AddClass(luaVM);
+    CLuaPathDefs::AddClass(luaVM);
     CLuaXMLDefs::AddClass(luaVM);
+
+    if (CustomTrainTracks)
+        CLuaTrainTrackDefs::AddClass(luaVM);
 }
 
 SharedUtil::CAsyncTaskScheduler* CLuaShared::GetAsyncTaskScheduler()

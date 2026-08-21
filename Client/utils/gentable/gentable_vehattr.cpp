@@ -5,7 +5,7 @@
  *  FILE:        utils/gentable/gentable_vehattr.cpp
  *  PURPOSE:     Vehicle attribute table generator
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -50,6 +50,8 @@ int main()
     SetAttribute(table, 599, VEHICLE_HAS_SIRENS);
     SetAttribute(table, 601, VEHICLE_HAS_SIRENS);
     SetAttribute(table, 423, VEHICLE_HAS_SIRENS);
+    SetAttribute(table, 432, VEHICLE_HAS_SIRENS);
+    SetAttribute(table, 433, VEHICLE_HAS_SIRENS);
 
     SetAttribute(table, 592, VEHICLE_HAS_LANDING_GEARS);
     SetAttribute(table, 577, VEHICLE_HAS_LANDING_GEARS);

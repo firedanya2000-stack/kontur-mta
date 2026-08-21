@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUICheckBox.h
  *  PURPOSE:     Check box widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUICheckBox : public CGUIElement
 {
 public:
-    virtual ~CGUICheckBox(){};
+    virtual ~CGUICheckBox() {};
 
     virtual void SetSelected(bool bSelected) = 0;
     virtual bool GetSelected() = 0;

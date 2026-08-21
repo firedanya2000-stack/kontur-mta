@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CModelInfoSA.h
  *  PURPOSE:     Header file for entity model information handler class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,54 +14,55 @@
 #include <game/Common.h>
 #include <game/CModelInfo.h>
 #include "CRenderWareSA.h"
+#include "game/RenderWare.h"
 
 class CPedModelInfoSA;
 class CPedModelInfoSAInterface;
 struct CColModelSAInterface;
 struct RpMaterial;
 
-#define     RpGetFrame(__c)                 ((RwFrame*)(((RwObject *)(__c))->parent))
+#define RpGetFrame(__c) ((RwFrame*)(((RwObject*)(__c))->parent))
 
 // #define     ARRAY_ModelLoaded               0x8E4CD0 // ##SA##
 static void* CStreaming__ms_aInfoForModel = *(void**)(0x5B8B08 + 6);
 static void* ARRAY_ModelLoaded = (char*)CStreaming__ms_aInfoForModel + 0x10;
 
-#define     FUNC_CStreaming__HasModelLoaded 0x4044C0
+#define FUNC_CStreaming__HasModelLoaded 0x4044C0
 
 // CModelInfo/ARRAY_ModelInfo __thiscall to load/replace vehicle models
-#define     FUNC_LoadVehicleModel           0x4C95C0
-#define     FUNC_LoadWeaponModel            0x4C9910
-#define     FUNC_LoadPedModel               0x4C7340
+#define FUNC_LoadVehicleModel 0x4C95C0
+#define FUNC_LoadWeaponModel  0x4C9910
+#define FUNC_LoadPedModel     0x4C7340
 
-#define     DWORD_AtomicsReplacerModelID    0xB71840
-#define     FUNC_AtomicsReplacer            0x537150
+#define DWORD_AtomicsReplacerModelID 0xB71840
+#define FUNC_AtomicsReplacer         0x537150
 
 // #define     ARRAY_ModelInfo                 0xA9B0C8
 static void* ARRAY_ModelInfo = *(void**)(0x403DA4 + 3);
-#define     CLASS_CText                     0xC1B340
-#define     FUNC_CText_Get                  0x6A0050
-#define     FUNC_GetBoundingBox             0x4082F0
+#define CLASS_CText         0xC1B340
+#define FUNC_CText_Get      0x6A0050
+#define FUNC_GetBoundingBox 0x4082F0
 
-#define     FUNC_RemoveRef                  0x4C4BB0
-#define     FUNC_IsBoatModel                0x4c5a70
-#define     FUNC_IsCarModel                 0x4c5aa0
-#define     FUNC_IsTrainModel               0x4c5ad0
-#define     FUNC_IsHeliModel                0x4c5b00
-#define     FUNC_IsPlaneModel               0x4c5b30
-#define     FUNC_IsBikeModel                0x4c5b60
-#define     FUNC_IsFakePlaneModel           0x4c5b90
-#define     FUNC_IsMonsterTruckModel        0x4c5bc0
-#define     FUNC_IsQuadBikeModel            0x4c5bf0
-#define     FUNC_IsBmxModel                 0x4c5c20
-#define     FUNC_IsTrailerModel             0x4c5c50
-#define     FUNC_IsVehicleModelType         0x4c5c80
-#define     FUNC_RemoveModel                0x4089a0
-#define     FUNC_FlushRequestList           0x40E4E0
-#define     FUNC_RequestVehicleUpgrade      0x408C70
+#define FUNC_RemoveRef             0x4C4BB0
+#define FUNC_IsBoatModel           0x4c5a70
+#define FUNC_IsCarModel            0x4c5aa0
+#define FUNC_IsTrainModel          0x4c5ad0
+#define FUNC_IsHeliModel           0x4c5b00
+#define FUNC_IsPlaneModel          0x4c5b30
+#define FUNC_IsBikeModel           0x4c5b60
+#define FUNC_IsFakePlaneModel      0x4c5b90
+#define FUNC_IsMonsterTruckModel   0x4c5bc0
+#define FUNC_IsQuadBikeModel       0x4c5bf0
+#define FUNC_IsBmxModel            0x4c5c20
+#define FUNC_IsTrailerModel        0x4c5c50
+#define FUNC_IsVehicleModelType    0x4c5c80
+#define FUNC_RemoveModel           0x4089a0
+#define FUNC_FlushRequestList      0x40E4E0
+#define FUNC_RequestVehicleUpgrade 0x408C70
 
-#define     FUNC_CVehicleModelInfo__GetNumRemaps        0x4C86B0
+#define FUNC_CVehicleModelInfo__GetNumRemaps 0x4C86B0
 
-#define     VAR_CTempColModels_ModelPed1    0x968DF0
+#define VAR_CTempColModels_ModelPed1 0x968DF0
 
 class CBaseModelInfoSAInterface;
 class CModelInfoSAInterface
@@ -79,25 +80,25 @@ class CBaseModelInfo_SA_VTBL
 {
 public:
     DWORD Destructor;
-    DWORD AsAtomicModelInfoPtr;                  // ()
-    DWORD AsDamageAtomicModelInfoPtr;            // ()
-    DWORD AsLodAtomicModelInfoPtr;               // ()
-    DWORD GetModelType;                          // ()           - Not defined in the base
-    DWORD GetTimeInfo;                           // ()
-    DWORD Init;                                  // ()
-    DWORD Shutdown;                              // ()
-    DWORD DeleteRwObject;                        // ()           - Not defined in the base
-    DWORD GetRwModelType;                        // ()           - Not defined in the base
-    DWORD CreateInstance_;                       // (RwMatrix*)   - Not defined in the base
-    DWORD CreateInstance;                        // ()           - Not defined in the base
-    DWORD SetAnimFile;                           // (char const*)
-    DWORD ConvertAnimFileIndex;                  // ()
-    DWORD GetAnimFileIndex;                      // ()
+    DWORD AsAtomicModelInfoPtr;        // ()
+    DWORD AsDamageAtomicModelInfoPtr;  // ()
+    DWORD AsLodAtomicModelInfoPtr;     // ()
+    DWORD GetModelType;                // ()           - Not defined in the base
+    DWORD GetTimeInfo;                 // ()
+    DWORD Init;                        // ()
+    DWORD Shutdown;                    // ()
+    DWORD DeleteRwObject;              // ()           - Not defined in the base
+    DWORD GetRwModelType;              // ()           - Not defined in the base
+    DWORD CreateInstance_;             // (RwMatrix*)   - Not defined in the base
+    DWORD CreateInstance;              // ()           - Not defined in the base
+    DWORD SetAnimFile;                 // (char const*)
+    DWORD ConvertAnimFileIndex;        // ()
+    DWORD GetAnimFileIndex;            // ()
 };
 
 class CAtomicModelInfo_SA_VTBL : public CBaseModelInfo_SA_VTBL
 {
-    DWORD SetAtomic;            // (RpAtomic*)
+    DWORD SetAtomic;  // (RpAtomic*)
 };
 
 class CDamageAtomicModelInfo_SA_VTBL : public CAtomicModelInfo_SA_VTBL
@@ -118,7 +119,7 @@ class CLodTimeModelInfo_SA_VTBL : public CLodAtomicModelInfo_SA_VTBL
 
 class CClumpModelInfo_SA_VTBL : public CBaseModelInfo_SA_VTBL
 {
-    DWORD SetClump;            // (RpClump*)
+    DWORD SetClump;  // (RpClump*)
 };
 
 class CWeaponModelInfo_SA_VTBL : public CClumpModelInfo_SA_VTBL
@@ -142,33 +143,33 @@ enum class eModelSpecialType : unsigned char
     GLASS_2 = 5,
     TAG = 6,
     GARAGE_DOOR = 7,
-    CRANE = 9,                // Not present in IDE but used in gta
-    UNKNOW_1 = 10,            // Read only
+    CRANE = 9,      // Not present in IDE but used in gta
+    UNKNOW_1 = 10,  // Read only
     BREAKABLE_STATUE = 11,
 };
 
 class CBaseModelInfoSAInterface
 {
 public:
-    CBaseModelInfo_SA_VTBL* VFTBL;            // +0
+    CBaseModelInfo_SA_VTBL* VFTBL;  // +0
 
-    unsigned long  ulHashKey;            // +4   Generated by CKeyGen::GetUppercaseKey(char const *) called by CBaseModelInfo::SetModelName(char const *)
-    unsigned short usNumberOfRefs : 16;                 // +8
-    unsigned short usTextureDictionary : 16;            // +10
-    unsigned char  ucAlpha : 8;                         // +12
+    unsigned long  ulHashKey;                 // +4   Generated by CKeyGen::GetUppercaseKey(char const *) called by CBaseModelInfo::SetModelName(char const *)
+    unsigned short usNumberOfRefs : 16;       // +8
+    unsigned short usTextureDictionary : 16;  // +10
+    unsigned char  ucAlpha : 8;               // +12
 
-    unsigned char  ucNumOf2DEffects : 8;            // +13
-    unsigned short usUnknown : 16;                  // +14     Something with 2d effects
+    unsigned char  ucNumOf2DEffects : 8;  // +13
+    unsigned short usUnknown : 16;        // +14     Something with 2d effects
 
-    unsigned short usDynamicIndex : 16;            // +16
+    unsigned short usDynamicIndex : 16;  // +16
 
     // Flags used by CBaseModelInfo
     union
     {
         struct
         {
-            unsigned char     bHasBeenPreRendered : 1;            // we use this because we need to apply changes only once
-            unsigned char     bAlphaTransparency : 1;             // bDrawLast
+            unsigned char     bHasBeenPreRendered : 1;  // we use this because we need to apply changes only once
+            unsigned char     bAlphaTransparency : 1;   // bDrawLast
             unsigned char     bAdditiveRender : 1;
             unsigned char     bDontWriteZBuffer : 1;
             unsigned char     bDontCastShadowsOn : 1;
@@ -179,16 +180,16 @@ public:
             unsigned char     bHasComplexHierarchy : 1;
             unsigned char     bDontCollideWithFlyer : 1;
             eModelSpecialType eSpecialModelType : 4;
-            unsigned char     bWetRoadReflection : 1;            // Used for tags
+            unsigned char     bWetRoadReflection : 1;  // Used for tags
         };
 
         unsigned short usFlags;
     };
 
-    CColModelSAInterface* pColModel;            // +20      CColModel: public CBoundingBox
+    CColModelSAInterface* pColModel;  // +20      CColModel: public CBoundingBox
 
-    float     fLodDistanceUnscaled;            // +24      Scaled is this value multiplied with flt_B6F118
-    RwObject* pRwObject;                       // +28
+    float     fLodDistanceUnscaled;  // +24      Scaled is this value multiplied with flt_B6F118
+    RwObject* pRwObject;             // +28
 
     // CWeaponModelInfo:
     // +36 = Weapon info as int
@@ -236,11 +237,21 @@ static_assert(sizeof(CBaseModelInfoSAInterface) == 0x20, "Invalid size for CBase
 
 struct CTimeInfoSAInterface
 {
-    CTimeInfoSAInterface() : m_nTimeOn(20), m_nTimeOff(6), m_wOtherTimeModel(0){};
-    CTimeInfoSAInterface(char timeOn, char timeOff, short OtherTimeModel) : m_nTimeOn(timeOn), m_nTimeOff(timeOff), m_wOtherTimeModel(OtherTimeModel){};
+    CTimeInfoSAInterface() : m_nTimeOn(20), m_nTimeOff(6), m_wOtherTimeModel(0) {};
+    CTimeInfoSAInterface(char timeOn, char timeOff, short OtherTimeModel) : m_nTimeOn(timeOn), m_nTimeOff(timeOff), m_wOtherTimeModel(OtherTimeModel) {};
     char  m_nTimeOn;
     char  m_nTimeOff;
     short m_wOtherTimeModel;
+};
+
+class CClumpModelInfoSAInterface : public CBaseModelInfoSAInterface
+{
+public:
+    union
+    {
+        char*    m_animFileName;
+        uint32_t m_nAnimFileIndex;
+    };
 };
 
 class CTimeModelInfoSAInterface : public CBaseModelInfoSAInterface
@@ -249,76 +260,101 @@ public:
     CTimeInfoSAInterface timeInfo;
 };
 
-class CVehicleModelVisualInfoSAInterface            // Not sure about this name. If somebody knows more, please change
+class CVehicleModelUpgradePosnDesc
+{
+    CVector m_vPosition;
+    RtQuat  m_vRotation;
+    int     m_iParentId;
+};
+static_assert(sizeof(CVehicleModelUpgradePosnDesc) == 0x20, "Invalid size of CVehicleModelUpgradePosnDesc class");
+
+class CDamageableModelInfoSAInterface : public CBaseModelInfoSAInterface
 {
 public:
-    CVector vecDummies[15];
-    char    m_sUpgrade[18];
+    void* m_damagedAtomic;
 };
 
-class CVehicleModelInfoSAInterface : public CBaseModelInfoSAInterface
+class CVehicleModelVisualInfoSAInterface  // Not sure about this name. If somebody knows more, please change
 {
 public:
-    uint32                              pad1;                      // +32
-    RpMaterial*                         pPlateMaterial;            // +36
+    CVector                      vecDummies[15];
+    CVehicleModelUpgradePosnDesc m_sUpgrade[18];
+    RpAtomic*                    m_pExtra[6];
+    std::uint8_t                 m_numExtras;
+    std::uint8_t                 _pad[3];
+    int                          m_maskComponentDamagable;
+};
+static_assert(sizeof(CVehicleModelVisualInfoSAInterface) == 0x314, "Invalid size of CVehicleModelVisualInfoSAInterface class");
+
+class CVehicleModelInfoSAInterface : public CClumpModelInfoSAInterface
+{
+public:
+    bool IsComponentDamageable(int componentIndex) const;
+
+    RpMaterial*                         pPlateMaterial;
     char                                plateText[8];
-    char                                pad[2];
+    std::uint8_t                        field_30;
+    std::uint8_t                        plateType;
     char                                gameName[8];
-    char                                pad2[2];
-    unsigned int                        uiVehicleType;
+    std::uint8_t                        field_3A[2];
+    std::uint32_t                       vehicleType;
     float                               fWheelSizeFront;
     float                               fWheelSizeRear;
-    short                               sWheelModel;
-    short                               sHandlingID;
-    byte                                ucNumDoors;
-    byte                                ucVehicleList;
-    byte                                ucVehicleFlags;
-    byte                                ucWheelUpgradeClass;
-    byte                                ucTimesUsed;
-    short                               sVehFrequency;
-    unsigned int                        uiComponentRules;
-    float                               fSteeringAngle;
-    CVehicleModelVisualInfoSAInterface* pVisualInfo;            // +92
-    char                                pad3[464];
-    char                                pDirtMaterial[64];            // *RwMaterial
-    char                                pad4[64];
-    char                                primColors[8];
-    char                                secondColors[8];
-    char                                treeColors[8];
-    char                                fourColors[8];
-    unsigned char                       ucNumOfColorVariations;
-    unsigned char                       ucLastColorVariation;
-    unsigned char                       ucPrimColor;
-    unsigned char                       ucSecColor;
-    unsigned char                       ucTertColor;
-    unsigned char                       ucQuatColor;
-    char                                upgrades[36];
-    char                                anRemapTXDs[8];
-    char                                pad5[2];
-    char                                pAnimBlock[4];
+    std::int16_t                        wheelModelID;
+    std::int16_t                        handlingID;
+    std::uint8_t                        numDoors;
+    std::uint8_t                        vehicleClass;
+    std::uint8_t                        vehicleFlags;
+    std::uint8_t                        wheelUpgradeClass;
+    std::uint8_t                        timesUsed;
+    std::uint8_t                        field_51;
+    std::int16_t                        vehFrequency;
+    std::uint32_t                       componentRules;
+    float                               bikeSteeringAngle;
+    CVehicleModelVisualInfoSAInterface* pVisualInfo;  // vehicleStruct
+    std::uint8_t                        field_60[464];
+    RpMaterial**                        m_dirtMaterials;
+    std::size_t                         m_numDirtMaterials;
+    RpMaterial*                         m_staticDirtMaterials[30];
+    std::uint8_t                        primColors[8];
+    std::uint8_t                        secondColors[8];
+    std::uint8_t                        treeColors[8];
+    std::uint8_t                        fourColors[8];
+    std::uint8_t                        numOfColorVariations;
+    std::uint8_t                        lastColorVariation;
+    std::uint8_t                        primColor;
+    std::uint8_t                        secColor;
+    std::uint8_t                        tertColor;
+    std::uint8_t                        quatColor;
+    std::uint8_t                        upgrades[36];
+    std::uint8_t                        anRemapTXDs[8];
+    std::uint8_t                        field_302[2];
+    void*                               pAnimBlock;  // CAnimBlock*
 };
+static_assert(sizeof(CVehicleModelInfoSAInterface) == 0x308, "Invalid size of CVehicleModelInfoSAInterface class");
 
 class CModelInfoSA : public CModelInfo
 {
 protected:
-    CBaseModelInfoSAInterface*                                                   m_pInterface;
-    DWORD                                                                        m_dwModelID;
-    DWORD                                                                        m_dwParentID;
-    DWORD                                                                        m_dwReferences;
-    DWORD                                                                        m_dwPendingInterfaceRef;
-    CColModel*                                                                   m_pCustomColModel;
-    CColModelSAInterface*                                                        m_pOriginalColModelInterface;
-    std::uint16_t                                                                m_originalFlags = 0;
-    RpClump*                                                                     m_pCustomClump;
-    static std::map<unsigned short, int>                                         ms_RestreamTxdIDMap;
-    static std::map<DWORD, float>                                                ms_ModelDefaultLodDistanceMap;
-    static std::map<DWORD, unsigned short>                                       ms_ModelDefaultFlagsMap;
-    static std::map<DWORD, BYTE>                                                 ms_ModelDefaultAlphaTransparencyMap;
-    static std::unordered_map<std::uint32_t, std::map<eVehicleDummies, CVector>> ms_ModelDefaultDummiesPosition;
-    static std::map<CTimeInfoSAInterface*, CTimeInfoSAInterface*>                ms_ModelDefaultModelTimeInfo;
-    static std::unordered_map<DWORD, unsigned short>                             ms_OriginalObjectPropertiesGroups;
-    static std::unordered_map<DWORD, std::pair<float, float>>                    ms_VehicleModelDefaultWheelSizes;
-    SVehicleSupportedUpgrades                                                    m_ModelSupportedUpgrades;
+    CBaseModelInfoSAInterface*                                                  m_pInterface;
+    DWORD                                                                       m_dwModelID;
+    DWORD                                                                       m_dwParentID;
+    DWORD                                                                       m_dwReferences;
+    DWORD                                                                       m_dwPendingInterfaceRef;
+    CColModel*                                                                  m_pCustomColModel;
+    CColModelSAInterface*                                                       m_pOriginalColModelInterface;
+    std::uint16_t                                                               m_originalFlags = 0;
+    RpClump*                                                                    m_pCustomClump;
+    static std::map<unsigned short, int>                                        ms_RestreamTxdIDMap;
+    static std::map<DWORD, float>                                               ms_ModelDefaultLodDistanceMap;
+    static std::map<DWORD, unsigned short>                                      ms_ModelDefaultFlagsMap;
+    static std::map<DWORD, BYTE>                                                ms_ModelDefaultAlphaTransparencyMap;
+    static std::unordered_map<std::uint32_t, std::map<VehicleDummies, CVector>> ms_ModelDefaultDummiesPosition;
+    static std::map<CTimeInfoSAInterface*, CTimeInfoSAInterface*>               ms_ModelDefaultModelTimeInfo;
+    static std::unordered_map<DWORD, unsigned short>                            ms_OriginalObjectPropertiesGroups;
+    static std::unordered_map<DWORD, std::pair<float, float>>                   ms_VehicleModelDefaultWheelSizes;
+    static std::map<unsigned short, int>                                        ms_DefaultTxdIDMap;
+    SVehicleSupportedUpgrades                                                   m_ModelSupportedUpgrades;
 
 public:
     CModelInfoSA();
@@ -348,9 +384,10 @@ public:
 
     char* GetNameIfVehicle();
 
-    BYTE           GetVehicleType();
+    BYTE           GetVehicleType() const noexcept;
     void           Request(EModelRequestType requestType, const char* szTag);
     void           Remove();
+    bool           UnloadUnused();
     bool           IsLoaded();
     bool           DoIsLoaded();
     unsigned short GetFlags();
@@ -362,10 +399,12 @@ public:
     static void    StaticResetFlags();
     CBoundingBox*  GetBoundingBox();
     bool           IsValid();
-    bool           IsAllocatedInArchive();
+    bool           IsAllocatedInArchive() const noexcept;
     float          GetDistanceFromCentreOfMassToBaseOfModel();
     unsigned short GetTextureDictionaryID();
     void           SetTextureDictionaryID(unsigned short usID);
+    void           ResetTextureDictionaryID();
+    static void    StaticResetTextureDictionaries();
     float          GetLODDistance();
     float          GetOriginalLODDistance();
     void           SetLODDistance(float fDistance, bool bOverrideMaxDistance = false);
@@ -396,14 +435,14 @@ public:
     void*        SetVehicleSuspensionData(void* pSuspensionLines);
     CVector      GetVehicleExhaustFumesPosition() override;
     void         SetVehicleExhaustFumesPosition(const CVector& vecPosition) override;
-    CVector      GetVehicleDummyDefaultPosition(eVehicleDummies eDummy) override;
-    CVector      GetVehicleDummyPosition(eVehicleDummies eDummy) override;
-    bool         GetVehicleDummyPositions(std::array<CVector, VEHICLE_DUMMY_COUNT>& positions) const override;
-    void         SetVehicleDummyPosition(eVehicleDummies eDummy, const CVector& vecPosition) override;
+    CVector      GetVehicleDummyDefaultPosition(VehicleDummies eDummy) override;
+    CVector      GetVehicleDummyPosition(VehicleDummies eDummy) override;
+    bool         GetVehicleDummyPositions(std::array<CVector, static_cast<std::size_t>(VehicleDummies::VEHICLE_DUMMY_COUNT)>& positions) const override;
+    void         SetVehicleDummyPosition(VehicleDummies eDummy, const CVector& vecPosition) override;
     void         ResetVehicleDummies(bool bRemoveFromDummiesMap);
     static void  ResetAllVehicleDummies();
-    float        GetVehicleWheelSize(eResizableVehicleWheelGroup eWheelGroup) override;
-    void         SetVehicleWheelSize(eResizableVehicleWheelGroup eWheelGroup, float fWheelSize) override;
+    float        GetVehicleWheelSize(ResizableVehicleWheelGroup eWheelGroup) override;
+    void         SetVehicleWheelSize(ResizableVehicleWheelGroup eWheelGroup, float fWheelSize) override;
     void         ResetVehicleWheelSizes(std::pair<float, float>* defaultSizes = nullptr) override;
     static void  ResetAllVehiclesWheelSizes();
 
@@ -431,10 +470,12 @@ public:
     RwObject* GetRwObject() { return m_pInterface ? m_pInterface->pRwObject : NULL; }
 
     // CModelInfoSA methods
-    void         MakePedModel(char* szTexture);
+    void         MakePedModel(const char* szTexture);
     void         MakeObjectModel(ushort usBaseModelID);
+    void         MakeObjectDamageableModel(std::uint16_t usBaseModelID) override;
     void         MakeVehicleAutomobile(ushort usBaseModelID);
     void         MakeTimedObjectModel(ushort usBaseModelID);
+    void         MakeClumpModel(ushort usBaseModelID);
     void         DeallocateModel(void);
     unsigned int GetParentID() { return m_dwParentID; };
 
@@ -450,6 +491,11 @@ public:
 
     // Vehicle towing functions
     bool IsTowableBy(CModelInfo* towingModel) override;
+
+    bool IsDynamic() { return m_pInterface ? m_pInterface->usDynamicIndex != MODEL_PROPERTIES_GROUP_STATIC : false; };
+    bool IsDamageableAtomic() override;
+
+    static bool IsVehicleModel(std::uint32_t model) noexcept;
 
 private:
     void CopyStreamingInfoFromModel(ushort usCopyFromModelID);

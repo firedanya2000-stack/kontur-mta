@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIScrollPane.h
  *  PURPOSE:     Scroll pane widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 class CGUIScrollPane : public CGUIElement
 {
 public:
-    virtual ~CGUIScrollPane(){};
+    virtual ~CGUIScrollPane() {};
 
     virtual void SetHorizontalScrollBar(bool bEnabled) = 0;
     virtual void SetVerticalScrollBar(bool bEnabled) = 0;

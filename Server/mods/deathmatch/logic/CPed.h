@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPed.h
  *  PURPOSE:     Ped entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -19,9 +19,9 @@
 #include <CMatrix.h>
 
 #define INVALID_VEHICLE_SEAT 0xFF
-#define NUM_PLAYER_STATS 343
-#define WEAPON_SLOTS 13
-#define STEALTH_KILL_RANGE 2.5f
+#define NUM_PLAYER_STATS     343
+#define WEAPON_SLOTS         13
+#define STEALTH_KILL_RANGE   2.5f
 
 enum ePedMoveAnim
 {
@@ -103,6 +103,26 @@ enum eBone
     BONE_RIGHTFOOT
 };
 
+struct SPlayerAnimData
+{
+    std::string blockName{};
+    std::string animName{};
+    int         time{-1};
+    bool        loop{true};
+    bool        updatePosition{true};
+    bool        interruptable{true};
+    bool        freezeLastFrame{true};
+    int         blendTime{250};
+    bool        taskToBeRestoredOnAnimEnd{false};
+
+    std::int64_t startTime{0};
+
+    float progress{0.0f};
+    float speed{1.0f};
+
+    bool IsAnimating() const noexcept { return !blockName.empty() && !animName.empty(); }
+};
+
 class CWeapon
 {
 public:
@@ -154,8 +174,8 @@ public:
     bool IsWearingGoggles() { return m_bWearingGoggles; };
     void SetWearingGoggles(bool bWearingGoggles) { m_bWearingGoggles = bWearingGoggles; };
 
-    bool IsOnFire() { return m_bIsOnFire; }
-    void SetOnFire(bool bOnFire) { m_bIsOnFire = bOnFire; }
+    bool IsOnFire() const noexcept override { return m_bIsOnFire; }
+    void SetOnFire(bool bOnFire) noexcept override { m_bIsOnFire = bOnFire; }
 
     CWeapon*       GetWeapon(unsigned char ucSlot = 0xFF);
     unsigned char  GetWeaponSlot() { return m_ucWeaponSlot; }
@@ -168,12 +188,13 @@ public:
     void           SetWeaponAmmoInClip(unsigned short uscAmmoInClip, unsigned char ucSlot = 0xFF);
     unsigned short GetWeaponTotalAmmo(unsigned char ucSlot = 0xFF);
     void           SetWeaponTotalAmmo(unsigned short usTotalAmmo, unsigned char ucSlot = 0xFF);
+    bool           HasWeaponType(unsigned char ucWeaponType);
 
     float GetMaxHealth();
     float GetHealth() { return m_fHealth; }
     void  SetHealth(float fHealth) { m_fHealth = fHealth; }
-    float GetArmor() { return m_fArmor; }
-    void  SetArmor(float fArmor) { m_fArmor = fArmor; }
+    float GetArmor() const noexcept { return m_armor; }
+    void  SetArmor(float armor) noexcept { m_armor = std::clamp(armor, 0.0f, 100.0f); }
 
     float GetPlayerStat(unsigned short usStat) { return (usStat < NUM_PLAYER_STATS) ? m_fStats[usStat] : 0; }
     void  SetPlayerStat(unsigned short usStat, float fValue)
@@ -214,6 +235,9 @@ public:
 
     float GetRotation() { return m_fRotation; }
     void  SetRotation(float fRotation) { m_fRotation = fRotation; }
+
+    float GetCameraRotation() const { return m_cameraRotation; }
+    void  SetCameraRotation(float fRotation) { m_cameraRotation = fRotation; }
 
     void GetRotation(CVector& vecRotation);
     void GetMatrix(CMatrix& matrix);
@@ -265,6 +289,9 @@ public:
     bool IsStealthAiming() { return m_bStealthAiming; }
     void SetStealthAiming(bool bAiming) { m_bStealthAiming = bAiming; }
 
+    bool IsReloadingWeapon() const noexcept { return m_reloadingWeapon; }
+    void SetReloadingWeapon(bool state) noexcept { m_reloadingWeapon = state; }
+
     bool GetCollisionEnabled() { return m_bCollisionsEnabled; }
     void SetCollisionEnabled(bool bCollisionEnabled) { m_bCollisionsEnabled = bCollisionEnabled; }
 
@@ -277,6 +304,14 @@ public:
     std::vector<CPlayer*>::const_iterator NearPlayersIterBegin() { return m_nearPlayersList.begin(); }
     std::vector<CPlayer*>::const_iterator NearPlayersIterEnd() { return m_nearPlayersList.end(); }
 
+    const SPlayerAnimData& GetAnimationData() const noexcept { return m_animData; };
+    void                   SetAnimationData(const SPlayerAnimData& animData) { m_animData = animData; };
+    void                   SetAnimationProgress(float progress) { m_animData.progress = progress; };
+    void                   SetAnimationSpeed(float speed) { m_animData.speed = speed; };
+
+    void SetHanging(bool hanging) noexcept { m_hanging = hanging; }
+    bool IsHanging() const noexcept { return m_hanging; }
+
 protected:
     bool ReadSpecialData(const int iLine) override;
 
@@ -288,7 +323,7 @@ protected:
     bool                                 m_bWearingGoggles;
     bool                                 m_bIsOnFire;
     float                                m_fHealth;
-    float                                m_fArmor;
+    float                                m_armor;
     SFixedArray<float, NUM_PLAYER_STATS> m_fStats;
     CPlayerClothes*                      m_pClothes;
     bool                                 m_bHasJetPack;
@@ -314,7 +349,11 @@ protected:
     bool                                 m_bHeadless;
     bool                                 m_bFrozen;
     bool                                 m_bStealthAiming;
+    bool                                 m_reloadingWeapon{};
     CVehicle*                            m_pJackingVehicle;
+    SPlayerAnimData                      m_animData{};
+    float                                m_cameraRotation{};
+    bool                                 m_hanging{false};  // Is the player hanging during a climb task?
 
     CVehicle*    m_pVehicle;
     unsigned int m_uiVehicleSeat;

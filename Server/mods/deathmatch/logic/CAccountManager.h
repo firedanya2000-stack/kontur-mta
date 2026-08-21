@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CAccountManager.h
  *  PURPOSE:     User account manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -21,10 +21,10 @@ class CDatabaseManager;
 
 typedef uint SDbConnectionId;
 
-#define GUEST_ACCOUNT_NAME          "guest"
-#define HTTP_GUEST_ACCOUNT_NAME     "http_guest"
-#define CONSOLE_ACCOUNT_NAME        "Console"
-#define CONSOLE_NICK_NAME           "Console"
+#define GUEST_ACCOUNT_NAME      "guest"
+#define HTTP_GUEST_ACCOUNT_NAME "http_guest"
+#define CONSOLE_ACCOUNT_NAME    "Console"
+#define CONSOLE_NICK_NAME       "Console"
 
 //
 // CFastList with additional name->account mapping

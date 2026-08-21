@@ -5,7 +5,7 @@
  *  FILE:        sdk/core/CCoreInterface.h
  *  PURPOSE:     Core interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,6 +23,8 @@
 #include "CWebCoreInterface.h"
 #include "CTrayIconInterface.h"
 #include "CChatInterface.h"
+#include "CDiscordInterface.h"
+#include "FPSLimiterInterface.h"
 #include "xml/CXML.h"
 #include <gui/CGUI.h>
 
@@ -40,17 +42,21 @@ enum eCoreVersion
 };
 
 #ifndef WITH_TIMING_CHECKPOINTS
-    #define WITH_TIMING_CHECKPOINTS 1     // Comment this line to remove timing checkpoint code
+    #define WITH_TIMING_CHECKPOINTS 1  // Comment this line to remove timing checkpoint code
 #endif
 
 #if WITH_TIMING_CHECKPOINTS
-    #define IS_TIMING_CHECKPOINTS()     g_pCore->IsTimingCheckpoints ()
-    #define TIMING_CHECKPOINT(x)        g_pCore->OnTimingCheckpoint ( x )
-    #define TIMING_DETAIL(x)            g_pCore->OnTimingDetail ( x )
+    #define IS_TIMING_CHECKPOINTS() g_pCore->IsTimingCheckpoints()
+    #define TIMING_CHECKPOINT(x)    g_pCore->OnTimingCheckpoint(x)
+    #define TIMING_DETAIL(x)        g_pCore->OnTimingDetail(x)
 #else
-    #define IS_TIMING_CHECKPOINTS()     (false)
-    #define TIMING_CHECKPOINT(x)        {}
-    #define TIMING_DETAIL(x)            {}
+    #define IS_TIMING_CHECKPOINTS() (false)
+    #define TIMING_CHECKPOINT(x) \
+        { \
+        }
+    #define TIMING_DETAIL(x) \
+        { \
+        }
 #endif
 
 class CCoreInterface
@@ -60,21 +66,24 @@ public:
     //       correct MTA version before trying to use any other interface funcs.
     virtual eCoreVersion GetVersion() = 0;
 
-    virtual CConsoleInterface*      GetConsole() = 0;
-    virtual CCommandsInterface*     GetCommands() = 0;
-    virtual CGame*                  GetGame() = 0;
-    virtual CGraphicsInterface*     GetGraphics() = 0;
-    virtual CGUI*                   GetGUI() = 0;
-    virtual CModManagerInterface*   GetModManager() = 0;
-    virtual CMultiplayer*           GetMultiplayer() = 0;
-    virtual CNet*                   GetNetwork() = 0;
-    virtual CXML*                   GetXML() = 0;
-    virtual CKeyBindsInterface*     GetKeyBinds() = 0;
-    virtual CXMLNode*               GetConfig() = 0;
-    virtual CCVarsInterface*        GetCVars() = 0;
-    virtual CLocalizationInterface* GetLocalization() = 0;
-    virtual CWebCoreInterface*      GetWebCore() = 0;
-    virtual CTrayIconInterface*     GetTrayIcon() = 0;
+    virtual CConsoleInterface*                 GetConsole() = 0;
+    virtual CCommandsInterface*                GetCommands() = 0;
+    virtual CGame*                             GetGame() = 0;
+    virtual CGraphicsInterface*                GetGraphics() = 0;
+    virtual CGUI*                              GetGUI() = 0;
+    virtual CModManagerInterface*              GetModManager() = 0;
+    virtual CMultiplayer*                      GetMultiplayer() = 0;
+    virtual CNet*                              GetNetwork() = 0;
+    virtual CXML*                              GetXML() = 0;
+    virtual CKeyBindsInterface*                GetKeyBinds() = 0;
+    virtual CXMLNode*                          GetConfig() = 0;
+    virtual CCVarsInterface*                   GetCVars() = 0;
+    virtual CLocalizationInterface*            GetLocalization() = 0;
+    virtual CWebCoreInterface*                 GetWebCore() = 0;
+    virtual CWebCoreInterface*                 GetWebCoreUnchecked() = 0;  // For cleanup in destructors only - bypasses initialization check
+    virtual CTrayIconInterface*                GetTrayIcon() = 0;
+    virtual std::shared_ptr<CDiscordInterface> GetDiscord() = 0;
+    virtual FPSLimiter::FPSLimiterInterface*   GetFPSLimiter() const noexcept = 0;
 
     // Temporary functions for r1
     virtual void DebugEcho(const char* szText) = 0;
@@ -137,24 +146,18 @@ public:
     virtual bool IsOptionalUpdateInfoRequired(const char* szHost) = 0;
     virtual void InitiateDataFilesFix() = 0;
 
-    virtual uint GetFrameRateLimit() = 0;
-    virtual void RecalculateFrameRateLimit(uint uiServerFrameRateLimit = -1, bool bLogToConsole = true) = 0;
-    virtual void ApplyFrameRateLimit(uint uiOverrideRate = -1) = 0;
-    virtual void EnsureFrameRateLimitApplied() = 0;
-    virtual void SetClientScriptFrameRateLimit(uint uiClientScriptFrameRateLimit) = 0;
-
     virtual void                 OnPreFxRender() = 0;
     virtual void                 OnPreHUDRender() = 0;
     virtual uint                 GetMinStreamingMemory() = 0;
     virtual uint                 GetMaxStreamingMemory() = 0;
     virtual void                 OnCrashAverted(uint uiId) = 0;
     virtual void                 OnEnterCrashZone(uint uiId) = 0;
+    virtual void                 UpdateWerCrashModuleBases() = 0;
     virtual void                 LogEvent(uint uiDebugId, const char* szType, const char* szContext, const char* szBody, uint uiAddReportLogId = 0) = 0;
     virtual bool                 GetDebugIdEnabled(uint uiDebugId) = 0;
     virtual EDiagnosticDebugType GetDiagnosticDebug() = 0;
     virtual void                 SetDiagnosticDebug(EDiagnosticDebugType value) = 0;
     virtual CModelCacheManager*  GetModelCacheManager() = 0;
-    virtual void                 AddModelToPersistentCache(ushort usModelId) = 0;
     virtual void                 UpdateDummyProgress(int iValue = -1, const char* szType = "") = 0;
     virtual void                 SetDummyProgressUpdateAlways(bool bAlways) = 0;
 
@@ -179,6 +182,15 @@ public:
     virtual void ResetChatboxCharacterLimit() = 0;
     virtual int  GetChatboxCharacterLimit() = 0;
     virtual int  GetChatboxMaxCharacterLimit() = 0;
+
+    virtual void   SetCustomStreamingMemory(size_t sizeBytes) = 0;
+    virtual bool   IsUsingCustomStreamingMemorySize() = 0;
+    virtual size_t GetStreamingMemory() = 0;
+
+    virtual const SString& GetLastConnectedServerName() const = 0;
+    virtual void           SetLastConnectedServerName(const SString& strServerName) = 0;
+
+    virtual void OnPostColorFilterRender() = 0;
 };
 
 class CClientTime

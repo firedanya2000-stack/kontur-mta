@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CBoatHandlingEntry.h
  *  PURPOSE:     Vehicle handling entry interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,7 +15,7 @@ class CBoatHandlingEntry
 {
 public:
     // Destructor
-    virtual ~CBoatHandlingEntry(){};
+    virtual ~CBoatHandlingEntry() {};
 
     // Use this to copy data from an another handling class to this
     virtual void Assign(const CBoatHandlingEntry* pData) = 0;

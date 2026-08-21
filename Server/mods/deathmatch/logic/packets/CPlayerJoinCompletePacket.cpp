@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPlayerJoinCompletePacket.cpp
  *  PURPOSE:     Player join completion packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -27,12 +27,13 @@ CPlayerJoinCompletePacket::CPlayerJoinCompletePacket()
     m_ucSampleRate = 1;
     m_ucQuality = 4;
     m_uiBitrate = 0;
+    m_szServerName = "";
 }
 
 CPlayerJoinCompletePacket::CPlayerJoinCompletePacket(ElementID PlayerID, ElementID RootElementID, eHTTPDownloadType ucHTTPDownloadType,
                                                      unsigned short usHTTPDownloadPort, const char* szHTTPDownloadURL, int iHTTPMaxConnectionsPerClient,
                                                      int iEnableClientChecks, bool bVoiceEnabled, unsigned char ucSampleRate, unsigned char ucVoiceQuality,
-                                                     unsigned int uiBitrate)
+                                                     unsigned int uiBitrate, const char* szServerName)
 {
     m_PlayerID = PlayerID;
     m_RootElementID = RootElementID;
@@ -43,6 +44,7 @@ CPlayerJoinCompletePacket::CPlayerJoinCompletePacket(ElementID PlayerID, Element
     m_ucSampleRate = ucSampleRate;
     m_ucQuality = ucVoiceQuality;
     m_uiBitrate = uiBitrate;
+    m_szServerName = szServerName;
 
     switch (m_ucHTTPDownloadType)
     {
@@ -88,10 +90,7 @@ bool CPlayerJoinCompletePacket::Write(NetBitStreamInterface& BitStream) const
     BitStream.WriteCompressed(m_uiBitrate);
 
     // fakelag command enabled
-    if (BitStream.Can(eBitStreamVersion::FakeLagCommand))
-    {
-        BitStream.WriteBit(g_pGame->GetConfig()->IsFakeLagCommandEnabled());
-    }
+    BitStream.WriteBit(g_pGame->GetConfig()->IsFakeLagCommandEnabled());
 
     // Tellclient about maybe throttling back http client requests
     BitStream.Write(m_iHTTPMaxConnectionsPerClient);
@@ -119,6 +118,8 @@ bool CPlayerJoinCompletePacket::Write(NetBitStreamInterface& BitStream) const
         default:
             break;
     }
+
+    BitStream.WriteString(m_szServerName);
 
     return true;
 }

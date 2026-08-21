@@ -5,13 +5,43 @@
  *  FILE:        game_sa/HookSystem.h
  *  PURPOSE:     Function hook installation system
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
-#define     MAX_JUMPCODE_SIZE           20
+#define MAX_JUMPCODE_SIZE 20
+
+#include "gamesa_init.h"
+#include <version.h>
+
+#pragma warning(disable : 4102)  // unreferenced label
+
+// This macro adds an unreferenced label to your '__declspec(naked)' hook functions, to
+// point to the value of __LOCAL_SIZE, which will be examined by an external tool after
+// compilation, and it must be zero.
+//
+// The Microsoft Visual C++ compiler (MSVC) expects you, the developer, to allocate space for
+// local variables on the stack frame in custom prolog code. In the MSVC implementation of the
+// C++17 language standard, the compiler started to use local space for certain statements,
+// for which we will never support any sort of local space, in naked hook functions.
+// https://learn.microsoft.com/en-us/cpp/cpp/considerations-for-writing-prolog-epilog-code
+// https://developercommunity.visualstudio.com/t/stack-access-broken-in-naked-function/549628
+//
+// IMPORTANT: We can't use static_assert because __LOCAL_SIZE is not a compile-time constant.
+//            If you're going to change this macro, then copy your changes to the copy in multiplayer_sa.
+// clang-format off
+#define MTA_VERIFY_HOOK_LOCAL_SIZE \
+    { \
+        __asm {              push   eax } \
+        ; \
+        __asm { _localSize:  mov    eax, __LOCAL_SIZE } \
+        ; \
+        __asm {              pop    eax } \
+        ; \
+    }
+// clang-format on
 
 template <typename T>
 void* FunctionPointerToVoidP(T func)
@@ -23,6 +53,10 @@ void* FunctionPointerToVoidP(T func)
     } c = {func};
     return c.b;
 }
+
+BYTE* CreateJump(DWORD dwFrom, DWORD dwTo, BYTE* ByteArray);
+
+void HookInstallCall(DWORD dwInstallAddress, DWORD dwHookFunction);
 
 template <typename T>
 bool HookInstall(DWORD dwInstallAddress, T dwHookHandler, int iJmpCodeSize = 5)
@@ -40,39 +74,8 @@ bool HookInstall(DWORD dwInstallAddress, T dwHookHandler, int iJmpCodeSize = 5)
     }
 }
 
-BYTE* CreateJump(DWORD dwFrom, DWORD dwTo, BYTE* ByteArray);
-
 // Auto detect requirement of US/EU hook installation
-#define EZHookInstall(type) \
-        __if_not_exists( RETURN_##type##_US ) \
-        { \
-            HookInstall( HOOKPOS_##type, (DWORD)HOOK_##type, HOOKSIZE_##type ) \
-        } \
-        __if_exists( RETURN_##type##_US ) \
-        { \
-            if ( pGame->GetGameVersion () == VERSION_US_10 ) \
-            { \
-                EZHookInstall_HERE( type, US ) \
-            } \
-            else \
-            { \
-                EZHookInstall_HERE( type, EU ) \
-            } \
-        }
-
-// US/EU hook installation
-// Includes additional return pointer copies if required
-#define EZHookInstall_HERE(type,CO) \
-        HookInstall( HOOKPOS_##type##_##CO##, (DWORD)HOOK_##type, HOOKSIZE_##type##_##CO## ); \
-        RETURN_##type##_BOTH = RETURN_##type##_##CO##; \
-        __if_exists( RETURN_##type##B_##CO## ) \
-        { \
-            RETURN_##type##B_BOTH = RETURN_##type##B_##CO##; \
-        } \
-        __if_exists( RETURN_##type##C_##CO## ) \
-        { \
-            RETURN_##type##C_BOTH = RETURN_##type##C_##CO##; \
-        }
+#define EZHookInstall(type) HookInstall(HOOKPOS_##type, (DWORD)HOOK_##type, HOOKSIZE_##type);
 
 // Structure for holding hook info
 struct SHookInfo
@@ -86,7 +89,7 @@ struct SHookInfo
     uint  uiSize;
 };
 
-#define MAKE_HOOK_INFO(type)  SHookInfo ( HOOKPOS_##type, HOOK_##type, HOOKSIZE_##type )
+#define MAKE_HOOK_INFO(type) SHookInfo(HOOKPOS_##type, HOOK_##type, HOOKSIZE_##type)
 
 // Structure for holding poke info
 struct SPokeInfo

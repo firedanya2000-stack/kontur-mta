@@ -5,13 +5,14 @@
  *  FILE:        SharedUtil.Math.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
 
 #include <cmath>
 #include "SharedUtil.Misc.h"
+#include <random>
 
 namespace SharedUtil
 {
@@ -103,5 +104,42 @@ namespace SharedUtil
         }
     }
 
-    inline float DegreesToRadians(float fValue) { return fValue * 0.017453292f; }
-}            // namespace SharedUtil
+    inline float DegreesToRadians(float fValue)
+    {
+        return fValue * 0.017453292f;
+    }
+
+    static std::random_device randomDevice;
+    static std::mt19937       randomEngine(randomDevice());
+
+    inline float GetRandomNumberInRange(float minRange, float maxRange)
+    {
+        return std::uniform_real_distribution<float>{minRange, maxRange}(randomEngine);
+    }
+
+    inline bool IsNearlyEqual(float a, float b, float epsilon = std::numeric_limits<float>().epsilon()) noexcept
+    {
+        return std::fabs(a - b) <= epsilon;
+    }
+
+    inline bool ApproximatelyEqual(float a, float b, float epsilon = std::numeric_limits<float>().epsilon()) noexcept
+    {
+        return std::fabs(a - b) <= std::max(std::fabs(a), std::fabs(b)) * epsilon;
+    }
+
+    inline bool EssentiallyEqual(float a, float b, float epsilon = std::numeric_limits<float>().epsilon()) noexcept
+    {
+        return std::fabs(a - b) <= std::min(std::fabs(a), std::fabs(b)) * epsilon;
+    }
+
+    inline bool DefinitelyGreaterThan(float a, float b, float epsilon = std::numeric_limits<float>().epsilon()) noexcept
+    {
+        return (a - b) > std::max(std::fabs(a), std::fabs(b)) * epsilon;
+    }
+
+    inline bool DefinitelyLessThan(float a, float b, float epsilon = std::numeric_limits<float>().epsilon()) noexcept
+    {
+        return (b - a) > std::max(std::fabs(a), std::fabs(b)) * epsilon;
+    }
+
+}  // namespace SharedUtil

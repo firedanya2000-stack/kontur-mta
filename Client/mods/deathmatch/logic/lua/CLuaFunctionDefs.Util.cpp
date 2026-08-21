@@ -12,27 +12,40 @@
 
 int CLuaFunctionDefs::GetValidPedModels(lua_State* luaVM)
 {
-    int iIndex = 0;
+    bool             includeCustom;
+    CScriptArgReader argStream(luaVM);
+    argStream.ReadBool(includeCustom, true);
+
+    auto* modelManager = g_pClientGame->GetManager()->GetModelManager();
+
+    std::size_t index = 0;
     lua_newtable(luaVM);
 
-    // Gather GTASA default skins
-    for (int i = 0; i <= 312; i++)
+    // Gather default and possibly custom GTASA ped model IDs
+    for (std::size_t i = 0; i <= 312; i++)
     {
         if (CClientPlayerManager::IsValidModel(i))
         {
-            lua_pushnumber(luaVM, ++iIndex);
+            // Skip custom skins if not requested
+            if (!includeCustom && modelManager->FindModelByID(i))
+                continue;
+
+            lua_pushnumber(luaVM, ++index);
             lua_pushnumber(luaVM, i);
             lua_settable(luaVM, -3);
         }
     }
 
-    // Gather our custom skin model IDs allocated with engineRequestModel
-    // (there might be some < 313 as well, and since we don't want duplicates, we start at 313, others are already included by the loop above)
-    for (const auto& model : m_pManager->GetModelManager()->GetModelsByType(eClientModelType::PED, 313))
+    if (includeCustom)
     {
-        lua_pushnumber(luaVM, ++iIndex);
-        lua_pushnumber(luaVM, model->GetModelID());
-        lua_settable(luaVM, -3);
+        // Gather the rest of custom skin model IDs allocated with engineRequestModel
+        // (there are usually some < 313 as well, and since we don't want duplicates, we start at 313, others are already included by the loop above)
+        for (const auto& model : m_pManager->GetModelManager()->GetModelsByType(eClientModelType::PED, 313))
+        {
+            lua_pushnumber(luaVM, ++index);
+            lua_pushnumber(luaVM, model->GetModelID());
+            lua_settable(luaVM, -3);
+        }
     }
 
     return 1;
@@ -214,7 +227,6 @@ int CLuaFunctionDefs::GetKeyboardLayout(lua_State* luaVM)
 {
     const char* readingLayout = "ltr";
 
-#if _WIN32_WINNT >= _WIN32_WINNT_WIN7
     DWORD readingLayoutValue = 0;
 
     if (::GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_IREADINGLAYOUT | LOCALE_RETURN_NUMBER, reinterpret_cast<LPWSTR>(&readingLayoutValue),
@@ -222,36 +234,22 @@ int CLuaFunctionDefs::GetKeyboardLayout(lua_State* luaVM)
     {
         switch (readingLayoutValue)
         {
-            case 0:            // Left to right (English)
+            case 0:  // Left to right (English)
                 readingLayout = "ltr";
                 break;
-            case 1:            // Right to left (Arabic, Hebrew)
+            case 1:  // Right to left (Arabic, Hebrew, and Persian)
                 readingLayout = "rtl";
                 break;
-            case 2:            // Vertical top to bottom with columns to the left and also left to right (Japanese)
+            case 2:  // Vertical top to bottom with columns to the left and also left to right (Japanese)
                 readingLayout = "ttb-rtl-ltr";
                 break;
-            case 3:            // Vertical top to bottom with columns proceeding to the right (Mongolian)
+            case 3:  // Vertical top to bottom with columns proceeding to the right (Mongolian)
                 readingLayout = "ttb-ltr";
                 break;
             default:
                 break;
         }
     }
-
-#else
-    HKL             keyboardLayout = ::GetKeyboardLayout(0 /* current thread*/);
-    LCID            locale = MAKELCID(LOWORD(keyboardLayout), SORT_DEFAULT);
-    LOCALESIGNATURE localeSignature = {};
-
-    if (GetLocaleInfoW(locale, LOCALE_FONTSIGNATURE, reinterpret_cast<LPWSTR>(&localeSignature), sizeof(localeSignature) / sizeof(WCHAR)) != 0)
-    {
-        if ((localeSignature.lsUsb[3] & 0x08000000) != 0)
-        {
-            readingLayout = "rtl";
-        }
-    }
-#endif
 
     lua_createtable(luaVM, 0, 1);
     lua_pushstring(luaVM, "readingLayout");
@@ -280,7 +278,7 @@ int CLuaFunctionDefs::GetPerformanceStats(lua_State* luaVM)
         for (int c = 0; c < Result.ColumnCount(); c++)
         {
             const SString& name = Result.ColumnName(c);
-            lua_pushnumber(luaVM, c + 1);            // row index number (starting at 1, not 0)
+            lua_pushnumber(luaVM, c + 1);  // row index number (starting at 1, not 0)
             lua_pushlstring(luaVM, name.c_str(), name.length());
             lua_settable(luaVM, -3);
         }
@@ -288,10 +286,10 @@ int CLuaFunctionDefs::GetPerformanceStats(lua_State* luaVM)
         lua_newtable(luaVM);
         for (int r = 0; r < Result.RowCount(); r++)
         {
-            lua_newtable(luaVM);                     // new table
-            lua_pushnumber(luaVM, r + 1);            // row index number (starting at 1, not 0)
-            lua_pushvalue(luaVM, -2);                // value
-            lua_settable(luaVM, -4);                 // refer to the top level table
+            lua_newtable(luaVM);           // new table
+            lua_pushnumber(luaVM, r + 1);  // row index number (starting at 1, not 0)
+            lua_pushvalue(luaVM, -2);      // value
+            lua_settable(luaVM, -4);       // refer to the top level table
 
             for (int c = 0; c < Result.ColumnCount(); c++)
             {
@@ -300,7 +298,7 @@ int CLuaFunctionDefs::GetPerformanceStats(lua_State* luaVM)
                 lua_pushlstring(luaVM, cell.c_str(), cell.length());
                 lua_settable(luaVM, -3);
             }
-            lua_pop(luaVM, 1);            // pop the inner table
+            lua_pop(luaVM, 1);  // pop the inner table
         }
         return 2;
     }

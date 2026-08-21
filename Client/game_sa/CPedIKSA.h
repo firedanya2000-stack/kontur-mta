@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CPedIKSA.h
  *  PURPOSE:     Header file for ped entity inverse kinematics class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -49,7 +49,7 @@ typedef struct
 class CPedIKSAInterface
 {
 public:
-    CPedSAInterface* ThisPed;            // 528
+    CPedSAInterface* ThisPed;  // 528
     LimbOrientation  m_torsoOrien;
     float            m_fSlopePitch;
     float            m_fSlopePitchLimitMult;

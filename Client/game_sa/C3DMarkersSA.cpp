@@ -5,7 +5,7 @@
  *  FILE:        game_sa/C3DMarkersSA.cpp
  *  PURPOSE:     3D Marker entity manager
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -28,7 +28,7 @@ C3DMarkersSA::~C3DMarkersSA()
     }
 }
 
-C3DMarker* C3DMarkersSA::CreateMarker(DWORD Identifier, e3DMarkerType dwType, CVector* vecPosition, float fSize, float fPulseFraction, BYTE r, BYTE g, BYTE b,
+C3DMarker* C3DMarkersSA::CreateMarker(DWORD Identifier, T3DMarkerType dwType, CVector* vecPosition, float fSize, float fPulseFraction, BYTE r, BYTE g, BYTE b,
                                       BYTE a)
 {
     /*
@@ -37,13 +37,18 @@ C3DMarker* C3DMarkersSA::CreateMarker(DWORD Identifier, e3DMarkerType dwType, CV
     unsigned short nPeriod, float fPulseFrac, short nRotRate, float normalX = 0.0f,
     float normalY = 0.0f, float normalZ = 0.0f, bool zCheck = FALSE);
     */
-    WORD wType = dwType;
-    dwType = (e3DMarkerType)wType;
+    WORD wType = (WORD)dwType;
+    dwType = (T3DMarkerType)wType;
     bool bZCheck = true;
+
+    // Pass a copy of the position to PlaceMarker, not the original pointer.
+    CVector  vecPositionCopy = *vecPosition;
+    CVector* pVecPosCopy = &vecPositionCopy;
 
     DWORD dwFunc = FUNC_PlaceMarker;
     DWORD dwReturn = 0;
-    _asm
+    // clang-format off
+    __asm
     {
         push    bZCheck     // zCheck  ##SA##
         push    0           // normalZ ##SA##
@@ -57,13 +62,14 @@ C3DMarker* C3DMarkersSA::CreateMarker(DWORD Identifier, e3DMarkerType dwType, CV
         push    g           // green
         push    r           // red
         push    fSize       // size
-        push    vecPosition // position
+        push    pVecPosCopy // position (copy to prevent PlaceMarker from corrupting the caller's vector)
         push    dwType      // type
         push    Identifier  // identifier
         call    dwFunc
         mov     dwReturn, eax
         add     esp, 0x3C
     }
+    // clang-format on
 
     if (dwReturn)
     {
@@ -98,4 +104,16 @@ C3DMarker* C3DMarkersSA::FindMarker(DWORD Identifier)
             return Markers[i];
     }
     return NULL;
+}
+
+void C3DMarkersSA::ReinitMarkers()
+{
+    using Function_ShutdownMarkers = void(__cdecl*)();
+    auto shutdownMarkers = reinterpret_cast<Function_ShutdownMarkers>(0x722710);
+
+    using Function_InitMarkers = void(__cdecl*)();
+    auto initMarkers = reinterpret_cast<Function_InitMarkers>(0x724E40);
+
+    shutdownMarkers();
+    initMarkers();
 }

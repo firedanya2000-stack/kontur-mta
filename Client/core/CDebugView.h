@@ -5,7 +5,7 @@
  *  FILE:        core/CDebugView.h
  *  PURPOSE:     Header file for debug view class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,8 +15,8 @@
 #include <gui/CGUI.h>
 #include "CChat.h"
 
-#define DEBUGVIEW_WIDTH         576                             // Debugview default width
-#define DEBUGVIEW_TEXT_COLOR    CColor( 235, 221, 178, 255 )    // Debugview default text color
+#define DEBUGVIEW_WIDTH      576                         // Debugview default width
+#define DEBUGVIEW_TEXT_COLOR CColor(235, 221, 178, 255)  // Debugview default text color
 
 class CDebugView : public CChat
 {
@@ -28,5 +28,5 @@ public:
 
 protected:
     // Debug view doesn't support position changes unlike chat box
-    void UpdatePosition() override{};
+    void UpdatePosition() override {};
 };

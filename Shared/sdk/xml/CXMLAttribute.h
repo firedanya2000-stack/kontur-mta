@@ -5,7 +5,7 @@
  *  FILE:        sdk/xml/CXMLAttribute.h
  *  PURPOSE:     XML attribute interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CXMLAttribute : public CXMLCommon
 {
 public:
-    virtual ~CXMLAttribute(){};
+    virtual ~CXMLAttribute() {};
 
     virtual const std::string  GetName() const = 0;
     virtual const std::string& GetValue() const = 0;

@@ -4,11 +4,14 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        Shared/sdk/SharedUtil.Crypto.hpp
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
+
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
 #include <cryptopp/base64.h>
+#include <cryptopp/base32.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/rsa.h>
 #include <cryptopp/modes.h>
@@ -16,6 +19,9 @@
 #include <cryptopp/hmac.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/md5.h>
+#include <zlib/zlib.h>
+#include <cstdint>
+#include <cstdlib>
 #include "SString.h"
 
 namespace SharedUtil
@@ -25,18 +31,66 @@ namespace SharedUtil
         SString publicKey, privateKey;
     };
 
-    inline SString Base64encode(const SString& data)
+    inline SString Base64encode(const SString& data, const SString& variant = SString())
     {
-        SString                result;
-        CryptoPP::StringSource ss(data, true, new CryptoPP::Base64Encoder(new CryptoPP::StringSink(result), false));            // Memory is freed automatically
+        SString result;
+
+        if (variant == "URL")
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base64URLEncoder(new CryptoPP::StringSink(result), false));
+        }
+        else
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base64Encoder(new CryptoPP::StringSink(result), false));
+        }
 
         return result;
     }
 
-    inline SString Base64decode(const SString& data)
+    inline SString Base64decode(const SString& data, const SString& variant = SString())
     {
-        SString                result;
-        CryptoPP::StringSource ss(data, true, new CryptoPP::Base64Decoder(new CryptoPP::StringSink(result)));            // Memory is freed automatically
+        SString result;
+
+        if (variant == "URL")
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base64URLDecoder(new CryptoPP::StringSink(result)));
+        }
+        else
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base64Decoder(new CryptoPP::StringSink(result)));
+        }
+
+        return result;
+    }
+
+    inline SString Base32encode(const SString& data, const SString& variant = SString())
+    {
+        SString result;
+
+        if (variant == "HEX")
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base32HexEncoder(new CryptoPP::StringSink(result), false));
+        }
+        else
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base32Encoder(new CryptoPP::StringSink(result), false));
+        }
+
+        return result;
+    }
+
+    inline SString Base32decode(const SString& data, const SString& variant = SString())
+    {
+        SString result;
+
+        if (variant == "HEX")
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base32HexDecoder(new CryptoPP::StringSink(result)));
+        }
+        else
+        {
+            CryptoPP::StringSource ss(data, true, new CryptoPP::Base32Decoder(new CryptoPP::StringSink(result)));
+        }
 
         return result;
     }
@@ -124,19 +178,42 @@ namespace SharedUtil
         using namespace CryptoPP;
         using CryptoPP::byte;
 
-        AutoSeededRandomPool rnd;
+        // Use malloc to probe if allocation would succeed, bypassing MTA's custom OOM handler
+        // (which uses non-continuable SEH exceptions). Unlike new, malloc does not invoke _set_new_handler.
+        // Probe with 3x input size to cover: output buffer + Crypto++ internal buffers + StringSink allocations.
+        constexpr size_t kMaxProbeSize = SIZE_MAX / 3 - 256;
+        if (sData.size() > kMaxProbeSize)
+            return {SString(), SString()};
 
-        SString result;
-        SString sIv;
+        void* probe = std::malloc(sData.size() * 3 + 256);
+        if (!probe)
+            return {SString(), SString()};
+        std::free(probe);
 
-        sIv.resize(AES::BLOCKSIZE);
-        rnd.GenerateBlock((byte*)sIv.data(), sIv.size());
+        try
+        {
+            AutoSeededRandomPool rnd;
 
-        CTR_Mode<AES>::Encryption aesEncryption;
-        aesEncryption.SetKeyWithIV((byte*)sKey.data(), sKey.size(), (byte*)sIv.data());
-        StringSource ss(sData, true, new StreamTransformationFilter(aesEncryption, new StringSink(result)));
+            SString result;
+            SString sIv;
 
-        return {result, sIv};
+            // Pre-reserve output buffer - AES-CTR output size equals input size
+            // This avoids StringSink's doubling behavior on large inputs
+            result.reserve(sData.size());
+
+            sIv.resize(AES::BLOCKSIZE);
+            rnd.GenerateBlock((byte*)sIv.data(), sIv.size());
+
+            CTR_Mode<AES>::Encryption aesEncryption;
+            aesEncryption.SetKeyWithIV((byte*)sKey.data(), sKey.size(), (byte*)sIv.data());
+            StringSource ss(sData, true, new StreamTransformationFilter(aesEncryption, new StringSink(result)));
+
+            return {result, sIv};
+        }
+        catch (const std::exception&)
+        {
+            return {SString(), SString()};
+        }
     }
 
     inline SString Aes128decode(const SString& sData, const SString& sKey, SString sIv)
@@ -144,13 +221,115 @@ namespace SharedUtil
         using namespace CryptoPP;
         using CryptoPP::byte;
 
-        sIv.resize(AES::BLOCKSIZE);
-        SString result;
+        // Use malloc to probe if allocation would succeed, bypassing MTA's custom OOM handler
+        // (which uses non-continuable SEH exceptions). Unlike new, malloc does not invoke _set_new_handler.
+        // Probe with 3x input size to cover: output buffer + Crypto++ internal buffers + StringSink allocations.
+        constexpr size_t kMaxProbeSize = SIZE_MAX / 3 - 256;
+        if (sData.size() > kMaxProbeSize)
+            return SString();
 
-        CTR_Mode<AES>::Decryption aesDecryption;
-        aesDecryption.SetKeyWithIV((byte*)sKey.data(), sKey.size(), (byte*)sIv.data());
-        StringSource ss(sData, true, new StreamTransformationFilter(aesDecryption, new StringSink(result)));
+        void* probe = std::malloc(sData.size() * 3 + 256);
+        if (!probe)
+            return SString();
+        std::free(probe);
+
+        try
+        {
+            sIv.resize(AES::BLOCKSIZE);
+            SString result;
+
+            // Pre-reserve output buffer - AES-CTR output size equals input size
+            // This avoids StringSink's doubling behavior on large inputs
+            result.reserve(sData.size());
+
+            CTR_Mode<AES>::Decryption aesDecryption;
+            aesDecryption.SetKeyWithIV((byte*)sKey.data(), sKey.size(), (byte*)sIv.data());
+            StringSource ss(sData, true, new StreamTransformationFilter(aesDecryption, new StringSink(result)));
+
+            return result;
+        }
+        catch (const std::exception&)
+        {
+            return SString();
+        }
+    }
+
+    inline bool StringToZLibFormat(const std::string& format, int& outResult)
+    {
+        int value = atoi(format.c_str());
+        if ((value >= 9 && value <= 31) || (value >= -15 && value <= -9))  // allowed values: 9..31, -9..-15
+        {
+            outResult = value;
+            return true;
+        }
+        return false;
+    }
+
+    inline int ZLibCompress(const std::string& input, std::string& output, const int windowBits = (int)ZLibFormat::GZIP, const int compression = 9,
+                            const ZLibStrategy strategy = ZLibStrategy::DEFAULT)
+    {
+        z_stream stream{};
+
+        int result = deflateInit2(&stream, compression, Z_DEFLATED, windowBits, MAX_MEM_LEVEL, (int)strategy);
+        if (result != Z_OK)
+            return result;
+
+        output.resize(deflateBound(&stream, input.size()));  // resize to the upper bound of what the compressed size might be
+
+        stream.next_out = (Bytef*)output.data();
+        stream.avail_out = output.size();
+
+        stream.next_in = (z_const Bytef*)input.data();
+        stream.avail_in = input.size();
+
+        result = deflate(&stream, Z_FINISH);
+        result |= deflateEnd(&stream);
+
+        if (result == Z_STREAM_END)
+            output.resize(stream.total_out);  // resize to the actual size
 
         return result;
     }
-}            // namespace SharedUtil
+
+    inline int ZLibUncompress(const std::string& input, std::string& output, int windowBits = 0)
+    {
+        if (windowBits == 0 && input.size() >= 2)  // try to determine format automatically
+        {
+            if (input[0] == '\x1F' && input[1] == '\x8B')
+                windowBits = (int)ZLibFormat::GZIP;
+            else if (input[0] == '\x78')
+                windowBits = (int)ZLibFormat::ZLIB;
+            else
+                windowBits = (int)ZLibFormat::ZRAW;
+        }
+        z_stream stream{};
+
+        int result = inflateInit2(&stream, windowBits);
+        if (result != Z_OK)
+            return result;
+
+        stream.next_in = (z_const Bytef*)input.data();
+        stream.avail_in = input.size();
+
+        // Uncompress in chunks
+        std::string buffer;
+        buffer.resize(std::min(stream.avail_in, 128000U));  // use input length for chunk size (capped to 128k bytes which should be efficient enough)
+        while (true)
+        {
+            stream.next_out = (Bytef*)buffer.data();
+            stream.avail_out = buffer.size();
+
+            result = inflate(&stream, Z_NO_FLUSH);
+            if (result != Z_OK && result != Z_STREAM_END)
+                break;
+
+            output.append(buffer, 0, stream.total_out - output.size());  // append only what was written to buffer
+
+            if (result == Z_STREAM_END)
+                break;
+        }
+        result |= inflateEnd(&stream);
+        return result;
+    }
+
+}  // namespace SharedUtil

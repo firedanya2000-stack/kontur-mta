@@ -5,7 +5,7 @@
  *  FILE:        core/CMainMenu.cpp
  *  PURPOSE:     2D Main menu graphical user interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,41 +13,43 @@
 #include <game/CGame.h>
 #include "CNewsBrowser.h"
 #include "CLanguageSelector.h"
+#include "CDiscordRichPresence.h"
 
-#define NATIVE_RES_X    1280.0f
-#define NATIVE_RES_Y    1024.0f
+#define NATIVE_RES_X 1280.0f
+#define NATIVE_RES_Y 1024.0f
 
-#define NATIVE_BG_X     1280.0f
-#define NATIVE_BG_Y     649.0f
+#define NATIVE_BG_X 1280.0f
+#define NATIVE_BG_Y 649.0f
 
-#define NATIVE_LOGO_X     1058.0f
-#define NATIVE_LOGO_Y     540.0f
+#define NATIVE_LOGO_X 1058.0f
+#define NATIVE_LOGO_Y 540.0f
 
-#define CORE_MTA_MENUITEMS_START_X  0.168
+#define CORE_MTA_MENUITEMS_START_X 0.168
 
-#define CORE_MTA_BG_MAX_ALPHA       1.00f   //ACHTUNG: Set to 1 for now due to GTA main menu showing through (no delay inserted between Entering game... and loading screen)
-#define CORE_MTA_BG_INGAME_ALPHA    0.90f
-#define CORE_MTA_FADER              0.05f // 1/20
-#define CORE_MTA_FADER_CREDITS      0.01f
+#define CORE_MTA_BG_MAX_ALPHA \
+    1.00f  // ACHTUNG: Set to 1 for now due to GTA main menu showing through (no delay inserted between Entering game... and loading screen)
+#define CORE_MTA_BG_INGAME_ALPHA 0.90f
+#define CORE_MTA_FADER           0.05f  // 1/20
+#define CORE_MTA_FADER_CREDITS   0.01f
 
-#define CORE_MTA_HOVER_SCALE        1.0f
-#define CORE_MTA_NORMAL_SCALE       0.6f
-#define CORE_MTA_HOVER_ALPHA        1.0f
-#define CORE_MTA_NORMAL_ALPHA       0.6f
+#define CORE_MTA_HOVER_SCALE  1.0f
+#define CORE_MTA_NORMAL_SCALE 0.6f
+#define CORE_MTA_HOVER_ALPHA  1.0f
+#define CORE_MTA_NORMAL_ALPHA 0.6f
 
-#define CORE_MTA_HIDDEN_ALPHA       0.0f
-#define CORE_MTA_DISABLED_ALPHA     0.4f
-#define CORE_MTA_ENABLED_ALPHA      1.0f
+#define CORE_MTA_HIDDEN_ALPHA   0.0f
+#define CORE_MTA_DISABLED_ALPHA 0.4f
+#define CORE_MTA_ENABLED_ALPHA  1.0f
 
-#define CORE_MTA_ANIMATION_TIME     200
+#define CORE_MTA_ANIMATION_TIME_IN  200
+#define CORE_MTA_ANIMATION_TIME_OUT 100
 #define CORE_MTA_MOVE_ANIM_TIME     600
 
-#define CORE_MTA_STATIC_BG          "cgui\\images\\background.png"
-#define CORE_MTA_LOGO               "cgui\\images\\background_logo.png"
-#define CORE_MTA_FILLER             "cgui\\images\\mta_filler.png"
-#define CORE_MTA_VERSION            "cgui\\images\\version.png"
+#define CORE_MTA_STATIC_BG "cgui\\images\\background.png"
+#define CORE_MTA_LOGO      "cgui\\images\\background_logo.png"
+#define CORE_MTA_FILLER    "cgui\\images\\mta_filler.png"
+#define CORE_MTA_VERSION   "cgui\\images\\version.png"
 
-static int          WaitForMenu = 0;
 static const SColor headlineColors[] = {SColorRGBA(233, 234, 106, 255), SColorRGBA(233 / 6 * 4, 234 / 6 * 4, 106 / 6 * 4, 255),
                                         SColorRGBA(233 / 7 * 3, 234 / 7 * 3, 106 / 7 * 3, 255)};
 
@@ -69,13 +71,13 @@ CMainMenu::CMainMenu(CGUI* pManager)
 
     // Initialize
     m_pManager = pManager;
-    m_bIsVisible = false;
+    m_bIsVisible = true;
     m_bIsFullyVisible = false;
     m_bIsIngame = true;
     //    m_bIsInSubWindow = false;
-    m_bStarted = false;
     m_fFader = 0;
     m_ucFade = FADE_INVISIBLE;
+    m_bCursorAlphaReset = false;
 
     // Adjust window size to resolution
     CVector2D ScreenSize = m_pManager->GetResolution();
@@ -87,7 +89,7 @@ CMainMenu::CMainMenu(CGUI* pManager)
     int iBackgroundSizeY;
 
     // First let's work out our x and y offsets
-    if (ScreenSize.fX > ScreenSize.fY)            // If the monitor is a normal landscape one
+    if (ScreenSize.fX > ScreenSize.fY)  // If the monitor is a normal landscape one
     {
         float iRatioSizeY = ScreenSize.fY / NATIVE_RES_Y;
         m_iMenuSizeX = NATIVE_RES_X * iRatioSizeY;
@@ -99,7 +101,7 @@ CMainMenu::CMainMenu(CGUI* pManager)
         iBackgroundSizeX = ScreenSize.fX;
         iBackgroundSizeY = NATIVE_BG_Y * iRatioSizeX;
     }
-    else            // Otherwise our monitor is in a portrait resolution, so we cant fill the background by y
+    else  // Otherwise our monitor is in a portrait resolution, so we cant fill the background by y
     {
         float iRatioSizeX = ScreenSize.fX / NATIVE_RES_X;
         m_iMenuSizeY = NATIVE_RES_Y * iRatioSizeX;
@@ -170,20 +172,27 @@ CMainMenu::CMainMenu(CGUI* pManager)
 
     float fBase = 0.613f;
     float fGap = 0.043f;
-    // Our disconnect item is shown/hidden dynamically, so we store it seperately
+    // Our disconnect item is shown/hidden dynamically, so we store it separately
     m_pDisconnect = CreateItem(MENU_ITEM_DISCONNECT, "menu_disconnect.png", CVector2D(0.168f, fBase + fGap * 0));
     m_pDisconnect->image->SetVisible(false);
 
     // Create the menu items
     // Filepath, Relative position, absolute native size
     // And the font for the graphics is ?
-    m_menuItems.push_back(CreateItem(MENU_ITEM_QUICK_CONNECT, "menu_quick_connect.png", CVector2D(0.168f, fBase + fGap * 0)));
-    m_menuItems.push_back(CreateItem(MENU_ITEM_BROWSE_SERVERS, "menu_browse_servers.png", CVector2D(0.168f, fBase + fGap * 1)));
-    m_menuItems.push_back(CreateItem(MENU_ITEM_HOST_GAME, "menu_host_game.png", CVector2D(0.168f, fBase + fGap * 2)));
-    m_menuItems.push_back(CreateItem(MENU_ITEM_MAP_EDITOR, "menu_map_editor.png", CVector2D(0.168f, fBase + fGap * 3)));
-    m_menuItems.push_back(CreateItem(MENU_ITEM_SETTINGS, "menu_settings.png", CVector2D(0.168f, fBase + fGap * 4)));
-    m_menuItems.push_back(CreateItem(MENU_ITEM_ABOUT, "menu_about.png", CVector2D(0.168f, fBase + fGap * 5)));
-    m_menuItems.push_back(CreateItem(MENU_ITEM_QUIT, "menu_quit.png", CVector2D(0.168f, fBase + fGap * 6)));
+    int iMenuItemIndex = 0;
+    m_menuItems.push_back(CreateItem(MENU_ITEM_QUICK_CONNECT, "menu_quick_connect.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
+    m_menuItems.push_back(CreateItem(MENU_ITEM_BROWSE_SERVERS, "menu_browse_servers.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
+
+    // Only add Host Game and Map Editor if server folder exists
+    if (DirectoryExists(CalcMTASAPath("server")))
+    {
+        m_menuItems.push_back(CreateItem(MENU_ITEM_HOST_GAME, "menu_host_game.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
+        m_menuItems.push_back(CreateItem(MENU_ITEM_MAP_EDITOR, "menu_map_editor.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
+    }
+
+    m_menuItems.push_back(CreateItem(MENU_ITEM_SETTINGS, "menu_settings.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
+    m_menuItems.push_back(CreateItem(MENU_ITEM_ABOUT, "menu_about.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
+    m_menuItems.push_back(CreateItem(MENU_ITEM_QUIT, "menu_quit.png", CVector2D(0.168f, fBase + fGap * iMenuItemIndex++)));
 
     // We store the position of the top item, and the second item.  These will be useful later
     float fFirstItemSize = m_menuItems.front()->image->GetSize(false).fY;
@@ -193,9 +202,9 @@ CMainMenu::CMainMenu(CGUI* pManager)
     m_iSecondItemCentre = (m_menuItems[1]->image)->GetPosition().fY + fSecondItemSize * 0.5f;
 
     // Store some mouse over bounding box positions
-    m_menuAX = (0.168f * m_iMenuSizeX) + m_iXOff;                                                                      // Left side of the items
-    m_menuAY = m_iFirstItemCentre - fFirstItemSize * (CORE_MTA_HOVER_SCALE / CORE_MTA_NORMAL_SCALE) * 0.5f;            // Top side of the items
-    m_menuBX = m_menuAX + ((390 / NATIVE_RES_X) * m_iMenuSizeX);            // Right side of the items. We add the longest picture (browse_servers)
+    m_menuAX = (0.168f * m_iMenuSizeX) + m_iXOff;                                                            // Left side of the items
+    m_menuAY = m_iFirstItemCentre - fFirstItemSize * (CORE_MTA_HOVER_SCALE / CORE_MTA_NORMAL_SCALE) * 0.5f;  // Top side of the items
+    m_menuBX = m_menuAX + ((390 / NATIVE_RES_X) * m_iMenuSizeX);  // Right side of the items. We add the longest picture (browse_servers)
     m_menuAY += BODGE_FACTOR_1;
 
     m_pMenuArea = reinterpret_cast<CGUIStaticImage*>(pManager->CreateStaticImage(m_pCanvas));
@@ -222,7 +231,7 @@ CMainMenu::CMainMenu(CGUI* pManager)
     float fDrawSizeX = (vecNativeSize.fX / NATIVE_RES_X) * m_iMenuSizeX;
     float fDrawSizeY = (vecNativeSize.fY / NATIVE_RES_Y) * m_iMenuSizeY;
     m_pLatestNews->SetSize(CVector2D(fDrawSizeX, fDrawSizeY), false);
-    float fDrawPosX = 0.83f * m_iMenuSizeX - fDrawSizeX;            // Right aligned
+    float fDrawPosX = 0.83f * m_iMenuSizeX - fDrawSizeX;  // Right aligned
     float fDrawPosY = 0.61f * m_iMenuSizeY;
     m_pLatestNews->SetPosition(CVector2D(fDrawPosX, fDrawPosY), false);
     m_pLatestNews->SetVisible(false);
@@ -292,6 +301,16 @@ CMainMenu::CMainMenu(CGUI* pManager)
     // We're not ingame
     SetIsIngame(false);
 
+    // Discord
+    if (g_pCore->GetCVars()->GetValue("allow_discord_rpc", false))
+    {
+        auto discord = g_pCore->GetDiscord();
+        if (!discord->IsDiscordRPCEnabled())
+            discord->SetDiscordRPCEnabled(true);
+
+        discord->SetPresenceState(_("Main menu"), false);
+        discord->SetPresenceStartTimestamp(0);
+    }
     // Store the pointer to the graphics subsystem
     m_pGraphics = CGraphics::GetSingletonPtr();
 
@@ -309,7 +328,7 @@ CMainMenu::CMainMenu(CGUI* pManager)
     // Add feature branch alert
     m_pFeatureBranchAlertTexture.reset(reinterpret_cast<CGUITexture*>(m_pManager->CreateTexture()));
     std::int32_t buffer = 0xFFFF0000;
-    m_pFeatureBranchAlertTexture->LoadFromMemory(&buffer, 1, 1);            // HACK: Load red dot
+    m_pFeatureBranchAlertTexture->LoadFromMemory(&buffer, 1, 1);  // HACK: Load red dot
 
     m_pFeatureBranchAlertImage.reset(reinterpret_cast<CGUIStaticImage*>(m_pManager->CreateStaticImage(m_pBackground)));
     m_pFeatureBranchAlertImage->LoadFromTexture(m_pFeatureBranchAlertTexture.get());
@@ -325,55 +344,70 @@ CMainMenu::CMainMenu(CGUI* pManager)
     m_pFeatureBranchAlertLabel->SetHorizontalAlign(CGUI_ALIGN_HORIZONTALCENTER);
     m_pFeatureBranchAlertLabel->SetVerticalAlign(CGUI_ALIGN_VERTICALCENTER);
 #endif
-
-#if _WIN32_WINNT <= _WIN32_WINNT_WINXP
-    // Add annonying alert
-    m_pAlertTexture.reset(reinterpret_cast<CGUITexture*>(m_pManager->CreateTexture()));
-    std::int32_t buffer = 0xFFFF0000;
-    m_pAlertTexture->LoadFromMemory(&buffer, 1, 1);            // HACK: Load red dot
-
-    m_pAlertImage.reset(reinterpret_cast<CGUIStaticImage*>(m_pManager->CreateStaticImage(m_pBackground)));
-    m_pAlertImage->LoadFromTexture(m_pAlertTexture.get());
-    m_pAlertImage->SetPosition({0.0f, 0.0f}, false);
-    m_pAlertImage->SetSize({ScreenSize.fX, 20.0f});
-
-    #define XP_VISTA_WARNING _("MTA will not receive updates on XP/Vista after July 2019.\n\nUpgrade Windows to play on the latest servers.")
-    m_pAlertLabel.reset(reinterpret_cast<CGUILabel*>(m_pManager->CreateLabel(m_pAlertImage.get(), XP_VISTA_WARNING)));
-    m_pAlertLabel->SetPosition({0.0f, 2.0f}, false);
-    m_pAlertLabel->SetSize({ScreenSize.fX, 20.0f});
-    m_pAlertLabel->SetHorizontalAlign(CGUI_ALIGN_HORIZONTALCENTER);
-#endif
 }
 
 CMainMenu::~CMainMenu()
 {
-    // Destroy GUI items
-    delete m_pBackground;
-    delete m_pCanvas;
-    delete m_pFiller;
-    delete m_pFiller2;
-    delete m_pLogo;
-    delete m_pLatestNews;
-    delete m_pVersion;
-    delete m_pMenuArea;
-
-    // Destroy the menu items. Note: The disconnect item isn't always in the
-    // list of menu items (it's only in there when we're in game). This means we
-    // don't delete it when we iterate the list and delete it separately - the
-    // menu item itself still exists even when it's no in the list of menu
-    // items. Perhaps there should be a separate list of loaded items really.
-    for (std::deque<sMenuItem*>::iterator it = m_menuItems.begin(); it != m_menuItems.end(); ++it)
+    auto destroyElement = [this](auto*& element)
     {
-        if ((*it) != m_pDisconnect)
-        {
-            delete (*it)->image;
-            delete (*it);
-        }
+        if (!element)
+            return;
+        m_pManager->DestroyElementRecursive(element);
+        element = nullptr;
+    };
+
+    for (uint i = 0; i < CORE_MTA_NEWS_ITEMS; ++i)
+    {
+        destroyElement(m_pNewsItemLabels[i]);
+        destroyElement(m_pNewsItemShadowLabels[i]);
+        destroyElement(m_pNewsItemDateLabels[i]);
+        destroyElement(m_pNewsItemNEWLabels[i]);
     }
 
-    delete m_pDisconnect->image;
-    delete m_pDisconnect;
+    for (sMenuItem* pItem : m_menuItems)
+    {
+        if (!pItem || pItem == m_pDisconnect)
+            continue;
+
+        if (pItem->image)
+        {
+            m_pManager->DestroyElementRecursive(pItem->image);
+            pItem->image = nullptr;
+        }
+
+        delete pItem;
+    }
+    m_menuItems.clear();
+    m_unhoveredItems.clear();
+    m_pHoveredItem = nullptr;
+
+    if (m_pDisconnect)
+    {
+        if (m_pDisconnect->image)
+        {
+            m_pManager->DestroyElementRecursive(m_pDisconnect->image);
+            m_pDisconnect->image = nullptr;
+        }
+
+        delete m_pDisconnect;
+        m_pDisconnect = nullptr;
+    }
+
     delete m_pLanguageSelector;
+    m_pLanguageSelector = nullptr;
+
+    delete m_pNewsBrowser;
+    m_pNewsBrowser = nullptr;
+
+    destroyElement(m_pMenuArea);
+    destroyElement(m_pLogo);
+    destroyElement(m_pLatestNews);
+    destroyElement(m_pVersion);
+
+    destroyElement(m_pCanvas);
+    destroyElement(m_pBackground);
+    destroyElement(m_pFiller);
+    destroyElement(m_pFiller2);
 }
 
 void CMainMenu::SetMenuVerticalPosition(int iPosY)
@@ -401,9 +435,9 @@ void CMainMenu::SetMenuVerticalPosition(int iPosY)
     m_pMenuArea->SetSize(CVector2D(m_menuBX - m_menuAX, m_menuBY - m_menuAY) + BODGE_FACTOR_6, false);
 }
 
-void CMainMenu::SetMenuUnhovered()            // Dehighlight all our items
+void CMainMenu::SetMenuUnhovered()  // Dehighlight all our items
 {
-    if (m_bIsIngame)            // CEGUI hack
+    if (m_bIsIngame)  // CEGUI hack
     {
         float fAlpha = m_pDisconnect->image->GetAlpha();
         m_pDisconnect->image->SetAlpha(0.35f);
@@ -435,8 +469,8 @@ void CMainMenu::Update()
     }
 
     // Get the game interface and the system state
-    CGame*       pGame = CCore::GetSingleton().GetGame();
-    eSystemState SystemState = pGame->GetSystemState();
+    CGame*      pGame = CCore::GetSingleton().GetGame();
+    SystemState systemState = pGame->GetSystemState();
 
     m_Credits.Update();
     m_Settings.Update();
@@ -447,7 +481,7 @@ void CMainMenu::Update()
     if (m_bHideGame)
         m_pGraphics->DrawRectangle(0, 0, m_ScreenSize.fX, m_ScreenSize.fY, 0xFF000000);
 
-    if (m_bIsIngame)            // CEGUI hack
+    if (m_bIsIngame)  // CEGUI hack
     {
         float fAlpha = m_pDisconnect->image->GetAlpha();
         m_pDisconnect->image->SetAlpha(0.35f);
@@ -507,11 +541,9 @@ void CMainMenu::Update()
 
             if (m_pHoveredItem)
             {
-                float fProgress = (m_pHoveredItem->image->GetAlpha() - CORE_MTA_NORMAL_ALPHA) / (CORE_MTA_HOVER_ALPHA - CORE_MTA_NORMAL_ALPHA);
-                // Let's work out what the target progress should be by working out the time passed
-                fProgress = ((float)ulTimePassed / CORE_MTA_ANIMATION_TIME) * (CORE_MTA_HOVER_ALPHA - CORE_MTA_NORMAL_ALPHA) + fProgress;
+                float progress = m_pHoveredItem->animProgress + ((float)ulTimePassed / CORE_MTA_ANIMATION_TIME_IN);
                 MapRemove(m_unhoveredItems, m_pHoveredItem);
-                SetItemHoverProgress(m_pHoveredItem, fProgress, true);
+                SetItemHoverProgress(m_pHoveredItem, progress, true);
             }
         }
         else if (m_pHoveredItem)
@@ -524,11 +556,11 @@ void CMainMenu::Update()
         std::set<sMenuItem*>::iterator it = m_unhoveredItems.begin();
         while (it != m_unhoveredItems.end())
         {
-            float fProgress = ((*it)->image->GetAlpha() - CORE_MTA_NORMAL_ALPHA) / (CORE_MTA_HOVER_ALPHA - CORE_MTA_NORMAL_ALPHA);
             // Let's work out what the target progress should be by working out the time passed
-            // Min of 0.5 progress fixes occasional graphical glitchekal
-            fProgress = fProgress - std::min(0.5f, ((float)ulTimePassed / CORE_MTA_ANIMATION_TIME) * (CORE_MTA_HOVER_ALPHA - CORE_MTA_NORMAL_ALPHA));
-            if (SetItemHoverProgress((*it), fProgress, false))
+            // Min of 0.5 progress fixes occasional graphical glitches
+            float newProgress =
+                (*it)->animProgress - std::min(0.5f, ((float)ulTimePassed / CORE_MTA_ANIMATION_TIME_OUT) * (CORE_MTA_HOVER_ALPHA - CORE_MTA_NORMAL_ALPHA));
+            if (SetItemHoverProgress((*it), newProgress, false))
             {
                 std::set<sMenuItem*>::iterator itToErase = it++;
                 m_unhoveredItems.erase(itToErase);
@@ -562,7 +594,7 @@ void CMainMenu::Update()
 
                 float fTopItemSize = m_pDisconnect->image->GetSize(false).fY;
                 float fTopItemCentre = m_pDisconnect->image->GetPosition(false).fY + fTopItemSize * 0.5f;
-                m_menuAY = fTopItemCentre - fTopItemSize * (CORE_MTA_HOVER_SCALE / CORE_MTA_NORMAL_SCALE) * 0.5f;            // Top side of the items
+                m_menuAY = fTopItemCentre - fTopItemSize * (CORE_MTA_HOVER_SCALE / CORE_MTA_NORMAL_SCALE) * 0.5f;  // Top side of the items
                 m_menuAY += BODGE_FACTOR_1;
 
                 m_pMenuArea->SetPosition(CVector2D(m_menuAX - m_iXOff, m_menuAY - m_iYOff) + BODGE_FACTOR_5, false);
@@ -586,7 +618,18 @@ void CMainMenu::Update()
 
         if (m_fFader > 0.0f)
         {
-            m_bIsVisible = true;            // Make cursor appear faster
+            m_bIsVisible = true;  // Make cursor appear faster
+
+            if (!m_bCursorAlphaReset)
+            {
+                CGUI* pGUI = g_pCore->GetGUI();
+
+                if (pGUI)
+                {
+                    pGUI->SetCursorAlpha(1.0f);
+                    m_bCursorAlphaReset = true;
+                }
+            }
         }
 
         // If the fade is complete
@@ -608,7 +651,10 @@ void CMainMenu::Update()
         m_pBackground->SetAlpha(Clamp(0.f, m_fFader, CORE_MTA_BG_MAX_ALPHA));
 
         if (m_fFader < 1.0f)
-            m_bIsVisible = false;            // Make cursor disappear faster
+        {
+            m_bIsVisible = false;  // Make cursor disappear faster
+            m_bCursorAlphaReset = false;
+        }
 
         // If the fade is complete
         if (m_fFader <= 0)
@@ -626,44 +672,31 @@ void CMainMenu::Update()
     }
 
     // Force the mainmenu on if we're at GTA's mainmenu or not ingame
-    if ((SystemState == 7 || SystemState == 9) && !m_bIsIngame)
+    if ((systemState == SystemState::GS_FRONTEND || systemState == SystemState::GS_PLAYING_GAME) && !m_bIsIngame)
     {
-        // Cope with early finish
-        if (pGame->HasCreditScreenFadedOut())
-            WaitForMenu = std::max(WaitForMenu, 250);
-
-        // Fade up
-        if (WaitForMenu >= 250)
+        if (!m_bStarted)
         {
-            m_bIsVisible = true;
             m_bStarted = true;
-        }
 
-        // Create headlines while the screen is still black
-        if (WaitForMenu == 250)
             m_pNewsBrowser->CreateHeadlines();
-
-        // Start updater after fade up is complete
-        if (WaitForMenu == 275)
             GetVersionUpdater()->EnableChecking(true);
 
-#if _WIN32_WINNT <= _WIN32_WINNT_WINXP
-        if (WaitForMenu == 275)
-        {
-            CCore::GetSingletonPtr()->ShowErrorMessageBox("", XP_VISTA_WARNING, "au-revoir-xp-vista");
+            if (!g_pCore->GetCVars()->GetValue("discord_rpc_share_data_firsttime", false) && g_pCore->GetCVars()->GetValue("allow_discord_rpc", false) &&
+                !g_pCore->GetCVars()->GetValue("discord_rpc_share_data", false))
+            {
+                m_Settings.ShowRichPresenceShareDataQuestionBox();
+                CVARS_SET("discord_rpc_share_data_firsttime", true);
+            }
+            else
+                CVARS_SET("discord_rpc_share_data_firsttime", true);
         }
-#endif
-
-        if (WaitForMenu < 300)
-            WaitForMenu++;
     }
 
     // If we're visible
-    if (m_bIsVisible && SystemState != 8)
+    if (m_bIsVisible && systemState != SystemState::GS_INIT_PLAYING_GAME)
     {
         // If we're at the game's mainmenu, or ingame when m_bIsIngame is true show the background
-        if (SystemState == 7 ||                          // GS_FRONTEND
-            SystemState == 9 && !m_bIsIngame)            // GS_PLAYING_GAME
+        if (systemState == SystemState::GS_FRONTEND || systemState == SystemState::GS_PLAYING_GAME && !m_bIsIngame)
         {
             if (m_ucFade == FADE_INVISIBLE)
                 Show(false);
@@ -709,6 +742,7 @@ void CMainMenu::OnEscapePressedOffLine()
 void CMainMenu::SetVisible(bool bVisible, bool bOverlay, bool bFrameDelay)
 {
     CMultiplayer* pMultiplayer = CCore::GetSingleton().GetMultiplayer();
+    CQuestionBox* pQuestionBox = CCore::GetSingleton().GetLocalGUI()->GetMainMenu()->GetQuestionWindow();
     pMultiplayer->DisablePadHandler(bVisible);
 
     if ((m_ucFade == FADE_VISIBLE || m_ucFade == FADE_IN) && bVisible == false)
@@ -730,6 +764,11 @@ void CMainMenu::SetVisible(bool bVisible, bool bOverlay, bool bFrameDelay)
         m_Credits.SetVisible(false);
         m_pNewsBrowser->SetVisible(false);
 
+        if (GetIsIngame() && pQuestionBox->IsVisible())
+        {
+            pQuestionBox->Reset();
+            pQuestionBox->Hide();
+        }
         //        m_bIsInSubWindow = false;
     }
     else
@@ -757,6 +796,9 @@ void CMainMenu::SetIsIngame(bool bIsIngame)
     {
         m_bIsIngame = bIsIngame;
         m_Settings.SetIsModLoaded(bIsIngame);
+
+        // Reset frame rate limit
+        CCore::GetSingleton().GetFPSLimiter()->Reset();
 
         m_ulMoveStartTick = GetTickCount32();
         if (bIsIngame)
@@ -821,6 +863,30 @@ bool CMainMenu::OnMenuClick(CGUIMouseEventArgs Args)
             case MENU_ITEM_MAP_EDITOR:
                 AskUserIfHeWantsToDisconnect(m_pHoveredItem->menuType);
                 return true;
+            case MENU_ITEM_DISCONNECT:
+                if (g_pCore->GetCVars()->GetValue("ask_before_disconnect", true))
+                {
+                    AskUserIfHeWantsToDisconnect(m_pHoveredItem->menuType);
+                    return true;
+                }
+
+                break;
+            case MENU_ITEM_QUICK_CONNECT:
+                AskUserIfHeWantsToDisconnect(m_pHoveredItem->menuType);
+                return true;
+            default:
+                break;
+        }
+    }
+    else if (!g_pCore->IsNetworkReady())
+    {
+        switch (m_pHoveredItem->menuType)
+        {
+            // case MENU_ITEM_QUICK_CONNECT:  // We only prevent it for left click in OnQuickConnectButtonClick.
+            case MENU_ITEM_HOST_GAME:
+            case MENU_ITEM_MAP_EDITOR:
+                ShowNetworkNotReadyWindow();
+                return true;
             default:
                 break;
         }
@@ -829,7 +895,7 @@ bool CMainMenu::OnMenuClick(CGUIMouseEventArgs Args)
     switch (m_pHoveredItem->menuType)
     {
         case MENU_ITEM_DISCONNECT:
-            OnDisconnectButtonClick(pElement);
+            OnDisconnectButtonClick();
             break;
         case MENU_ITEM_QUICK_CONNECT:
             OnQuickConnectButtonClick(pElement, Args.button == LeftButton);
@@ -865,17 +931,23 @@ bool CMainMenu::OnQuickConnectButtonClick(CGUIElement* pElement, bool left)
     if (m_ucFade != FADE_VISIBLE)
         return false;
 
-    // If we're right clicking, execute special command
-    if (!left)
+    if (left)
     {
-        std::string command;
-        CVARS_GET("_beta_qc_rightclick_command", command);
-        g_pCore->GetCommands()->Execute(command.data());
-        return true;
+        if (!g_pCore->IsNetworkReady())
+        {
+            ShowNetworkNotReadyWindow();
+            return true;
+        }
+
+        g_pCore->GetConnectManager()->SetQuickConnect(true);
+        g_pCore->GetCommands()->Execute("reconnect", "");
+    }
+    else
+    {
+        m_ServerBrowser.SetVisible(true);
+        m_ServerBrowser.OnQuickConnectButtonClick();
     }
 
-    m_ServerBrowser.SetVisible(true);
-    m_ServerBrowser.OnQuickConnectButtonClick();
     return true;
 }
 
@@ -909,7 +981,7 @@ void CMainMenu::HideServerInfo()
     m_ServerInfo.Hide();
 }
 
-bool CMainMenu::OnDisconnectButtonClick(CGUIElement* pElement)
+bool CMainMenu::OnDisconnectButtonClick()
 {
     // Return if we haven't faded in yet
     if (m_ucFade != FADE_VISIBLE)
@@ -927,8 +999,11 @@ bool CMainMenu::OnHostGameButtonClick()
     if (m_ucFade != FADE_VISIBLE)
         return false;
 
+    if (!WarnIfLocalServerUnsupported())
+        return false;
+
     // Load deathmatch, but with local play
-    CModManager::GetSingleton().RequestLoad("deathmatch", "local");
+    CModManager::GetSingleton().RequestLoad("local");
 
     return true;
 }
@@ -939,8 +1014,11 @@ bool CMainMenu::OnEditorButtonClick()
     if (m_ucFade != FADE_VISIBLE)
         return false;
 
+    if (!WarnIfLocalServerUnsupported())
+        return false;
+
     // Load deathmatch, but with local play
-    CModManager::GetSingleton().RequestLoad("deathmatch", "editor");
+    CModManager::GetSingleton().RequestLoad("editor");
 
     return true;
 }
@@ -1060,8 +1138,10 @@ bool CMainMenu::SetItemHoverProgress(sMenuItem* pItem, float fProgress, bool bHo
 {
     fProgress = Clamp<float>(0, fProgress, 1);
 
-    // Use OutQuad equation for easing, or OutQuad for unhovering
-    fProgress = bHovering ? -fProgress * (fProgress - 2) : fProgress * fProgress;
+    pItem->animProgress = fProgress;
+
+    // Always use OutQuad for both hovering and unhovering, to avoid animation glitches.
+    fProgress = -fProgress * (fProgress - 2);
 
     // Work out the target scale
     float fTargetScale = (CORE_MTA_HOVER_SCALE - CORE_MTA_NORMAL_SCALE) * (fProgress) + CORE_MTA_NORMAL_SCALE;
@@ -1080,7 +1160,7 @@ bool CMainMenu::SetItemHoverProgress(sMenuItem* pItem, float fProgress, bool bHo
     pItem->image->SetSize(CVector2D(iSizeX, iSizeY), false);
 
     // Return whether the hovering has maxed out
-    return bHovering ? (fProgress == 1) : (fProgress == 0);
+    return bHovering ? (pItem->animProgress >= 1.0) : (pItem->animProgress <= 0.0f);
 }
 
 void CMainMenu::SetNewsHeadline(int iIndex, const SString& strHeadline, const SString& strDate, bool bIsNew)
@@ -1157,6 +1237,45 @@ void CMainMenu::AskUserIfHeWantsToDisconnect(uchar menuType)
 
 /////////////////////////////////////////////////////////////
 //
+// CMainMenu::ShowNetworkNotReadyWindow
+//
+// Shows a window with information that the network module is not ready.
+//
+/////////////////////////////////////////////////////////////
+void CMainMenu::ShowNetworkNotReadyWindow()
+{
+    static auto HideQuestionWindow = [](void* window, uint) { reinterpret_cast<CQuestionBox*>(window)->Hide(); };
+
+    CQuestionBox& window = m_QuestionBox;
+    window.Reset();
+    window.SetTitle(_("INFORMATION"));
+    window.SetMessage("\n\nThe network module is not ready.\nPlease wait a moment and try again.");
+    window.SetButton(0, _("OK"));
+    window.SetCallback(HideQuestionWindow, &window);
+    window.Show();
+}
+
+/////////////////////////////////////////////////////////////
+//
+// CMainMenu::WarnIfLocalServerUnsupported
+//
+// Returns true if the local server can run on this OS.
+// Returns false and shows a dialog if unsupported (e.g. 32-bit OS).
+//
+/////////////////////////////////////////////////////////////
+bool CMainMenu::WarnIfLocalServerUnsupported()
+{
+    if (!Is64BitOS())
+    {
+        CCore::GetSingleton().ShowMessageBox(_("Error"), _("Local server is not supported on 32-bit OS, please upgrade"), MB_BUTTON_OK | MB_ICON_ERROR);
+        return false;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////
+//
 // CMainMenu::StaticWantsToDisconnectCallBack
 //
 // Callback from disconnect question
@@ -1189,6 +1308,12 @@ void CMainMenu::WantsToDisconnectCallBack(void* pData, uint uiButton)
                 break;
             case MENU_ITEM_MAP_EDITOR:
                 OnEditorButtonClick();
+                break;
+            case MENU_ITEM_DISCONNECT:
+                OnDisconnectButtonClick();
+                break;
+            case MENU_ITEM_QUICK_CONNECT:
+                OnQuickConnectButtonClick(nullptr, true);
                 break;
             default:
                 break;

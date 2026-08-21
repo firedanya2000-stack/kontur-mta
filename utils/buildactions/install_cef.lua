@@ -9,12 +9,23 @@ local CEF_URL_PREFIX = "https://cef-builds.spotifycdn.com/cef_binary_"
 local CEF_URL_SUFFIX = "_windows32_minimal.tar.bz2"
 
 -- Change here to update CEF version
-local CEF_VERSION = "114.2.10+g398e3c3+chromium-114.0.5735.110"
-local CEF_HASH = "28f848e2dd44870cb630c49090409e96b6574a12f01f7ab20a3263de0aeff49f"
+local CEF_VERSION = "147.0.10+gd58e84d+chromium-147.0.7727.118"
+local CEF_HASH = "b6574257645183fe948b2c9471e419a52505c4eb13593422aa25d7b826e8e4d5"
+
+-- Stuck in the past for maetro
+if os.getenv("MTA_MAETRO") == "true" then
+	CEF_URL_PREFIX = "https://mirror-cdn.multitheftauto.com/vendor/cef/cef_binary_"
+	CEF_VERSION = "109.1.18+gf1c41e4+chromium-109.0.5414.120"
+	CEF_HASH = "ac78ea1e9f9d386130de16ca951acef1ba5a37ad9aef9d66f3d5f3529672c21c"
+end
 
 function make_cef_download_url()
+<<<<<<< HEAD
 	local escaped = CEF_VERSION:gsub("%+", "%%2B")
 	return CEF_URL_PREFIX..escaped..CEF_URL_SUFFIX
+=======
+	return CEF_URL_PREFIX..CEF_VERSION..CEF_URL_SUFFIX
+>>>>>>> upstream/master
 end
 
 function update_install_cef(version, hash)
@@ -112,7 +123,7 @@ newaction {
 		else
 			-- Download CEF
 			print("Downloading CEF " .. CEF_VERSION ..  "...")
-			if not http.download_print_errors(make_cef_download_url(), archive_path) then
+			if not http.download_print_errors(make_cef_download_url(), archive_path, { progress = http.create_download_progress_handler{update_interval_s = 5} }) then
 				os.exit(1)
 				return
 			end

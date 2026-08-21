@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/rpc/CElementRPCs.h
  *  PURPOSE:     Header for element RPC class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -46,8 +46,10 @@ public:
     DECLARE_ELEMENT_RPC(SetCustomWeaponFlags);
     DECLARE_ELEMENT_RPC(SetCustomWeaponFiringRate);
     DECLARE_ELEMENT_RPC(ResetCustomWeaponFiringRate);
+    DECLARE_ELEMENT_RPC(SetCustomWeaponWeaponRange);
     DECLARE_ELEMENT_RPC(SetWeaponOwner);
     DECLARE_ELEMENT_RPC(SetWeaponConfig);
     DECLARE_ELEMENT_RPC(SetCallPropagationEnabled);
     DECLARE_ELEMENT_RPC(SetColPolygonHeight);
+    DECLARE_ELEMENT_RPC(SetElementOnFire);
 };

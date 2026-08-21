@@ -10,7 +10,7 @@
 
 #pragma once
 
-#define MAX_GTA_CONTROLS 44
+#define MAX_GTA_CONTROLS        44
 #define MAX_GTA_ANALOG_CONTROLS 14
 
 class CClientPed;
@@ -23,6 +23,7 @@ public:
     static const char* GetControlName(unsigned int uiIndex);
 
     static bool GetAnalogControlIndex(const char* szName, unsigned int& uiIndex);
+    static void InitAnalogControlStates();
 
     CClientPad();
 

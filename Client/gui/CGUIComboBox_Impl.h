@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIComboBox_Impl.h
  *  PURPOSE:     Combobox widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -44,7 +44,7 @@ public:
     void ShowDropList();
     void HideDropList();
 
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 
 protected:
     CFastHashMap<CEGUI::ListboxItem*, CGUIListItem_Impl*> m_Items;

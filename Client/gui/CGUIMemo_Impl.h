@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIMemo_Impl.h
  *  PURPOSE:     Multi-line edit box widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -45,7 +45,7 @@ public:
 
     eCGUIType GetType() { return CGUI_MEMO; };
 
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 
 private:
     bool Event_TextChanged(const CEGUI::EventArgs& e);

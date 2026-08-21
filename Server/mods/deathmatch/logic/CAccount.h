@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CAccount.h
  *  PURPOSE:     User account class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -27,10 +27,10 @@ public:
 
     enum EAccountPasswordType
     {
-        NONE,            // "" (empty string) possibly means 'not a password'
+        NONE,  // "" (empty string) possibly means 'not a password'
         PLAINTEXT,
-        MD5,              // pass stored as sha256(md5)+salt+type, stored as "1"
-        SHA256            // pass stored as sha256(plaintext)+salt+type, stored as "0"
+        MD5,    // pass stored as sha256(md5)+salt+type, stored as "1"
+        SHA256  // pass stored as sha256(plaintext)+salt+type, stored as "0"
     };
 
 protected:
@@ -39,7 +39,7 @@ protected:
     SString m_strSha256;
     SString m_strSalt;
 
-    SString m_strType;            // can be "1", "0" or "" as shown in EAccountPasswordType
+    SString m_strType;  // can be "1", "0" or "" as shown in EAccountPasswordType
 };
 
 enum class EAccountType
@@ -71,48 +71,52 @@ public:
              const std::string& strIP = "", const std::string& strSerial = "", const SString& strHttpPassAppend = "");
     ~CAccount();
 
-    bool IsRegistered() { return m_AccountType != EAccountType::Guest; }
-    bool IsConsoleAccount() { return m_AccountType == EAccountType::Console; }
+    bool IsRegistered() const { return m_AccountType != EAccountType::Guest; }
+    bool IsConsoleAccount() const { return m_AccountType == EAccountType::Console; }
     void OnLoginSuccess(const SString& strSerial, const SString& strIp);
     void OnLoginHttpSuccess(const SString& strIp);
 
-    const SString& GetName() { return m_strName; }
+    const SString& GetName() const { return m_strName; }
     void           SetName(const std::string& strName);
+
+    const EAccountType GetType() const { return m_AccountType; }
 
     void           SetPassword(const SString& strPassword);
     bool           IsPassword(const SString& strPassword, bool* pbUsedHttpPassAppend = nullptr);
     SString        GetPasswordHash();
-    const SString& GetHttpPassAppend() { return m_strHttpPassAppend; }
+    const SString& GetHttpPassAppend() const { return m_strHttpPassAppend; }
     void           SetHttpPassAppend(const SString& strHttpPassAppend);
 
-    const std::string& GetIP() { return m_strIP; }
-    const std::string& GetSerial() { return m_strSerial; }
-    int                GetID() { return m_iUserID; }
+    const std::string& GetIP() const { return m_strIP; }
+    const std::string& GetSerial() const { return m_strSerial; }
+    const int          GetID() const { return m_iUserID; }
 
-    bool                       HasLoadedSerialUsage();
+    bool                       HasLoadedSerialUsage() const;
     void                       EnsureLoadedSerialUsage();
     std::vector<SSerialUsage>& GetSerialUsageList();
     SSerialUsage*              GetSerialUsage(const SString& strSerial);
     bool                       IsIpAuthorized(const SString& strIp);
     bool                       IsSerialAuthorized(const SString& strSerial);
+    bool                       IsValidSerial(const std::string& serial) const noexcept;
     bool                       AddSerialForAuthorization(const SString& strSerial, const SString& strIp);
     bool                       AuthorizeSerial(const SString& strSerial, const SString& strWho);
     bool                       RemoveSerial(const SString& strSerial);
     void                       RemoveUnauthorizedSerials();
+    bool                       SetAccountSerial(const std::string& serial) noexcept;
 
-    CClient* GetClient() { return m_pClient; }
+    CClient* GetClient() const { return m_pClient; }
     void     SetClient(CClient* pClient);
 
     void SetChanged(bool bChanged) { m_bChanged = bChanged; }
-    bool HasChanged() { return m_bChanged; }
+    bool HasChanged() const { return m_bChanged; }
     uint GetScriptID() const { return m_uiScriptID; }
 
     std::shared_ptr<CLuaArgument>             GetData(const std::string& strKey);
     bool                                      SetData(const std::string& strKey, const std::string& strValue, int iType);
     bool                                      HasData(const std::string& strKey);
     void                                      RemoveData(const std::string& strKey);
-    std::map<SString, CAccountData>::iterator DataBegin() { return m_Data.begin(); }
-    std::map<SString, CAccountData>::iterator DataEnd() { return m_Data.end(); }
+    std::map<SString, CAccountData>::iterator begin() { return m_Data.begin(); }
+    std::map<SString, CAccountData>::iterator end() { return m_Data.end(); }
 
 protected:
     CAccountData* GetDataPointer(const std::string& strKey);
@@ -147,9 +151,9 @@ public:
         m_iType = iType;
     }
 
-    const std::string& GetKey() { return m_strKey; }
-    const std::string& GetStrValue() { return m_strValue; }
-    int                GetType() { return m_iType; }
+    const std::string& GetKey() const { return m_strKey; }
+    const std::string& GetStrValue() const { return m_strValue; }
+    int                GetType() const { return m_iType; }
     void               SetStrValue(const std::string& strValue) { m_strValue = strValue; }
     void               SetType(int iType) { m_iType = iType; }
 

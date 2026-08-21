@@ -5,12 +5,17 @@
  *  FILE:        mods/deathmatch/logic/packets/CLuaEventPacket.cpp
  *  PURPOSE:     Lua event packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include "CLuaEventPacket.h"
+
+namespace
+{
+    constexpr int MAX_LUA_EVENT_ARGUMENTS_SIZE = 1024 * 1024;
+}
 
 CLuaEventPacket::CLuaEventPacket()
 {
@@ -22,7 +27,7 @@ CLuaEventPacket::CLuaEventPacket(const char* szName, ElementID ID, CLuaArguments
 {
     m_strName.AssignLeft(szName, MAX_EVENT_NAME_LENGTH);
     m_ElementID = ID;
-    m_pArguments = pArguments;            // Use a pointer to save copying the arguments
+    m_pArguments = pArguments;  // Use a pointer to save copying the arguments
 }
 
 bool CLuaEventPacket::Read(NetBitStreamInterface& BitStream)
@@ -32,6 +37,9 @@ bool CLuaEventPacket::Read(NetBitStreamInterface& BitStream)
     {
         if (usNameLength < (MAX_EVENT_NAME_LENGTH - 1) && BitStream.ReadStringCharacters(m_strName, usNameLength) && BitStream.Read(m_ElementID))
         {
+            if (BitStream.GetNumberOfUnreadBits() > MAX_LUA_EVENT_ARGUMENTS_SIZE * 8)
+                return false;
+
             // Faster than using a constructor
             m_ArgumentsStore.DeleteArguments();
             if (!m_ArgumentsStore.ReadFromBitStream(BitStream))

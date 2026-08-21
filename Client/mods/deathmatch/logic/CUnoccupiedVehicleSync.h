@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CUnoccupiedVehicleSync.h
  *  PURPOSE:     Header for unoccupied vehicle sync class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,7 +13,7 @@
 
 #include <CClientCommon.h>
 #include "CDeathmatchVehicle.h"
-#define MIN_ROTATION_DIFF   0.1
+#define MIN_ROTATION_DIFF 0.1
 class CUnoccupiedVehicleSync
 {
 public:

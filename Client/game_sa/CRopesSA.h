@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CRopesSA.h
  *  PURPOSE:     Header file for rope entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,9 +14,9 @@
 #include <CVector.h>
 #include <game/CRopes.h>
 
-#define ROPES_COUNT    8
+#define ROPES_COUNT 8
 
-#define FUNC_CRopes_CreateRopeForSwatPed    0x558d10
+#define FUNC_CRopes_CreateRopeForSwatPed 0x558d10
 
 class CRopesSAInterface
 {

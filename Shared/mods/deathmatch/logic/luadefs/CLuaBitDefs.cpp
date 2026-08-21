@@ -4,15 +4,13 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        Shared/mods/deathmatch/logic/luadefs/CLuaBitDefs.h
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include "CLuaBitDefs.h"
 #include "CScriptArgReader.h"
-
-#define mask(n) ((1 << (n)) - 1)
 
 void CLuaBitDefs::LoadFunctions()
 {
@@ -70,7 +68,8 @@ int CLuaBitDefs::bitNot(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        lua_pushnumber(luaVM, ~uiVar);
+        const uint uiResult = ~uiVar;
+        lua_pushnumber(luaVM, static_cast<lua_Number>(uiResult));
         return 1;
     }
     else
@@ -186,7 +185,7 @@ int CLuaBitDefs::bitLRotate(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        iDisp &= (32 - 1);            // iDisp %= 32
+        iDisp &= (32 - 1);  // iDisp %= 32
         uint uiResult = (uiVar << iDisp) | (uiVar >> (32 - iDisp));
 
         lua_pushnumber(luaVM, uiResult);
@@ -211,7 +210,7 @@ int CLuaBitDefs::bitRRotate(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        iDisp &= (32 - 1);            // iDisp %= 32
+        iDisp &= (32 - 1);  // iDisp %= 32
         uint uiResult = (uiVar >> iDisp) | (uiVar << (32 - iDisp));
 
         lua_pushnumber(luaVM, uiResult);
@@ -352,7 +351,7 @@ int CLuaBitDefs::bitExtract(lua_State* luaVM)
 
         if (!argStream.HasErrors())
         {
-            lua_pushnumber(luaVM, (uiVar >> iField) & mask(iWidth));
+            lua_pushnumber(luaVM, (uiVar >> iField) & BYTE_MASK(iWidth));
             return 1;
         }
     }
@@ -391,7 +390,7 @@ int CLuaBitDefs::bitReplace(lua_State* luaVM)
 
         if (!argStream.HasErrors())
         {
-            int iMask = mask(iWidth);
+            int iMask = BYTE_MASK(iWidth);
 
             // Erase bits outside given width
             uiReplaceValue &= iMask;

@@ -5,12 +5,14 @@
  *  FILE:        mods/deathmatch/logic/luadefs/CLuaRadarAreaDefs.h
  *  PURPOSE:     Lua function definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 #include "CLuaDefs.h"
+
+class CRadarArea;
 
 class CLuaRadarAreaDefs : public CLuaDefs
 {
@@ -22,7 +24,8 @@ public:
     LUA_DECLARE(CreateRadarArea);
 
     // Radar area get funcs
-    LUA_DECLARE_OOP(GetRadarAreaSize);
+    LUA_DECLARE(GetRadarAreaSize);
+    static std::variant<CLuaMultiReturn<float, float>, CVector2D, bool> OOP_GetRadarAreaSize(lua_State* luaVM, CRadarArea* radarArea);
     LUA_DECLARE(GetRadarAreaColor);
     LUA_DECLARE(IsRadarAreaFlashing);
     LUA_DECLARE(IsInsideRadarArea);

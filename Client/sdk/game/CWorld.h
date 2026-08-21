@@ -5,15 +5,18 @@
  *  FILE:        sdk/game/CWorld.h
  *  PURPOSE:     Game world interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
+#include "CEntity.h"
 
 class CEntitySAInterface;
 class CVector;
+class CVector2D;
 class CColPoint;
+class CEntity;
 
 struct SLineOfSightFlags
 {
@@ -36,7 +39,7 @@ struct SLineOfSightFlags
     bool bCheckDummies;
     bool bSeeThroughStuff;
     bool bIgnoreSomeObjectsForCamera;
-    bool bShootThroughStuff;            // not used for IsLineOfSightClear
+    bool bShootThroughStuff;  // not used for IsLineOfSightClear
     bool bCheckCarTires;
 };
 
@@ -51,75 +54,23 @@ struct SLineOfSightBuildingResult
     CEntitySAInterface* pInterface;
 };
 
-struct SBuildingRemoval
+struct SProcessLineOfSightMaterialInfoResult
 {
-    SBuildingRemoval()
-    {
-        m_pBinaryRemoveList = new std::list<CEntitySAInterface*>;
-        m_pDataRemoveList = new std::list<CEntitySAInterface*>;
-        m_usModel = 0;
-        m_vecPos = CVector(0, 0, 0);
-        m_fRadius = 0.0f;
-        m_cInterior = -1;
-    }
-
-    ~SBuildingRemoval()
-    {
-        delete m_pBinaryRemoveList;
-        delete m_pDataRemoveList;
-    }
-
-    void AddBinaryBuilding(CEntitySAInterface* pInterface)
-    {
-        // Add to list of binary buildings for this removal
-        m_pBinaryRemoveList->push_back(pInterface);
-    }
-    void AddDataBuilding(CEntitySAInterface* pInterface)
-    {
-        // Add to list of data buildings for this removal
-        m_pDataRemoveList->push_back(pInterface);
-    }
-
-    unsigned short                  m_usModel;
-    CVector                         m_vecPos;
-    float                           m_fRadius;
-    char                            m_cInterior;
-    std::list<CEntitySAInterface*>* m_pBinaryRemoveList;
-    std::list<CEntitySAInterface*>* m_pDataRemoveList;
-};
-struct SIPLInst
-{
-    CVector m_pPosition;
-    CVector m_pRotation;
-    float   m_fRotationCont;
-    WORD    m_nModelIndex;
-    BYTE    m_nInterior;
-    BYTE    m_bLOD;
+    CVector2D   uv;           //< On-texture UV coordinates of the intersection point
+    const char* textureName;  //< GTA texture name
+    const char* frameName;    //< The name of the frame the hit geometry belongs to
+    CVector     hitPos;       //< Precise hit position on the clump [World space]
+    bool        valid{};      //< Data found in this struct is only valid if this is `true`!
 };
 
-struct sDataBuildingRemovalItem
+struct STestSphereAgainstWorldResult
 {
-    sDataBuildingRemovalItem(CEntitySAInterface* pInterface, bool bData)
-    {
-        m_pInterface = pInterface;
-        m_iCount = 0;
-    }
-    void                AddCount() { m_iCount++; }
-    void                RemoveCount() { m_iCount--; }
-    CEntitySAInterface* m_pInterface;
-    int                 m_iCount;
-};
-struct sBuildingRemovalItem
-{
-    sBuildingRemovalItem(CEntitySAInterface* pInterface, bool bData)
-    {
-        m_pInterface = pInterface;
-        m_iCount = 0;
-    }
-    void                AddCount() { m_iCount++; }
-    void                RemoveCount() { m_iCount--; }
-    CEntitySAInterface* m_pInterface;
-    int                 m_iCount;
+    bool          collisionDetected{false};
+    std::uint32_t modelID{0};
+    CVector       entityPosition{};
+    CVector       entityRotation{};
+    std::uint32_t lodID{0};
+    eEntityType   type{ENTITY_TYPE_NOTHING};
 };
 
 enum eDebugCaller
@@ -146,7 +97,11 @@ enum eDebugCaller
     CCivPed_Constructor,
     CCivPed_Destructor,
     CBuilding_Destructor,
-
+    CBuildingPool_Constructor,
+    CBuildingPool_Destructor,
+    CBuilding_SetLod,
+    CDummyPool_Constructor,
+    CDummyPool_Destructor,
 };
 
 enum eSurfaceProperties
@@ -227,58 +182,58 @@ class SurfaceInfo_c
 {
 public:
     uint8_t  m_tyreGrip;
-    uint8_t  m_wetGrip;            // 2
-    uint16_t pad;                  // 4
+    uint8_t  m_wetGrip;  // 2
+    uint16_t pad;        // 4
     union
     {
-        struct            // size 8
+        struct  // size 8
         {
             uint32_t flags[2];
         };
-        struct            // size = 51
+        struct  // size = 51
         {
-            uint32_t m_adhesionGroup : 3;             // 1 - 3
-            uint32_t m_skidmarkType : 2;              // 4 - 5
-            uint32_t m_frictionEffect : 3;            // 6 - 8
-            uint32_t m_bulletFx : 3;                  // 9 - 11
-            uint32_t m_softLanding : 1;               // 12
-            uint32_t m_seeThrough : 1;                // 13
-            uint32_t m_shootThrough : 1;              // 14
-            uint32_t m_sand : 1;                      // 15
+            uint32_t m_adhesionGroup : 3;   // 1 - 3
+            uint32_t m_skidmarkType : 2;    // 4 - 5
+            uint32_t m_frictionEffect : 3;  // 6 - 8
+            uint32_t m_bulletFx : 3;        // 9 - 11
+            uint32_t m_softLanding : 1;     // 12
+            uint32_t m_seeThrough : 1;      // 13
+            uint32_t m_shootThrough : 1;    // 14
+            uint32_t m_sand : 1;            // 15
             uint32_t m_water : 1;
-            uint32_t m_shallowWater : 1;            // unknown effect
+            uint32_t m_shallowWater : 1;  // unknown effect
             uint32_t m_beach : 1;
             uint32_t m_steepSlope : 1;
-            uint32_t m_glass : 1;            // 20
+            uint32_t m_glass : 1;  // 20
             uint32_t m_stairs : 1;
             uint32_t m_skateable : 1;
             uint32_t m_pavement : 1;
-            uint32_t m_roughness : 2;                // 24 - 25
-            uint32_t m_flammability : 2;             // 26 - 27
-            uint32_t m_createsSparks : 1;            // 28
-            uint32_t m_cantSprintOn : 1;             // 29
+            uint32_t m_roughness : 2;      // 24 - 25
+            uint32_t m_flammability : 2;   // 26 - 27
+            uint32_t m_createsSparks : 1;  // 28
+            uint32_t m_cantSprintOn : 1;   // 29
             uint32_t m_leavesFootsteps : 1;
             uint32_t m_producesFootDust : 1;
-            uint32_t m_makesCarDirty : 1;            // 32
+            uint32_t m_makesCarDirty : 1;  // 32
 
-            uint32_t m_makesCarClean : 1;            // 1
+            uint32_t m_makesCarClean : 1;  // 1
             uint32_t m_createsWheelGrass : 1;
             uint32_t m_createsWheelGravel : 1;
             uint32_t m_createsWheelMud : 1;
-            uint32_t m_createsWheelDust : 1;             // 5
-            uint32_t m_createsWheelSand : 1;             // no effect
-            uint32_t m_createsWheelSpray : 1;            // crash
-            uint32_t m_createsPlants : 1;                // 8
+            uint32_t m_createsWheelDust : 1;   // 5
+            uint32_t m_createsWheelSand : 1;   // no effect
+            uint32_t m_createsWheelSpray : 1;  // crash
+            uint32_t m_createsPlants : 1;      // 8
             uint32_t m_createsObjects : 1;
-            uint32_t m_canClimb : 1;                 // 10
-            uint32_t m_audioConcrete : 1;            // 11
+            uint32_t m_canClimb : 1;       // 10
+            uint32_t m_audioConcrete : 1;  // 11
             uint32_t m_audioGrass : 1;
-            uint32_t m_audioSand : 1;            // 13
+            uint32_t m_audioSand : 1;  // 13
             uint32_t m_audioGravel : 1;
             uint32_t m_audioWood : 1;
             uint32_t m_audioWater : 1;
             uint32_t m_audioMetal : 1;
-            uint32_t m_audioLongGrass : 1;            // 18
+            uint32_t m_audioLongGrass : 1;  // 18
             uint32_t m_audioTile : 1;
         };
     };
@@ -305,10 +260,13 @@ class CWorld
 {
 public:
     virtual void  Add(CEntity* entity, eDebugCaller CallerId) = 0;
+    virtual void  Add(CEntitySAInterface* entity, eDebugCaller CallerId) = 0;
     virtual void  Remove(CEntity* entity, eDebugCaller CallerId) = 0;
     virtual void  Remove(CEntitySAInterface* entityInterface, eDebugCaller CallerId) = 0;
+    virtual auto  ProcessLineAgainstMesh(CEntitySAInterface* e, CVector start, CVector end) -> SProcessLineOfSightMaterialInfoResult = 0;
     virtual bool  ProcessLineOfSight(const CVector* vecStart, const CVector* vecEnd, CColPoint** colCollision, CEntity** CollisionEntity,
-                                     const SLineOfSightFlags flags = SLineOfSightFlags(), SLineOfSightBuildingResult* pBuildingResult = NULL) = 0;
+                                     const SLineOfSightFlags flags = SLineOfSightFlags(), SLineOfSightBuildingResult* pBuildingResult = NULL,
+                                     SProcessLineOfSightMaterialInfoResult* outMatInfo = {}) = 0;
     virtual void  IgnoreEntity(CEntity* entity) = 0;
     virtual float FindGroundZFor3DPosition(CVector* vecPosition) = 0;
     virtual float FindRoofZFor3DCoord(CVector* pvecPosition, bool* pbOutResult) = 0;
@@ -326,22 +284,12 @@ public:
     virtual bool  GetOcclusionsEnabled() = 0;
     virtual void  FindWorldPositionForRailTrackPosition(float fRailTrackPosition, int iTrackId, CVector* pOutVecPosition) = 0;
     virtual int   FindClosestRailTrackNode(const CVector& vecPosition, uchar& ucOutTrackId, float& fOutRailDistance) = 0;
-
-    virtual void RemoveBuilding(unsigned short usModelToRemove, float fDistance, float fX, float fY, float fZ, char cInterior, uint* pOutAmount = NULL) = 0;
-    virtual bool IsRemovedModelInRadius(SIPLInst* pInst) = 0;
-    virtual bool IsModelRemoved(unsigned short usModelID) = 0;
-    virtual void ClearRemovedBuildingLists(uint* pOutAmount = NULL) = 0;
-    virtual bool RestoreBuilding(unsigned short usModelToRestore, float fDistance, float fX, float fY, float fZ, char cInterior, uint* pOutAmount = NULL) = 0;
-    virtual SBuildingRemoval* GetBuildingRemoval(CEntitySAInterface* pInterface) = 0;
-    virtual void              AddDataBuilding(CEntitySAInterface* pInterface) = 0;
-    virtual void              AddBinaryBuilding(CEntitySAInterface* pInterface) = 0;
-    virtual void              RemoveWorldBuildingFromLists(CEntitySAInterface* pInterface) = 0;
-    virtual bool              IsObjectRemoved(CEntitySAInterface* pInterface) = 0;
-    virtual bool              IsDataModelRemoved(unsigned short usModelID) = 0;
-    virtual bool              IsEntityRemoved(CEntitySAInterface* pInterface) = 0;
-    virtual bool              CalculateImpactPosition(const CVector& vecInputStart, CVector& vecInputEnd) = 0;
+    virtual bool  CalculateImpactPosition(const CVector& vecInputStart, CVector& vecInputEnd) = 0;
 
     virtual CSurfaceType* GetSurfaceInfo() = 0;
     virtual void          ResetAllSurfaceInfo() = 0;
     virtual bool          ResetSurfaceInfo(short sSurfaceID) = 0;
+
+    virtual CEntity* TestSphereAgainstWorld(const CVector& sphereCenter, float radius, CEntity* ignoredEntity, bool checkBuildings, bool checkVehicles,
+                                            bool checkPeds, bool checkObjects, bool checkDummies, bool cameraIgnore, STestSphereAgainstWorldResult& result) = 0;
 };

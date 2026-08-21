@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPlayerModInfoPacket.cpp
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -21,6 +21,14 @@ bool CPlayerModInfoPacket::Read(NetBitStreamInterface& BitStream)
     // Read amount of items
     uint uiCount;
     if (!BitStream.Read(uiCount))
+        return false;
+
+    // Limit item count to prevent DoS via oversized payloads routed
+    // through the latent transfer path (CLatentReceiver). Without this
+    // cap, an attacker can send ~60K entries in a single 100MB latent
+    // packet, causing hundreds of thousands of heap allocations in
+    // Packet_PlayerModInfo and locking the main thread for seconds.
+    if (uiCount > 2048)
         return false;
 
     // Read each item

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CVehicle.cpp
  *  PURPOSE:     Vehicle entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -54,7 +54,7 @@ CVehicle::CVehicle(CVehicleManager* pVehicleManager, CElement* pParent, unsigned
     m_pTowedByVehicle = NULL;
     m_ucPaintjob = 3;
     m_ucMaxPassengersOverride = VEHICLE_PASSENGERS_UNDEFINED;
-    m_pHandlingEntry = NULL;
+    m_HandlingEntry = nullptr;
 
     m_fRespawnHealth = DEFAULT_VEHICLE_HEALTH;
     m_bRespawnEnabled = false;
@@ -86,6 +86,7 @@ CVehicle::CVehicle(CVehicleManager* pVehicleManager, CElement* pParent, unsigned
     m_bHandlingChanged = false;
     m_ucVariant = ucVariant;
     m_ucVariant2 = ucVariant2;
+    m_onFire = false;
 
     // Initialize the occupied Players
     for (int i = 0; i < MAX_VEHICLE_SEATS; i++)
@@ -131,16 +132,20 @@ CVehicle::~CVehicle()
             if (pPed->GetVehicleAction() == CPed::VEHICLEACTION_EXITING)
             {
                 // Does it have an occupant and is the occupant the requesting ped?
-                unsigned char ucOccupiedSeat = pPed->GetOccupiedVehicleSeat();
-                if (pPed == GetOccupant(ucOccupiedSeat))
+                const uint uiOccupiedSeat = pPed->GetOccupiedVehicleSeat();
+                if (uiOccupiedSeat > 0xFF)
+                    continue;
+
+                unsigned char occupiedSeat = static_cast<unsigned char>(uiOccupiedSeat);
+                if (pPed == GetOccupant(occupiedSeat))
                 {
                     // Mark the ped/vehicle as empty
-                    SetOccupant(NULL, ucOccupiedSeat);
+                    SetOccupant(NULL, occupiedSeat);
                     pPed->SetOccupiedVehicle(NULL, 0);
                     pPed->SetVehicleAction(CPed::VEHICLEACTION_NONE);
 
                     // Tell everyone he has exited the vehicle
-                    CVehicleInOutPacket Reply(pPed->GetID(), GetID(), ucOccupiedSeat, CGame::VEHICLE_NOTIFY_OUT_RETURN);
+                    CVehicleInOutPacket Reply(pPed->GetID(), GetID(), static_cast<unsigned char>(occupiedSeat), CGame::VEHICLE_NOTIFY_OUT_RETURN);
                     g_pGame->GetPlayerManager()->BroadcastOnlyJoined(Reply);
                 }
             }
@@ -167,11 +172,10 @@ CVehicle::~CVehicle()
         }
     }
     delete m_pUpgrades;
-    delete m_pHandlingEntry;
 
     CElementRefManager::RemoveElementRefs(ELEMENT_REF_DEBUG(this, "CVehicle"), &m_pTowedVehicle, &m_pTowedByVehicle, &m_pSyncer, &m_pJackingPed, NULL);
 
-    // Notify the vehicle manager that we are not to be respawned anymore if neccessary
+    // Notify the vehicle manager that we are not to be respawned anymore if necessary
     if (m_bRespawnEnabled)
         m_pVehicleManager->GetRespawnEnabledVehicles().remove(this);
 
@@ -312,7 +316,7 @@ bool CVehicle::ReadSpecialData(const int iLine)
         uchar ucValues[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
         char* sz1 = strtok(szTemp, ", ");
         if (sz1)
-            ucValues[0] = atoi(sz1);
+            ucValues[0] = static_cast<uchar>(atoi(sz1));
 
         int i;
         for (i = 1; i < 12; i++)
@@ -320,7 +324,7 @@ bool CVehicle::ReadSpecialData(const int iLine)
             char* szn = strtok(NULL, ", ");
             if (!szn)
                 break;
-            ucValues[i] = atoi(szn);
+            ucValues[i] = static_cast<uchar>(atoi(szn));
         }
 
         if (i == 3 || i == 6 || i == 9 || i == 12)
@@ -804,7 +808,7 @@ void CVehicle::GenerateRegPlate()
             }
 
             // Put it in the plate
-            m_szRegPlate[i] = iChar;
+            m_szRegPlate[i] = static_cast<char>(iChar);
         }
     }
 
@@ -849,29 +853,38 @@ void CVehicle::GetInitialDoorStates(SFixedArray<unsigned char, MAX_DOORS>& ucOut
     }
 }
 
-void CVehicle::GenerateHandlingData()
+void CVehicle::GenerateHandlingData() noexcept
 {
+    const auto* handlingManager = g_pGame->GetHandlingManager();
+
     // Make a new CHandlingEntry
-    if (m_pHandlingEntry == NULL)
-        m_pHandlingEntry = g_pGame->GetHandlingManager()->CreateHandlingData();
+    if (!m_HandlingEntry)
+        m_HandlingEntry = handlingManager->CreateHandlingData();
+
     // Apply the model handling info
-    m_pHandlingEntry->ApplyHandlingData(g_pGame->GetHandlingManager()->GetModelHandlingData(static_cast<eVehicleTypes>(m_usModel)));
+    m_HandlingEntry->ApplyHandlingData(handlingManager->GetModelHandlingData(m_usModel));
 
     m_bHandlingChanged = false;
 }
 
 void CVehicle::SetVehicleSirenPosition(unsigned char ucSirenID, CVector vecPos)
 {
+    if (ucSirenID >= SIREN_COUNT_MAX)
+        return;
     m_tSirenBeaconInfo.m_tSirenInfo[ucSirenID].m_vecSirenPositions = vecPos;
 }
 
 void CVehicle::SetVehicleSirenMinimumAlpha(unsigned char ucSirenID, DWORD dwPercentage)
 {
+    if (ucSirenID >= SIREN_COUNT_MAX)
+        return;
     m_tSirenBeaconInfo.m_tSirenInfo[ucSirenID].m_dwMinSirenAlpha = dwPercentage;
 }
 
 void CVehicle::SetVehicleSirenColour(unsigned char ucSirenID, SColor tVehicleSirenColour)
 {
+    if (ucSirenID >= SIREN_COUNT_MAX)
+        return;
     m_tSirenBeaconInfo.m_tSirenInfo[ucSirenID].m_RGBBeaconColour = tVehicleSirenColour;
 }
 
@@ -884,7 +897,7 @@ void CVehicle::SetVehicleFlags(bool bEnable360, bool bEnableRandomiser, bool bEn
 }
 void CVehicle::RemoveVehicleSirens()
 {
-    for (int i = 0; i <= 7; i++)
+    for (int i = 0; i < SIREN_COUNT_MAX; i++)
     {
         m_tSirenBeaconInfo.m_tSirenInfo[i] = SSirenBeaconInfo();
         SetVehicleSirenPosition(i, CVector(0, 0, 0));

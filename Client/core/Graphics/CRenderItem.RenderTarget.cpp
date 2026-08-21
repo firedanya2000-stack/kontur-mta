@@ -16,14 +16,17 @@
 //
 //
 ////////////////////////////////////////////////////////////////
-void CRenderTargetItem::PostConstruct(CRenderItemManager* pManager, uint uiSizeX, uint uiSizeY, bool bWithAlphaChannel, bool bIncludeInMemoryStats)
+void CRenderTargetItem::PostConstruct(CRenderItemManager* pManager, uint uiSizeX, uint uiSizeY, bool bHasSurfaceFormat, bool bWithAlphaChannel,
+                                      int surfaceFormat, bool bIncludeInMemoryStats)
 {
     Super::PostConstruct(pManager, bIncludeInMemoryStats);
     m_uiSizeX = uiSizeX;
     m_uiSizeY = uiSizeY;
     m_uiSurfaceSizeX = uiSizeX;
     m_uiSurfaceSizeY = uiSizeY;
+    m_bHasSurfaceFormat = bHasSurfaceFormat;
     m_bWithAlphaChannel = bWithAlphaChannel;
+    m_eSurfaceFormat = surfaceFormat;
 
     // Initial creation of d3d data
     CreateUnderlyingData();
@@ -64,6 +67,8 @@ bool CRenderTargetItem::IsValid()
 void CRenderTargetItem::OnLostDevice()
 {
     ReleaseUnderlyingData();
+    m_uiLastEnsureAttempt = 0;
+    m_uiEnsureDelayMs = 0;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -76,6 +81,48 @@ void CRenderTargetItem::OnLostDevice()
 void CRenderTargetItem::OnResetDevice()
 {
     CreateUnderlyingData();
+    m_uiLastEnsureAttempt = 0;
+    m_uiEnsureDelayMs = 0;
+}
+
+////////////////////////////////////////////////////////////////
+//
+// CRenderTargetItem::TryEnsureValid
+//
+// Attempt to (re)create device resources if missing
+//
+////////////////////////////////////////////////////////////////
+bool CRenderTargetItem::TryEnsureValid()
+{
+    if (IsValid())
+        return true;
+
+    if (!m_pManager || m_pManager->GetDeviceCooperativeLevel("RenderTargetTryEnsureValid", false) != D3D_OK)
+        return false;
+
+    const uint kRetryIntervalMinMs = 250;
+    const uint kRetryIntervalMaxMs = 2000;
+    const uint uiNow = GetTickCount32();
+    if (m_uiEnsureDelayMs == 0)
+        m_uiEnsureDelayMs = kRetryIntervalMinMs;
+
+    if (uiNow - m_uiLastEnsureAttempt < m_uiEnsureDelayMs)
+        return false;
+
+    m_uiLastEnsureAttempt = uiNow;
+
+    if (m_pD3DRenderTargetSurface || m_pD3DTexture || m_pD3DZStencilSurface || m_pD3DReadSurface)
+        ReleaseUnderlyingData();
+
+    CreateUnderlyingData();
+    if (IsValid())
+    {
+        m_uiEnsureDelayMs = kRetryIntervalMinMs;
+        return true;
+    }
+
+    m_uiEnsureDelayMs = std::min(m_uiEnsureDelayMs * 2, kRetryIntervalMaxMs);
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -98,9 +145,15 @@ void CRenderTargetItem::CreateUnderlyingData()
         //            i == 1  - EvictManagedResources
         // 3rd try -  i == 2  - 32 bit target
         // 4th try -  i == 3  - 16 bit target
-        D3DFORMAT Format = i & 1 ? D3DFMT_R5G6B5 : D3DFMT_X8R8G8B8;
-        if (m_bWithAlphaChannel)
-            Format = D3DFMT_A8R8G8B8;
+        D3DFORMAT Format;
+        if (m_bHasSurfaceFormat)
+            Format = (D3DFORMAT)m_eSurfaceFormat;
+        else
+        {
+            Format = i & 1 ? D3DFMT_R5G6B5 : D3DFMT_X8R8G8B8;
+            if (m_bWithAlphaChannel)
+                Format = D3DFMT_A8R8G8B8;
+        }
         if (SUCCEEDED(
                 m_pDevice->CreateTexture(m_uiSizeX, m_uiSizeY, 1, D3DUSAGE_RENDERTARGET, Format, D3DPOOL_DEFAULT, (IDirect3DTexture9**)&m_pD3DTexture, NULL)))
             break;
@@ -133,6 +186,7 @@ void CRenderTargetItem::CreateUnderlyingData()
     // Check depth buffer created
     if (!m_pD3DZStencilSurface)
     {
+        SAFE_RELEASE(m_pD3DRenderTargetSurface);
         SAFE_RELEASE(m_pD3DTexture);
         return;
     }

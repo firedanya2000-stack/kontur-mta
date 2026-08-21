@@ -5,7 +5,7 @@
  *  FILE:        sdk/xml/CXMLCommon.h
  *  PURPOSE:     XML module common interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,7 +23,7 @@ enum eXMLClass
 class CXMLCommon
 {
 public:
-    virtual ~CXMLCommon(){};
+    virtual ~CXMLCommon() {};
 
     virtual eXMLClass     GetClassType() = 0;
     virtual unsigned long GetID() = 0;

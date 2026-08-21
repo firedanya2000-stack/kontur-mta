@@ -5,7 +5,7 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaSearchLightDefs.h
  *  PURPOSE:     Lua searchlight class functions
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -29,4 +29,7 @@ public:
     LUA_DECLARE(SetSearchLightEndPosition);
     LUA_DECLARE(SetSearchLightStartRadius);
     LUA_DECLARE(SetSearchLightEndRadius);
+
+    static CLuaMultiReturn<std::uint8_t, std::uint8_t, std::uint8_t, std::uint8_t> GetSearchLightColor(CClientSearchLight* searchLight);
+    static void                                                                    SetSearchLightColor(CClientSearchLight* searchLight, SColor color);
 };

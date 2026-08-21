@@ -5,13 +5,14 @@
  *  FILE:        xml/CXMLAttributesImpl.cpp
  *  PURPOSE:     XML attributes container class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
+using namespace tinyxml2;
 
-CXMLAttributesImpl::CXMLAttributesImpl(TiXmlElement& Node, bool bUseIDs) : m_bUsingIDs(bUseIDs), m_Node(Node)
+CXMLAttributesImpl::CXMLAttributesImpl(XMLElement& Node, bool bUseIDs) : m_bUsingIDs(bUseIDs), m_Node(Node)
 {
     // Init
     m_bCanRemoveFromList = true;
@@ -117,7 +118,7 @@ void CXMLAttributesImpl::DeleteAll()
     m_bCanRemoveFromList = true;
 }
 
-TiXmlElement& CXMLAttributesImpl::GetNode()
+XMLElement& CXMLAttributesImpl::GetNode()
 {
     return m_Node;
 }
@@ -140,7 +141,7 @@ void CXMLAttributesImpl::RemoveFromList(CXMLAttribute* pAttribute)
 void CXMLAttributesImpl::CreateAttributes()
 {
     // Grab the first attribute and iterate from there
-    TiXmlAttribute* pAttrib = m_Node.FirstAttribute();
+    const XMLAttribute* pAttrib = m_Node.FirstAttribute();
     if (pAttrib)
     {
         do

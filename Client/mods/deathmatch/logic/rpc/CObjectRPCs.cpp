@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/rpc/CObjectRPCs.cpp
  *  PURPOSE:     Object remote procedure calls
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -21,6 +21,9 @@ void CObjectRPCs::LoadFunctions()
     AddHandler(SET_OBJECT_SCALE, SetObjectScale, "SetObjectScale");
     AddHandler(SET_OBJECT_VISIBLE_IN_ALL_DIMENSIONS, SetObjectVisibleInAllDimensions, "SetObjectVisibleInAllDimensions");
     AddHandler(SET_OBJECT_BREAKABLE, SetObjectBreakable, "SetObjectBreakable");
+    AddHandler(BREAK_OBJECT, BreakObject, "BreakObject");
+    AddHandler(RESPAWN_OBJECT, RespawnObject, "RespawnObject");
+    AddHandler(TOGGLE_OBJECT_RESPAWN, ToggleObjectRespawn, "ToggleObjectRespawn");
 }
 
 void CObjectRPCs::DestroyAllObjects(NetBitStreamInterface& bitStream)
@@ -92,11 +95,8 @@ void CObjectRPCs::SetObjectScale(CClientEntity* pSource, NetBitStreamInterface& 
         bitStream.Read(vecScale.fX);
         vecScale.fY = vecScale.fX;
         vecScale.fZ = vecScale.fX;
-        if (bitStream.Version() >= 0x40)
-        {
-            bitStream.Read(vecScale.fY);
-            bitStream.Read(vecScale.fZ);
-        }
+        bitStream.Read(vecScale.fY);
+        bitStream.Read(vecScale.fZ);
         pObject->SetScale(vecScale);
     }
 }
@@ -125,4 +125,28 @@ void CObjectRPCs::SetObjectBreakable(CClientEntity* pSource, NetBitStreamInterfa
     {
         pObject->SetBreakable(bitStream.ReadBit());
     }
+}
+
+void CObjectRPCs::BreakObject(CClientEntity* pSource, NetBitStreamInterface& bitStream)
+{
+    auto* pObject = static_cast<CDeathmatchObject*>(m_pObjectManager->Get(pSource->GetID()));
+
+    if (pObject)
+        pObject->Break();
+}
+
+void CObjectRPCs::RespawnObject(CClientEntity* pSource, NetBitStreamInterface& bitStream)
+{
+    auto* pObject = static_cast<CDeathmatchObject*>(m_pObjectManager->Get(pSource->GetID()));
+
+    if (pObject)
+        g_pClientGame->GetObjectRespawner()->Respawn(pObject);
+}
+
+void CObjectRPCs::ToggleObjectRespawn(CClientEntity* pSource, NetBitStreamInterface& bitStream)
+{
+    auto* pObject = static_cast<CDeathmatchObject*>(m_pObjectManager->Get(pSource->GetID()));
+
+    if (pObject)
+        pObject->SetRespawnEnabled(bitStream.ReadBit());
 }

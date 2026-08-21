@@ -5,7 +5,7 @@
  *  FILE:        sdk/core/CCommandsInterface.h
  *  PURPOSE:     Dynamic command manager interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,12 +14,12 @@
 #include <list>
 
 typedef void (*PFNCOMMANDHANDLER)(const char*);
-typedef bool (*pfnExecuteCommandHandler)(const char*, const char*, bool, bool, bool);
+typedef bool (*pfnExecuteCommandHandler)(const char*, const char*, bool, bool, bool, bool);
 
 typedef void (*PFNCOMMAND)(const char*);
 
-#define MAX_COMMAND_NAME_LENGTH             128
-#define MAX_COMMAND_DESCRIPTION_LENGTH      128
+#define MAX_COMMAND_NAME_LENGTH        128
+#define MAX_COMMAND_DESCRIPTION_LENGTH 128
 
 typedef struct tagCOMMANDENTRY
 {

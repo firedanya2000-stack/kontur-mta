@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPerfStatModule.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -121,7 +121,7 @@ public:
     virtual const SString& GetCategoryName() = 0;
     virtual void           DoPulse() = 0;
     virtual void           GetStats(CPerfStatResult* pOutResult, const std::map<SString, int>& optionMap, const SString& strFilter) = 0;
-    virtual void           Stop(){};
+    virtual void           Stop() {};
 };
 
 //

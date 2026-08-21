@@ -5,7 +5,7 @@
  *  FILE:        SharedUtil.FastHashSet.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -16,15 +16,15 @@
     #define CFastHashSet std::CSet
 #else
 
-#ifdef WIN32
-    #pragma push_macro("assert")
-#endif
+    #ifdef WIN32
+        #pragma push_macro("assert")
+    #endif
 
-#include <google/dense_hash_set>
+    #include <google/dense_hash_set>
 
-#ifdef WIN32
-    #pragma pop_macro("assert")
-#endif
+    #ifdef WIN32
+        #pragma pop_macro("assert")
+    #endif
 
 namespace SharedUtil
 {
@@ -67,6 +67,6 @@ namespace SharedUtil
         return true;
     }
 
-}            // namespace SharedUtil
+}  // namespace SharedUtil
 
 #endif  // WITH_ALLOC_TRACKING

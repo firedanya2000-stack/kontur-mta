@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIFont.h
  *  PURPOSE:     Font type interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 class CGUIFont
 {
 public:
-    virtual ~CGUIFont(){};
+    virtual ~CGUIFont() {};
 
     virtual void SetAntiAliasingEnabled(bool bAntialiased) = 0;
     virtual bool IsAntiAliasingEnabled() = 0;

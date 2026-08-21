@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -12,119 +12,144 @@
 #include <game/CWeather.h>
 #include <game/CColPoint.h>
 #include <game/CCoronas.h>
+#include <game/CClock.h>
 #include "lua/CLuaFunctionParser.h"
 
 void CLuaWorldDefs::LoadFunctions()
 {
-    constexpr static const std::pair<const char*, lua_CFunction> functions[]{// World get functions
-                                                                             {"getTime", GetTime},
-                                                                             {"getRoofPosition", GetRoofPosition},
-                                                                             {"getGroundPosition", GetGroundPosition},
-                                                                             {"processLineOfSight", ProcessLineOfSight},
-                                                                             {"getWorldFromScreenPosition", GetWorldFromScreenPosition},
-                                                                             {"getScreenFromWorldPosition", GetScreenFromWorldPosition},
-                                                                             {"getWeather", GetWeather},
-                                                                             {"getZoneName", GetZoneName},
-                                                                             {"getGravity", GetGravity},
-                                                                             {"getGameSpeed", GetGameSpeed},
-                                                                             {"getMinuteDuration", GetMinuteDuration},
-                                                                             {"getWaveHeight", GetWaveHeight},
-                                                                             {"getGaragePosition", GetGaragePosition},
-                                                                             {"getGarageSize", GetGarageSize},
-                                                                             {"getGarageBoundingBox", GetGarageBoundingBox},
-                                                                             {"getBlurLevel", GetBlurLevel},
-                                                                             {"getTrafficLightState", GetTrafficLightState},
-                                                                             {"getSkyGradient", GetSkyGradient},
-                                                                             {"getHeatHaze", GetHeatHaze},
-                                                                             {"getJetpackMaxHeight", GetJetpackMaxHeight},
-                                                                             {"getWindVelocity", GetWindVelocity},
-                                                                             {"getInteriorSoundsEnabled", GetInteriorSoundsEnabled},
-                                                                             {"getInteriorFurnitureEnabled", GetInteriorFurnitureEnabled},
-                                                                             {"getFarClipDistance", GetFarClipDistance},
-                                                                             {"getNearClipDistance", GetNearClipDistance},
-                                                                             {"getVehiclesLODDistance", GetVehiclesLODDistance},
-                                                                             {"getPedsLODDistance", GetPedsLODDistance},
-                                                                             {"getFogDistance", GetFogDistance},
-                                                                             {"getSunColor", GetSunColor},
-                                                                             {"getSunSize", GetSunSize},
-                                                                             {"getAircraftMaxHeight", GetAircraftMaxHeight},
-                                                                             {"getAircraftMaxVelocity", GetAircraftMaxVelocity},
-                                                                             {"getOcclusionsEnabled", GetOcclusionsEnabled},
-                                                                             {"getCloudsEnabled", GetCloudsEnabled},
-                                                                             {"getRainLevel", GetRainLevel},
-                                                                             {"getMoonSize", GetMoonSize},
-                                                                             {"getFPSLimit", GetFPSLimit},
-                                                                             {"getBirdsEnabled", GetBirdsEnabled},
-                                                                             {"getCoronaReflectionsEnabled", ArgumentParser<GetCoronaReflectionsEnabled>},
+    constexpr static const std::pair<const char*, lua_CFunction> functions[]{
+        // World get functions
+        {"getTime", GetTime},
+        {"getColorFilter", ArgumentParser<GetColorFilter>},
+        {"getRoofPosition", GetRoofPosition},
+        {"getGroundPosition", GetGroundPosition},
+        {"processLineAgainstMesh", ArgumentParser<ProcessLineAgainstMesh>},
+        {"processLineOfSight", ProcessLineOfSight},
+        {"getWorldFromScreenPosition", GetWorldFromScreenPosition},
+        {"getScreenFromWorldPosition", GetScreenFromWorldPosition},
+        {"getWeather", GetWeather},
+        {"getZoneName", GetZoneName},
+        {"getGravity", GetGravity},
+        {"getGameSpeed", GetGameSpeed},
+        {"getMinuteDuration", GetMinuteDuration},
+        {"getWaveHeight", GetWaveHeight},
+        {"getGaragePosition", GetGaragePosition},
+        {"getGarageSize", GetGarageSize},
+        {"getGarageBoundingBox", GetGarageBoundingBox},
+        {"getBlurLevel", GetBlurLevel},
+        {"getTrafficLightState", GetTrafficLightState},
+        {"getSkyGradient", GetSkyGradient},
+        {"getHeatHaze", GetHeatHaze},
+        {"getJetpackMaxHeight", GetJetpackMaxHeight},
+        {"getWindVelocity", GetWindVelocity},
+        {"getInteriorSoundsEnabled", GetInteriorSoundsEnabled},
+        {"getInteriorFurnitureEnabled", GetInteriorFurnitureEnabled},
+        {"getFarClipDistance", GetFarClipDistance},
+        {"getNearClipDistance", GetNearClipDistance},
+        {"getVehiclesLODDistance", GetVehiclesLODDistance},
+        {"getPedsLODDistance", GetPedsLODDistance},
+        {"getFogDistance", GetFogDistance},
+        {"getSunColor", GetSunColor},
+        {"getSunSize", GetSunSize},
+        {"getAircraftMaxHeight", GetAircraftMaxHeight},
+        {"getAircraftMaxVelocity", GetAircraftMaxVelocity},
+        {"getOcclusionsEnabled", GetOcclusionsEnabled},
+        {"getCloudsEnabled", GetCloudsEnabled},
+        {"getRainLevel", GetRainLevel},
+        {"getMoonSize", GetMoonSize},
+        {"getFPSLimit", GetFPSLimit},
+        {"getBirdsEnabled", GetBirdsEnabled},
+        {"getCoronaReflectionsEnabled", ArgumentParser<GetCoronaReflectionsEnabled>},
+        {"getWorldProperty", ArgumentParser<GetWorldProperty>},
 
-                                                                             // World set funcs
-                                                                             {"setTime", SetTime},
-                                                                             {"setColorFilter", ArgumentParser<SetColorFilter>},
-                                                                             {"setSkyGradient", SetSkyGradient},
-                                                                             {"setHeatHaze", SetHeatHaze},
-                                                                             {"setWeather", SetWeather},
-                                                                             {"setWeatherBlended", SetWeatherBlended},
-                                                                             {"setGravity", SetGravity},
-                                                                             {"setGameSpeed", SetGameSpeed},
-                                                                             {"setWaveHeight", SetWaveHeight},
-                                                                             {"setMinuteDuration", SetMinuteDuration},
-                                                                             {"setGarageOpen", SetGarageOpen},
-                                                                             {"setWorldSpecialPropertyEnabled", SetWorldSpecialPropertyEnabled},
-                                                                             {"setBlurLevel", SetBlurLevel},
-                                                                             {"setJetpackMaxHeight", SetJetpackMaxHeight},
-                                                                             {"setCloudsEnabled", SetCloudsEnabled},
-                                                                             {"setTrafficLightState", SetTrafficLightState},
-                                                                             {"setTrafficLightsLocked", SetTrafficLightsLocked},
-                                                                             {"setWindVelocity", SetWindVelocity},
-                                                                             {"setInteriorSoundsEnabled", SetInteriorSoundsEnabled},
-                                                                             {"setInteriorFurnitureEnabled", SetInteriorFurnitureEnabled},
-                                                                             {"setRainLevel", SetRainLevel},
-                                                                             {"setFarClipDistance", SetFarClipDistance},
-                                                                             {"setNearClipDistance", SetNearClipDistance},
-                                                                             {"setVehiclesLODDistance", SetVehiclesLODDistance},
-                                                                             {"setPedsLODDistance", SetPedsLODDistance},
-                                                                             {"setFogDistance", SetFogDistance},
-                                                                             {"setSunColor", SetSunColor},
-                                                                             {"setSunSize", SetSunSize},
-                                                                             {"setAircraftMaxHeight", SetAircraftMaxHeight},
-                                                                             {"setAircraftMaxVelocity", SetAircraftMaxVelocity},
-                                                                             {"setOcclusionsEnabled", SetOcclusionsEnabled},
-                                                                             {"setBirdsEnabled", SetBirdsEnabled},
-                                                                             {"setPedTargetingMarkerEnabled", SetPedTargetingMarkerEnabled},
-                                                                             {"setMoonSize", SetMoonSize},
-                                                                             {"setFPSLimit", SetFPSLimit},
-                                                                             {"setCoronaReflectionsEnabled", ArgumentParser<SetCoronaReflectionsEnabled>},
-                                                                             {"removeWorldModel", RemoveWorldBuilding},
-                                                                             {"restoreAllWorldModels", RestoreWorldBuildings},
-                                                                             {"restoreWorldModel", RestoreWorldBuilding},
+        // World set funcs
+        {"setTime", SetTime},
+        {"setColorFilter", ArgumentParser<SetColorFilter>},
+        {"setGrainMultiplier", ArgumentParser<SetGrainMultiplier>},
+        {"setGrainLevel", ArgumentParser<SetGrainLevel>},
+        {"setSkyGradient", SetSkyGradient},
+        {"setHeatHaze", SetHeatHaze},
+        {"setWeather", SetWeather},
+        {"setWeatherBlended", SetWeatherBlended},
+        {"setGravity", SetGravity},
+        {"setGameSpeed", SetGameSpeed},
+        {"setWaveHeight", SetWaveHeight},
+        {"setMinuteDuration", SetMinuteDuration},
+        {"setGarageOpen", SetGarageOpen},
+        {"setWorldSpecialPropertyEnabled", ArgumentParser<SetWorldSpecialPropertyEnabled>},
+        {"setBlurLevel", SetBlurLevel},
+        {"setJetpackMaxHeight", SetJetpackMaxHeight},
+        {"setCloudsEnabled", SetCloudsEnabled},
+        {"setTrafficLightState", SetTrafficLightState},
+        {"setTrafficLightsLocked", SetTrafficLightsLocked},
+        {"setWindVelocity", SetWindVelocity},
+        {"setInteriorSoundsEnabled", SetInteriorSoundsEnabled},
+        {"setInteriorFurnitureEnabled", SetInteriorFurnitureEnabled},
+        {"setRainLevel", SetRainLevel},
+        {"setFarClipDistance", SetFarClipDistance},
+        {"setNearClipDistance", SetNearClipDistance},
+        {"setVehiclesLODDistance", SetVehiclesLODDistance},
+        {"setPedsLODDistance", SetPedsLODDistance},
+        {"setFogDistance", SetFogDistance},
+        {"setSunColor", SetSunColor},
+        {"setSunSize", SetSunSize},
+        {"setAircraftMaxHeight", SetAircraftMaxHeight},
+        {"setAircraftMaxVelocity", SetAircraftMaxVelocity},
+        {"setOcclusionsEnabled", SetOcclusionsEnabled},
+        {"setBirdsEnabled", SetBirdsEnabled},
+        {"setPedTargetingMarkerEnabled", SetPedTargetingMarkerEnabled},
+        {"setMoonSize", SetMoonSize},
+        {"setFPSLimit", SetFPSLimit},
+        {"setCoronaReflectionsEnabled", ArgumentParser<SetCoronaReflectionsEnabled>},
+        {"setWorldProperty", ArgumentParser<SetWorldProperty>},
 
-                                                                             // World create funcs
-                                                                             {"createSWATRope", CreateSWATRope},
-                                                                             {"createExplosion", CreateExplosion},
+        // World remove/restore functions
+        {"removeWorldModel", RemoveWorldBuilding},
+        {"restoreAllWorldModels", RestoreWorldBuildings},
+        {"restoreWorldModel", RestoreWorldBuilding},
+        {"removeGameWorld", ArgumentParser<RemoveGameWorld>},
+        {"restoreGameWorld", ArgumentParser<RestoreGameWorld>},
 
-                                                                             // World reset funcs
-                                                                             {"resetColorFilter", ArgumentParser<ResetColorFilter>},
-                                                                             {"resetCoronaReflectionsEnabled", ArgumentParser<ResetCoronaReflectionsEnabled>},
-                                                                             {"resetSkyGradient", ResetSkyGradient},
-                                                                             {"resetHeatHaze", ResetHeatHaze},
-                                                                             {"resetWindVelocity", ResetWindVelocity},
-                                                                             {"resetRainLevel", ResetRainLevel},
-                                                                             {"resetFarClipDistance", ResetFarClipDistance},
-                                                                             {"resetNearClipDistance", ResetNearClipDistance},
-                                                                             {"resetVehiclesLODDistance", ResetVehiclesLODDistance},
-                                                                             {"resetPedsLODDistance", ResetPedsLODDistance},
-                                                                             {"resetFogDistance", ResetFogDistance},
-                                                                             {"resetSunColor", ResetSunColor},
-                                                                             {"resetSunSize", ResetSunSize},
-                                                                             {"resetMoonSize", ResetMoonSize},
-                                                                             {"resetBlurLevel", ResetBlurLevel},
+        {"setTimeFrozen", ArgumentParser<SetTimeFrozen>},
+        {"setVolumetricShadowsEnabled", ArgumentParser<SetVolumetricShadowsEnabled>},
+        {"setDynamicPedShadowsEnabled", ArgumentParser<SetDynamicPedShadowsEnabled>},
 
-                                                                             // World check funcs
-                                                                             {"areTrafficLightsLocked", AreTrafficLightsLocked},
-                                                                             {"isPedTargetingMarkerEnabled", IsPedTargetingMarkerEnabled},
-                                                                             {"isLineOfSightClear", IsLineOfSightClear},
-                                                                             {"isWorldSpecialPropertyEnabled", IsWorldSpecialPropertyEnabled},
-                                                                             {"isGarageOpen", IsGarageOpen}};
+        // World create funcs
+        {"createSWATRope", CreateSWATRope},
+        {"createExplosion", CreateExplosion},
+
+        // World reset funcs
+        {"resetColorFilter", ArgumentParser<ResetColorFilter>},
+        {"resetCoronaReflectionsEnabled", ArgumentParser<ResetCoronaReflectionsEnabled>},
+        {"resetSkyGradient", ResetSkyGradient},
+        {"resetHeatHaze", ResetHeatHaze},
+        {"resetWindVelocity", ResetWindVelocity},
+        {"resetRainLevel", ResetRainLevel},
+        {"resetFarClipDistance", ResetFarClipDistance},
+        {"resetNearClipDistance", ResetNearClipDistance},
+        {"resetVehiclesLODDistance", ResetVehiclesLODDistance},
+        {"resetPedsLODDistance", ResetPedsLODDistance},
+        {"resetFogDistance", ResetFogDistance},
+        {"resetSunColor", ResetSunColor},
+        {"resetSunSize", ResetSunSize},
+        {"resetMoonSize", ResetMoonSize},
+        {"resetBlurLevel", ResetBlurLevel},
+        {"resetWorldProperty", ArgumentParserWarn<false, ResetWorldProperty>},
+        {"resetTimeFrozen", ArgumentParser<ResetTimeFrozen>},
+        {"resetVolumetricShadows", ArgumentParser<ResetVolumetricShadows>},
+        {"resetWorldProperties", ArgumentParser<ResetWorldProperties>},
+        {"resetDynamicPedShadows", ArgumentParser<ResetDynamicPedShadows>},
+
+        // World check funcs
+        {"areTrafficLightsLocked", AreTrafficLightsLocked},
+        {"isPedTargetingMarkerEnabled", IsPedTargetingMarkerEnabled},
+        {"isLineOfSightClear", IsLineOfSightClear},
+        {"isWorldSpecialPropertyEnabled", ArgumentParserWarn<false, IsWorldSpecialPropertyEnabled>},
+        {"isGarageOpen", IsGarageOpen},
+        {"isTimeFrozen", ArgumentParser<IsTimeFrozen>},
+        {"isVolumetricShadowsEnabled", ArgumentParser<IsVolumetricShadowsEnabled>},
+        {"isDynamicPedShadowsEnabled", ArgumentParser<IsDynamicPedShadowsEnabled>},
+        {"testSphereAgainstWorld", ArgumentParser<TestSphereAgainstWorld>}};
 
     // Add functions
     for (const auto& [name, func] : functions)
@@ -149,7 +174,7 @@ int CLuaWorldDefs::CreateExplosion(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        if (CStaticFunctionDefinitions::CreateExplosion(vecPosition, iType, bMakeSound, fCamShake, bDamaging))
+        if (CStaticFunctionDefinitions::CreateExplosion(vecPosition, static_cast<unsigned char>(iType), bMakeSound, fCamShake, bDamaging))
         {
             lua_pushboolean(luaVM, true);
             return 1;
@@ -227,7 +252,38 @@ int CLuaWorldDefs::GetRoofPosition(lua_State* luaVM)
     return 1;
 }
 
-int CLuaWorldDefs::ProcessLineOfSight(lua_State* luaVM)
+std::variant<bool, CLuaMultiReturn<bool, float, float, const char*, const char*, float, float, float>> CLuaWorldDefs::ProcessLineAgainstMesh(CClientEntity* e,
+                                                                                                                                             CVector start,
+                                                                                                                                             CVector end)
+{
+    const auto ge = e->GetGameEntity();
+    if (!ge)
+    {
+        // Element likely not streamed in, and such
+        // Can't process it. This isn't an error per-se, thus we won't raise anything and treat this as a no-hit scenario
+        return {false};
+    }
+    const SProcessLineOfSightMaterialInfoResult matInfo{g_pGame->GetWorld()->ProcessLineAgainstMesh(ge->GetInterface(), start, end)};
+    if (!matInfo.valid)
+    {
+        return {false};  // No hit
+    }
+    return CLuaMultiReturn<bool, float, float, const char*, const char*, float, float, float>{
+        true,
+
+        matInfo.uv.fX,
+        matInfo.uv.fY,
+
+        matInfo.textureName,
+        matInfo.frameName,
+
+        matInfo.hitPos.fX,
+        matInfo.hitPos.fY,
+        matInfo.hitPos.fZ,
+    };
+}
+
+int CLuaWorldDefs::ProcessLineOfSight(lua_State* L)
 {
     //  bool float float float element float float float int int int processLineOfSight ( float startX, float startY, float startZ, float endX, float endY,
     //  float endZ,
@@ -239,8 +295,9 @@ int CLuaWorldDefs::ProcessLineOfSight(lua_State* luaVM)
     SLineOfSightFlags flags;
     CClientEntity*    pIgnoredElement;
     bool              bIncludeBuildingInfo;
+    bool              bIncludeExtraMateriaInfo;
 
-    CScriptArgReader argStream(luaVM);
+    CScriptArgReader argStream(L);
     argStream.ReadVector3D(vecStart);
     argStream.ReadVector3D(vecEnd);
     argStream.ReadBool(flags.bCheckBuildings, true);
@@ -254,16 +311,18 @@ int CLuaWorldDefs::ProcessLineOfSight(lua_State* luaVM)
     argStream.ReadUserData(pIgnoredElement, NULL);
     argStream.ReadBool(bIncludeBuildingInfo, false);
     argStream.ReadBool(flags.bCheckCarTires, false);
+    argStream.ReadBool(bIncludeExtraMateriaInfo, false);
 
     if (!argStream.HasErrors())
     {
-        CEntity*                   pIgnoredEntity = pIgnoredElement ? pIgnoredElement->GetGameEntity() : NULL;
-        CColPoint*                 pColPoint = NULL;
-        CClientEntity*             pColEntity = NULL;
-        bool                       bCollision;
-        SLineOfSightBuildingResult buildingResult;
+        CEntity*                              pIgnoredEntity = pIgnoredElement ? pIgnoredElement->GetGameEntity() : NULL;
+        CColPoint*                            pColPoint = NULL;
+        CClientEntity*                        pColEntity = NULL;
+        bool                                  bCollision;
+        SLineOfSightBuildingResult            buildingResult;
+        SProcessLineOfSightMaterialInfoResult matInfo;
         if (CStaticFunctionDefinitions::ProcessLineOfSight(vecStart, vecEnd, bCollision, &pColPoint, &pColEntity, flags, pIgnoredEntity,
-                                                           bIncludeBuildingInfo ? &buildingResult : NULL))
+                                                           bIncludeBuildingInfo ? &buildingResult : NULL, bIncludeExtraMateriaInfo ? &matInfo : nullptr))
         {
             // Got a collision?
             CVector vecColPosition;
@@ -278,7 +337,7 @@ int CLuaWorldDefs::ProcessLineOfSight(lua_State* luaVM)
                 // Get the collision position
                 vecColPosition = pColPoint->GetPosition();
                 vecColNormal = pColPoint->GetNormal();
-                iMaterial = pColPoint->GetSurfaceTypeB();            // From test, only B function return relevant data
+                iMaterial = pColPoint->GetSurfaceTypeB();  // From test, only B function return relevant data
                 fLighting = pColPoint->GetLightingForTimeOfDay();
                 iPiece = pColPoint->GetPieceTypeB();
 
@@ -286,50 +345,77 @@ int CLuaWorldDefs::ProcessLineOfSight(lua_State* luaVM)
                 pColPoint->Destroy();
             }
 
-            lua_pushboolean(luaVM, bCollision);
+            lua_pushboolean(L, bCollision);
             if (bCollision)
             {
-                lua_pushnumber(luaVM, vecColPosition.fX);
-                lua_pushnumber(luaVM, vecColPosition.fY);
-                lua_pushnumber(luaVM, vecColPosition.fZ);
+                lua_pushnumber(L, vecColPosition.fX);
+                lua_pushnumber(L, vecColPosition.fY);
+                lua_pushnumber(L, vecColPosition.fZ);
 
                 if (pColEntity)
-                    lua_pushelement(luaVM, pColEntity);
+                    lua_pushelement(L, pColEntity);
                 else
-                    lua_pushnil(luaVM);
+                    lua_pushnil(L);
 
-                lua_pushnumber(luaVM, vecColNormal.fX);
-                lua_pushnumber(luaVM, vecColNormal.fY);
-                lua_pushnumber(luaVM, vecColNormal.fZ);
+                lua_pushnumber(L, vecColNormal.fX);
+                lua_pushnumber(L, vecColNormal.fY);
+                lua_pushnumber(L, vecColNormal.fZ);
 
-                lua_pushinteger(luaVM, iMaterial);
-                lua_pushnumber(luaVM, fLighting);
-                lua_pushinteger(luaVM, iPiece);
+                lua_pushinteger(L, iMaterial);
+                lua_pushnumber(L, fLighting);
+                lua_pushinteger(L, iPiece);
 
-                if (bIncludeBuildingInfo && buildingResult.bValid)
+                if (bIncludeBuildingInfo && buildingResult.bValid)  // 8 args
                 {
-                    lua_pushnumber(luaVM, buildingResult.usModelID);
+                    lua_pushnumber(L, buildingResult.usModelID);
 
-                    lua_pushnumber(luaVM, buildingResult.vecPosition.fX);
-                    lua_pushnumber(luaVM, buildingResult.vecPosition.fY);
-                    lua_pushnumber(luaVM, buildingResult.vecPosition.fZ);
+                    lua_pushnumber(L, buildingResult.vecPosition.fX);
+                    lua_pushnumber(L, buildingResult.vecPosition.fY);
+                    lua_pushnumber(L, buildingResult.vecPosition.fZ);
 
-                    lua_pushnumber(luaVM, ConvertRadiansToDegrees(buildingResult.vecRotation.fX));
-                    lua_pushnumber(luaVM, ConvertRadiansToDegrees(buildingResult.vecRotation.fY));
-                    lua_pushnumber(luaVM, ConvertRadiansToDegrees(buildingResult.vecRotation.fZ));
+                    lua_pushnumber(L, ConvertRadiansToDegrees(buildingResult.vecRotation.fX));
+                    lua_pushnumber(L, ConvertRadiansToDegrees(buildingResult.vecRotation.fY));
+                    lua_pushnumber(L, ConvertRadiansToDegrees(buildingResult.vecRotation.fZ));
 
-                    lua_pushnumber(luaVM, buildingResult.usLODModelID);
-                    return 19;
+                    lua_pushnumber(L, buildingResult.usLODModelID);
                 }
-                return 11;
+                else
+                {
+                    for (auto i = 1 + 3 + 3 + 1; i-- > 0;)
+                    {
+                        lua_pushnil(L);
+                    }
+                }
+
+                if (bIncludeExtraMateriaInfo && matInfo.valid)
+                {  // 7 args
+                    lua::Push(L, matInfo.uv.fX);
+                    lua::Push(L, matInfo.uv.fY);
+
+                    lua::Push(L, matInfo.textureName);
+                    lua::Push(L, matInfo.frameName);
+
+                    lua::Push(L, matInfo.hitPos.fX);
+                    lua::Push(L, matInfo.hitPos.fY);
+                    lua::Push(L, matInfo.hitPos.fZ);
+                }
+                else
+                {
+                    for (auto i = 2 + 1 + 1 + 3; i-- > 0;)
+                    {
+                        lua_pushnil(L);
+                    }
+                }
+
+                return 11 + 8 + 7;
             }
             return 1;
         }
     }
     else
-        m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
+        m_pScriptDebugging->LogCustom(L, argStream.GetFullErrorMessage());
 
-    lua_pushboolean(luaVM, false);
+    lua_pushboolean(L, false);
     return 1;
 }
 
@@ -548,7 +634,7 @@ int CLuaWorldDefs::IsGarageOpen(lua_State* luaVM)
     {
         bool bIsOpen;
 
-        if (CStaticFunctionDefinitions::IsGarageOpen(iGarageID, bIsOpen))
+        if (CStaticFunctionDefinitions::IsGarageOpen(static_cast<unsigned char>(iGarageID), bIsOpen))
         {
             lua_pushboolean(luaVM, bIsOpen);
             return 1;
@@ -573,7 +659,7 @@ int CLuaWorldDefs::GetGaragePosition(lua_State* luaVM)
     {
         CVector vecPosition;
 
-        if (CStaticFunctionDefinitions::GetGaragePosition(iGarageID, vecPosition))
+        if (CStaticFunctionDefinitions::GetGaragePosition(static_cast<unsigned char>(iGarageID), vecPosition))
         {
             lua_pushnumber(luaVM, vecPosition.fX);
             lua_pushnumber(luaVM, vecPosition.fY);
@@ -602,11 +688,11 @@ int CLuaWorldDefs::GetGarageSize(lua_State* luaVM)
         float fWidth;
         float fHeight;
 
-        if (CStaticFunctionDefinitions::GetGarageSize(iGarageID, fHeight, fWidth, fDepth))
+        if (CStaticFunctionDefinitions::GetGarageSize(static_cast<unsigned char>(iGarageID), fHeight, fWidth, fDepth))
         {
-            lua_pushnumber(luaVM, fHeight);
             lua_pushnumber(luaVM, fWidth);
             lua_pushnumber(luaVM, fDepth);
+            lua_pushnumber(luaVM, fHeight);
             return 3;
         }
     }
@@ -632,7 +718,7 @@ int CLuaWorldDefs::GetGarageBoundingBox(lua_State* luaVM)
         float fFront;
         float fBack;
 
-        if (CStaticFunctionDefinitions::GetGarageBoundingBox(iGarageID, fLeft, fRight, fFront, fBack))
+        if (CStaticFunctionDefinitions::GetGarageBoundingBox(static_cast<unsigned char>(iGarageID), fLeft, fRight, fFront, fBack))
         {
             lua_pushnumber(luaVM, fLeft);
             lua_pushnumber(luaVM, fRight);
@@ -995,7 +1081,7 @@ int CLuaWorldDefs::SetGarageOpen(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        if (CStaticFunctionDefinitions::SetGarageOpen(iGarageID, bOpen))
+        if (CStaticFunctionDefinitions::SetGarageOpen(static_cast<unsigned char>(iGarageID), bOpen))
         {
             lua_pushboolean(luaVM, true);
             return 1;
@@ -1052,7 +1138,8 @@ int CLuaWorldDefs::RemoveWorldBuilding(lua_State* luaVM)
             if (pResource)
             {
                 uint uiAmount;
-                CStaticFunctionDefinitions::RemoveWorldBuilding(iModelToRemove, fRadius, vecPosition.fX, vecPosition.fY, vecPosition.fZ, cInterior, uiAmount);
+                CStaticFunctionDefinitions::RemoveWorldBuilding(static_cast<unsigned short>(iModelToRemove), fRadius, vecPosition.fX, vecPosition.fY,
+                                                                vecPosition.fZ, cInterior, uiAmount);
 
                 lua_pushboolean(luaVM, true);
                 lua_pushnumber(luaVM, uiAmount);
@@ -1108,7 +1195,8 @@ int CLuaWorldDefs::RestoreWorldBuilding(lua_State* luaVM)
             if (pResource)
             {
                 uint uiAmount;
-                CStaticFunctionDefinitions::RestoreWorldBuilding(iModelToRestore, fRadius, vecPosition.fX, vecPosition.fY, vecPosition.fZ, cInterior, uiAmount);
+                CStaticFunctionDefinitions::RestoreWorldBuilding(static_cast<unsigned short>(iModelToRestore), fRadius, vecPosition.fX, vecPosition.fY,
+                                                                 vecPosition.fZ, cInterior, uiAmount);
 
                 lua_pushboolean(luaVM, true);
                 lua_pushnumber(luaVM, uiAmount);
@@ -1192,50 +1280,25 @@ int CLuaWorldDefs::SetOcclusionsEnabled(lua_State* luaVM)
     return 1;
 }
 
-int CLuaWorldDefs::IsWorldSpecialPropertyEnabled(lua_State* luaVM)
+bool CLuaWorldDefs::IsWorldSpecialPropertyEnabled(const WorldSpecialProperty property) noexcept
 {
-    //  bool isWorldSpecialPropertyEnabled ( string propname )
-    SString strPropName;
-
-    CScriptArgReader argStream(luaVM);
-    argStream.ReadString(strPropName);
-
-    if (!argStream.HasErrors())
-    {
-        bool bResult = CStaticFunctionDefinitions::IsWorldSpecialPropertyEnabled(strPropName);
-        lua_pushboolean(luaVM, bResult);
-        return 1;
-    }
-    else
-        m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
-
-    lua_pushboolean(luaVM, false);
-    return 1;
+    return m_pClientGame->IsWorldSpecialProperty(property);
 }
 
-int CLuaWorldDefs::SetWorldSpecialPropertyEnabled(lua_State* luaVM)
+bool CLuaWorldDefs::SetWorldSpecialPropertyEnabled(const WorldSpecialProperty property, const bool enabled) noexcept
 {
-    //  bool setWorldSpecialPropertyEnabled ( string propname, bool enable )
-    SString strPropName;
-    bool    bEnable;
+    if (!m_pClientGame->SetWorldSpecialProperty(property, enabled))
+        return false;
 
-    CScriptArgReader argStream(luaVM);
-    argStream.ReadString(strPropName);
-    argStream.ReadBool(bEnable);
-
-    if (!argStream.HasErrors())
+    if (auto stream = g_pNet->AllocateNetBitStream())
     {
-        if (CStaticFunctionDefinitions::SetWorldSpecialPropertyEnabled(strPropName, bEnable))
-        {
-            lua_pushboolean(luaVM, true);
-            return 1;
-        }
+        stream->WriteString(EnumToString(property));
+        stream->WriteBit(enabled);
+        g_pNet->SendPacket(PACKET_ID_PLAYER_WORLD_SPECIAL_PROPERTY, stream, PACKET_PRIORITY_HIGH, PACKET_RELIABILITY_RELIABLE_ORDERED);
+        g_pNet->DeallocateNetBitStream(stream);
     }
-    else
-        m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
 
-    lua_pushboolean(luaVM, false);
-    return 1;
+    return true;
 }
 
 int CLuaWorldDefs::SetCloudsEnabled(lua_State* luaVM)
@@ -1308,7 +1371,7 @@ int CLuaWorldDefs::SetTrafficLightState(lua_State* luaVM)
 
         if (!argStream.HasErrors())
         {
-            if (CStaticFunctionDefinitions::SetTrafficLightState(iState))
+            if (CStaticFunctionDefinitions::SetTrafficLightState(static_cast<unsigned char>(iState)))
             {
                 lua_pushboolean(luaVM, true);
                 return 1;
@@ -1803,7 +1866,8 @@ int CLuaWorldDefs::SetSunColor(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        g_pMultiplayer->SetSunColor(iCoreRed, iCoreGreen, iCoreBlue, iCoronaRed, iCoronaGreen, iCoronaBlue);
+        g_pMultiplayer->SetSunColor(static_cast<unsigned char>(iCoreRed), static_cast<unsigned char>(iCoreGreen), static_cast<unsigned char>(iCoreBlue),
+                                    static_cast<unsigned char>(iCoronaRed), static_cast<unsigned char>(iCoronaGreen), static_cast<unsigned char>(iCoronaBlue));
     }
     else
         m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
@@ -1951,21 +2015,19 @@ int CLuaWorldDefs::ResetMoonSize(lua_State* luaVM)
 int CLuaWorldDefs::SetFPSLimit(lua_State* luaVM)
 {
     // bool setFPSLimit ( int fpsLimit )
-    int iLimit;
+    std::uint16_t fps;
 
-    CScriptArgReader argStream(luaVM);
-    argStream.ReadNumber(iLimit);
+    CScriptArgReader argReader(luaVM);
+    argReader.ReadNumber(fps);
 
-    if (!argStream.HasErrors())
+    if (!argReader.HasErrors())
     {
-        if (CStaticFunctionDefinitions::SetFPSLimit(iLimit))
-        {
-            lua_pushboolean(luaVM, true);
-            return 1;
-        }
+        CStaticFunctionDefinitions::SetClientFPSLimit(fps);
+        lua_pushboolean(luaVM, true);
+        return 1;
     }
     else
-        m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
+        m_pScriptDebugging->LogCustom(luaVM, argReader.GetFullErrorMessage());
 
     lua_pushboolean(luaVM, false);
     return 1;
@@ -1973,14 +2035,12 @@ int CLuaWorldDefs::SetFPSLimit(lua_State* luaVM)
 
 int CLuaWorldDefs::GetFPSLimit(lua_State* luaVM)
 {
-    int iLimit;
-    if (CStaticFunctionDefinitions::GetFPSLimit(iLimit))
-    {
-        lua_pushnumber(luaVM, iLimit);
-        return 1;
-    }
+    // int getFPSLimit ()
+    std::uint16_t fps;
 
-    lua_pushboolean(luaVM, false);
+    CStaticFunctionDefinitions::GetFPSLimit(fps);
+
+    lua_pushnumber(luaVM, fps);
     return 1;
 }
 
@@ -1996,6 +2056,28 @@ bool CLuaWorldDefs::SetColorFilter(uchar ucPass0Red, uchar ucPass0Green, uchar u
     unsigned long ulColor0 = COLOR_RGBA(ucPass0Red, ucPass0Green, ucPass0Blue, ucPass0Alpha);
     unsigned long ulColor1 = COLOR_RGBA(ucPass1Red, ucPass1Green, ucPass1Blue, ucPass1Alpha);
     g_pMultiplayer->SetColorFilter(ulColor0, ulColor1);
+    return true;
+}
+
+CLuaMultiReturn<uchar, uchar, uchar, uchar, uchar, uchar, uchar, uchar> CLuaWorldDefs::GetColorFilter(bool isOriginal)
+{
+    SColor uColor0 = 0;
+    SColor uColor1 = 0;
+    g_pMultiplayer->GetColorFilter(uColor0.ulARGB, uColor1.ulARGB, isOriginal);
+    return {
+        uColor0.R, uColor0.G, uColor0.B, uColor0.A, uColor1.R, uColor1.G, uColor1.B, uColor1.A,
+    };
+}
+
+bool CLuaWorldDefs::SetGrainMultiplier(eGrainMultiplierType type, float fMultiplier)
+{
+    g_pMultiplayer->SetGrainMultiplier(type, fMultiplier);
+    return true;
+}
+
+bool CLuaWorldDefs::SetGrainLevel(uchar ucLevel)
+{
+    g_pMultiplayer->SetGrainLevel(ucLevel);
     return true;
 }
 
@@ -2019,4 +2101,290 @@ bool CLuaWorldDefs::ResetCoronaReflectionsEnabled()
     g_pGame->GetSettings()->SetCoronaReflectionsControlledByScript(false);
     g_pGame->GetSettings()->ResetCoronaReflectionsEnabled();
     return true;
+}
+
+std::variant<bool, float, CLuaMultiReturn<float, float, float>> CLuaWorldDefs::GetWorldProperty(WorldProperty property)
+{
+    switch (property)
+    {
+        case WorldProperty::AMBIENT_COLOR:
+        {
+            float red, green, blue;
+            g_pMultiplayer->GetAmbientColor(red, green, blue);
+            return std::make_tuple((int16)(red * 255), (int16)(green * 255), (int16)(blue * 255));
+        }
+        case WorldProperty::AMBIENT_OBJ_COLOR:
+        {
+            float red, green, blue;
+            g_pMultiplayer->GetAmbientObjectColor(red, green, blue);
+            return std::make_tuple((int16)(red * 255), (int16)(green * 255), (int16)(blue * 255));
+        }
+        case WorldProperty::DIRECTIONAL_COLOR:
+        {
+            float red, green, blue;
+            g_pMultiplayer->GetDirectionalColor(red, green, blue);
+            return std::make_tuple((int16)(red * 255), (int16)(green * 255), (int16)(blue * 255));
+        }
+        case WorldProperty::SPRITE_SIZE:
+            return g_pMultiplayer->GetSpriteSize();
+        case WorldProperty::SPRITE_BRIGHTNESS:
+            return g_pMultiplayer->GetSpriteBrightness();
+        case WorldProperty::POLE_SHADOW_STRENGTH:
+            return (float)g_pMultiplayer->GetPoleShadowStrength();
+        case WorldProperty::SHADOW_STRENGTH:
+            return (float)g_pMultiplayer->GetShadowStrength();
+        case WorldProperty::SHADOWS_OFFSET:
+            return g_pMultiplayer->GetShadowsOffset();
+        case WorldProperty::LIGHTS_ON_GROUND:
+            return g_pMultiplayer->GetLightsOnGroundBrightness();
+        case WorldProperty::LOW_CLOUDS_COLOR:
+        {
+            int16 red, green, blue;
+            g_pMultiplayer->GetLowCloudsColor(red, green, blue);
+            return std::make_tuple(red, green, blue);
+        }
+        case WorldProperty::BOTTOM_CLOUDS_COLOR:
+        {
+            int16 red, green, blue;
+            g_pMultiplayer->GetBottomCloudsColor(red, green, blue);
+            return std::make_tuple(red, green, blue);
+        }
+        case WorldProperty::CLOUDS_ALPHA1:
+            return g_pMultiplayer->GetCloudsAlpha1();
+        case WorldProperty::ILLUMINATION:
+            return g_pMultiplayer->GetIllumination();
+        case WorldProperty::WEATHER_WET_ROADS:
+            return g_pGame->GetWeather()->GetWetRoads();
+        case WorldProperty::WEATHER_FOGGYNESS:
+            return g_pGame->GetWeather()->GetFoggyness();
+        case WorldProperty::WEATHER_FOG:
+            return g_pGame->GetWeather()->GetFog();
+        case WorldProperty::WEATHER_RAIN_FOG:
+            return g_pGame->GetWeather()->GetRainFog();
+        case WorldProperty::WEATHER_WATER_FOG:
+            return g_pGame->GetWeather()->GetWaterFog();
+        case WorldProperty::WEATHER_SANDSTORM:
+            return g_pGame->GetWeather()->GetSandstorm();
+        case WorldProperty::WEATHER_RAINBOW:
+            return g_pGame->GetWeather()->GetRainbow();
+    }
+    return false;
+}
+
+bool CLuaWorldDefs::SetWorldProperty(WorldProperty property, float arg1, std::optional<float> arg2, std::optional<float> arg3)
+{
+    if (arg2.has_value() && arg3.has_value())
+    {
+        const auto toInt16ColorComponent = [](float value) -> int16
+        {
+            const int iValue = Round(value);
+            if (iValue < 0 || iValue > 255)
+                throw std::invalid_argument("Expected a valid colour component (0-255)");
+
+            return static_cast<int16>(iValue);
+        };
+
+        switch (property)
+        {
+            case WorldProperty::AMBIENT_COLOR:
+                return g_pMultiplayer->SetAmbientColor(arg1 / 255, arg2.value() / 255, arg3.value() / 255);
+            case WorldProperty::AMBIENT_OBJ_COLOR:
+                return g_pMultiplayer->SetAmbientObjectColor(arg1 / 255, arg2.value() / 255, arg3.value() / 255);
+            case WorldProperty::DIRECTIONAL_COLOR:
+                return g_pMultiplayer->SetDirectionalColor(arg1 / 255, arg2.value() / 255, arg3.value() / 255);
+            case WorldProperty::LOW_CLOUDS_COLOR:
+                return g_pMultiplayer->SetLowCloudsColor(toInt16ColorComponent(arg1), toInt16ColorComponent(arg2.value()), toInt16ColorComponent(arg3.value()));
+            case WorldProperty::BOTTOM_CLOUDS_COLOR:
+                return g_pMultiplayer->SetBottomCloudsColor(toInt16ColorComponent(arg1), toInt16ColorComponent(arg2.value()),
+                                                            toInt16ColorComponent(arg3.value()));
+        }
+        return false;
+    }
+    switch (property)
+    {
+        case WorldProperty::SPRITE_SIZE:
+            return g_pMultiplayer->SetSpriteSize(arg1);
+        case WorldProperty::SPRITE_BRIGHTNESS:
+            return g_pMultiplayer->SetSpriteBrightness(arg1);
+        case WorldProperty::POLE_SHADOW_STRENGTH:
+            return g_pMultiplayer->SetPoleShadowStrength(static_cast<int16>(arg1));
+        case WorldProperty::SHADOW_STRENGTH:
+            return g_pMultiplayer->SetShadowStrength(static_cast<int16>(arg1));
+        case WorldProperty::SHADOWS_OFFSET:
+            return g_pMultiplayer->SetShadowsOffset(arg1);
+        case WorldProperty::LIGHTS_ON_GROUND:
+            return g_pMultiplayer->SetLightsOnGroundBrightness(arg1);
+        case WorldProperty::CLOUDS_ALPHA1:
+            return g_pMultiplayer->SetCloudsAlpha1(arg1);
+        case WorldProperty::ILLUMINATION:
+            return g_pMultiplayer->SetIllumination(arg1);
+        case WorldProperty::WEATHER_WET_ROADS:
+            return g_pGame->GetWeather()->SetWetRoads(arg1);
+        case WorldProperty::WEATHER_FOGGYNESS:
+            return g_pGame->GetWeather()->SetFoggyness(arg1);
+        case WorldProperty::WEATHER_FOG:
+            return g_pGame->GetWeather()->SetFog(arg1);
+        case WorldProperty::WEATHER_RAIN_FOG:
+            return g_pGame->GetWeather()->SetRainFog(arg1);
+        case WorldProperty::WEATHER_WATER_FOG:
+            return g_pGame->GetWeather()->SetWaterFog(arg1);
+        case WorldProperty::WEATHER_SANDSTORM:
+            return g_pGame->GetWeather()->SetSandstorm(arg1);
+        case WorldProperty::WEATHER_RAINBOW:
+            return g_pGame->GetWeather()->SetRainbow(arg1);
+    }
+    return false;
+}
+
+bool CLuaWorldDefs::ResetWorldProperty(WorldProperty property)
+{
+    switch (property)
+    {
+        case WorldProperty::AMBIENT_COLOR:
+            return g_pMultiplayer->ResetAmbientColor();
+        case WorldProperty::AMBIENT_OBJ_COLOR:
+            return g_pMultiplayer->ResetAmbientObjectColor();
+        case WorldProperty::DIRECTIONAL_COLOR:
+            return g_pMultiplayer->ResetDirectionalColor();
+        case WorldProperty::SPRITE_SIZE:
+            return g_pMultiplayer->ResetSpriteSize();
+        case WorldProperty::SPRITE_BRIGHTNESS:
+            return g_pMultiplayer->ResetSpriteBrightness();
+        case WorldProperty::POLE_SHADOW_STRENGTH:
+            return g_pMultiplayer->ResetPoleShadowStrength();
+        case WorldProperty::SHADOW_STRENGTH:
+            return g_pMultiplayer->ResetShadowStrength();
+        case WorldProperty::SHADOWS_OFFSET:
+            return g_pMultiplayer->ResetShadowsOffset();
+        case WorldProperty::LIGHTS_ON_GROUND:
+            return g_pMultiplayer->ResetLightsOnGroundBrightness();
+        case WorldProperty::LOW_CLOUDS_COLOR:
+            return g_pMultiplayer->ResetLowCloudsColor();
+        case WorldProperty::BOTTOM_CLOUDS_COLOR:
+            return g_pMultiplayer->ResetBottomCloudsColor();
+        case WorldProperty::CLOUDS_ALPHA1:
+            return g_pMultiplayer->ResetCloudsAlpha1();
+        case WorldProperty::ILLUMINATION:
+            return g_pMultiplayer->ResetIllumination();
+        case WorldProperty::WEATHER_WET_ROADS:
+            return g_pGame->GetWeather()->ResetWetRoads();
+        case WorldProperty::WEATHER_FOGGYNESS:
+            return g_pGame->GetWeather()->ResetFoggyness();
+        case WorldProperty::WEATHER_FOG:
+            return g_pGame->GetWeather()->ResetFog();
+        case WorldProperty::WEATHER_RAIN_FOG:
+            return g_pGame->GetWeather()->ResetRainFog();
+        case WorldProperty::WEATHER_WATER_FOG:
+            return g_pGame->GetWeather()->ResetWaterFog();
+        case WorldProperty::WEATHER_SANDSTORM:
+            return g_pGame->GetWeather()->ResetSandstorm();
+        case WorldProperty::WEATHER_RAINBOW:
+            return g_pGame->GetWeather()->ResetRainbow();
+    }
+    return false;
+}
+
+bool CLuaWorldDefs::SetTimeFrozen(bool value) noexcept
+{
+    return g_pGame->GetClock()->SetTimeFrozen(value);
+}
+
+bool CLuaWorldDefs::IsTimeFrozen() noexcept
+{
+    return g_pGame->GetClock()->IsTimeFrozen();
+}
+
+bool CLuaWorldDefs::ResetTimeFrozen() noexcept
+{
+    return g_pGame->GetClock()->ResetTimeFrozen();
+}
+
+void CLuaWorldDefs::RemoveGameWorld()
+{
+    // We do not want to remove scripted buildings
+    // But we need remove them from the buildings pool for a bit...
+    m_pBuildingManager->DestroyAllForABit();
+
+    // This function makes buildings backup without scripted buildings
+    g_pGame->RemoveGameWorld();
+
+    // ... And restore here
+    m_pBuildingManager->RestoreDestroyed();
+}
+
+void CLuaWorldDefs::RestoreGameWorld()
+{
+    // We want to restore the game buildings to the same positions as they were before the backup.
+    // Remove scripted buildings for a bit
+    m_pBuildingManager->DestroyAllForABit();
+
+    g_pGame->RestoreGameWorld();
+
+    // ... And restore here
+    m_pBuildingManager->RestoreDestroyedSafe();
+}
+
+bool CLuaWorldDefs::SetVolumetricShadowsEnabled(bool enable) noexcept
+{
+    g_pGame->GetSettings()->SetVolumetricShadowsEnabled(enable);
+    return true;
+}
+
+bool CLuaWorldDefs::IsVolumetricShadowsEnabled() noexcept
+{
+    return g_pGame->GetSettings()->IsVolumetricShadowsEnabled();
+}
+
+bool CLuaWorldDefs::ResetVolumetricShadows() noexcept
+{
+    return g_pGame->GetSettings()->ResetVolumetricShadows();
+}
+
+void CLuaWorldDefs::ResetWorldProperties(std::optional<bool> resetSpecialWorldProperties, std::optional<bool> resetWorldProperties,
+                                         std::optional<bool> resetWeatherProperties, std::optional<bool> resetLODs, std::optional<bool> resetSounds) noexcept
+{
+    g_pClientGame->ResetWorldProperties(ResetWorldPropsInfo{resetSpecialWorldProperties.value_or(true), resetWorldProperties.value_or(true),
+                                                            resetWeatherProperties.value_or(true), resetLODs.value_or(true), resetSounds.value_or(true)});
+}
+
+bool CLuaWorldDefs::SetDynamicPedShadowsEnabled(bool enable)
+{
+    g_pGame->GetSettings()->SetDynamicPedShadowsEnabled(enable);
+    return true;
+}
+
+bool CLuaWorldDefs::IsDynamicPedShadowsEnabled() noexcept
+{
+    return g_pGame->GetSettings()->IsDynamicPedShadowsEnabled();
+}
+
+bool CLuaWorldDefs::ResetDynamicPedShadows() noexcept
+{
+    return g_pGame->GetSettings()->ResetDynamicPedShadows();
+}
+
+CLuaMultiReturn<bool, CClientEntity*, int, float, float, float, float, float, float, int, eEntityType> CLuaWorldDefs::TestSphereAgainstWorld(
+    CVector sphereCenter, float radius, std::optional<CClientEntity*> ignoredEntity, std::optional<bool> checkBuildings, std::optional<bool> checkVehicles,
+    std::optional<bool> checkPeds, std::optional<bool> checkObjects, std::optional<bool> checkDummies, std::optional<bool> cameraIgnore)
+{
+    STestSphereAgainstWorldResult result;
+    CClientEntity*                collidedEntity = nullptr;
+
+    CEntity* entity = g_pGame->GetWorld()->TestSphereAgainstWorld(
+        sphereCenter, radius, ignoredEntity.has_value() ? ignoredEntity.value()->GetGameEntity() : nullptr, checkBuildings.value_or(true),
+        checkVehicles.value_or(true), checkPeds.value_or(true), checkObjects.value_or(true), checkDummies.value_or(true), cameraIgnore.value_or(false), result);
+    if (entity)
+        collidedEntity = reinterpret_cast<CClientEntity*>(entity->GetStoredPointer());
+
+    return {result.collisionDetected,
+            collidedEntity,
+            result.modelID,
+            result.entityPosition.fX,
+            result.entityPosition.fY,
+            result.entityPosition.fZ,
+            ConvertRadiansToDegrees(result.entityRotation.fX),
+            ConvertRadiansToDegrees(result.entityRotation.fY),
+            ConvertRadiansToDegrees(result.entityRotation.fZ),
+            result.lodID,
+            result.type};
 }

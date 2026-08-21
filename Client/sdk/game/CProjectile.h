@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CProjectile.h
  *  PURPOSE:     Projectile entity interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -18,7 +18,7 @@ class CProjectileInfo;
 class CProjectile : public virtual CObject
 {
 public:
-    virtual ~CProjectile(){};
+    virtual ~CProjectile() {};
 
     virtual void Destroy(bool bBlow) = 0;
     virtual void SetProjectileInfo(CProjectileInfo* pProjectileInfo) = 0;

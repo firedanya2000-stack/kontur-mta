@@ -5,7 +5,7 @@
  *  FILE:        sdk/net/CNetServer.h
  *  PURPOSE:     Net server module interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 #include "ns_playerid.h"
 #include "net/CNetHTTPDownloadManagerInterface.h"
 
-#define MAX_CALL_REMOTE_QUEUES  100
+#define MAX_CALL_REMOTE_QUEUES 100
 
 namespace EDownloadMode
 {
@@ -164,4 +164,5 @@ public:
         assert(0);
         return false;
     }
+    virtual void SetMinClientRequirement(const char* szVersion) = 0;
 };

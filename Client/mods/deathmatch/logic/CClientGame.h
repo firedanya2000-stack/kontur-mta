@@ -1,11 +1,12 @@
 /*****************************************************************************
+/*****************************************************************************
  *
  *  PROJECT:     Multi Theft Auto v1.0
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        mods/deathmatch/logic/CClientGame.h
  *  PURPOSE:     Header for client game class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -27,7 +28,7 @@
 #include "CUnoccupiedVehicleSync.h"
 #include "CPedSync.h"
 #include "CObjectSync.h"
-#include "CRadarMap.h"
+#include "CPlayerMap.h"
 #include "CClientTeamManager.h"
 #include "CClientPedManager.h"
 #include "lua/CLuaManager.h"
@@ -37,7 +38,6 @@
 #include "CResourceManager.h"
 #include "CScriptKeyBinds.h"
 #include "CElementDeleter.h"
-#include "CFoo.h"
 #include "CRegisteredCommands.h"
 #include "CClientGUIElement.h"
 #include "CLocalServer.h"
@@ -45,14 +45,15 @@
 #include "CSingularFileDownloadManager.h"
 #include "CObjectRespawner.h"
 
-#define HeliKill_List_Clear_Rate 500
-#define MIN_PUSH_ANTISPAM_RATE 1500
+#define HeliKill_List_Clear_Rate        500
+#define MIN_PUSH_ANTISPAM_RATE          1500
 #define INVALID_DOWNLOAD_PRIORITY_GROUP (INT_MIN)
 
 class CClientModelCacheManager;
 class CDebugHookManager;
 class CResourceFileDownloadManager;
 class CServerInfo;
+class CFire;
 enum class eAnimID;
 
 struct SVehExtrapolateSettings
@@ -69,6 +70,15 @@ struct SMiscGameSettings
     bool bAllowFastSprintFix;
     bool bAllowBadDrivebyHitboxFix;
     bool bAllowShotgunDamageFix;
+};
+
+struct ResetWorldPropsInfo
+{
+    bool resetSpecialProperties{};
+    bool resetWorldProperties{};
+    bool resetWeatherProperties{};
+    bool resetLODs{};
+    bool resetSounds{};
 };
 
 class CClientGame
@@ -120,8 +130,12 @@ public:
         SCRIPTFILE,
         WATER,
         WEAPON,
-        POINTLIGHTS,
+        _DATABASE_CONNECTION,  // server only
+        TRAIN_TRACK,
+        ROOT,
         UNKNOWN,
+        BUILDING,
+        POINTLIGHTS,
     };
 
     enum
@@ -179,6 +193,7 @@ public:
         QUIT_CONNECTION_DESYNC,
         QUIT_TIMEOUT,
     };
+
     enum
     {
         GLITCH_QUICKRELOAD,
@@ -191,6 +206,7 @@ public:
         GLITCH_BADDRIVEBYHITBOX,
         GLITCH_QUICKSTAND,
         GLITCH_KICKOUTOFVEHICLE_ONMODELREPLACE,
+        GLITCH_VEHICLE_RAPID_STOP,
         NUM_GLITCHES
     };
 
@@ -287,7 +303,7 @@ public:
 
     CBlendedWeather*       GetBlendedWeather() { return m_pBlendedWeather; };
     CNetAPI*               GetNetAPI() { return m_pNetAPI; };
-    CRadarMap*             GetRadarMap() { return m_pRadarMap; };
+    CPlayerMap*            GetPlayerMap() { return m_pPlayerMap; };
     CMovingObjectsManager* GetMovingObjectsManager() { return m_pMovingObjectsManager; }
 
     CClientPlayer*       GetLocalPlayer() { return m_pLocalPlayer; }
@@ -308,22 +324,23 @@ public:
     CRemoteCalls*                 GetRemoteCalls() { return m_pRemoteCalls; }
     CResourceFileDownloadManager* GetResourceFileDownloadManager() { return m_pResourceFileDownloadManager; }
 
+    CModelRenderer* GetModelRenderer() const noexcept { return m_pModelRenderer.get(); }
+
     SharedUtil::CAsyncTaskScheduler* GetAsyncTaskScheduler() { return m_pAsyncTaskScheduler; }
 
     // Status toggles
     void ShowNetstat(int iCmd);
-    void ShowEaeg(bool bShow);
     void ShowFPS(bool bShow) { m_bShowFPS = bShow; };
 
-    #if defined (MTA_DEBUG) || defined (MTA_BETA)
+#if defined(MTA_DEBUG) || defined(MTA_BETA)
     void ShowSyncingInfo(bool bShow) { m_bShowSyncingInfo = bShow; };
-    #endif
+#endif
 
 #ifdef MTA_WEPSYNCDBG
     void ShowWepdata(const char* szNick);
 #endif
 
-    #ifdef MTA_DEBUG
+#ifdef MTA_DEBUG
     void ShowWepdata(const char* szNick);
     void ShowTasks(const char* szNick);
     void ShowPlayer(const char* szNick);
@@ -332,7 +349,7 @@ public:
     void SetDoPaintballs(bool bDoPaintballs) { m_bDoPaintballs = bDoPaintballs; }
     void ShowInterpolation(bool bShow) { m_bShowInterpolation = bShow; }
     bool IsShowingInterpolation() const { return m_bShowInterpolation; }
-    #endif
+#endif
 
     CEntity*       GetTargetedGameEntity() { return m_pTargetedGameEntity; }
     CClientEntity* GetTargetedEntity() { return m_pTargetedEntity; }
@@ -389,6 +406,46 @@ public:
     void SendPedWastedPacket(CClientPed* Ped, ElementID damagerID = INVALID_ELEMENT_ID, unsigned char ucWeapon = 0xFF, unsigned char ucBodyPiece = 0xFF,
                              AssocGroupId animGroup = 0, AnimationId animID = 15);
 
+    void ClearDamageData() noexcept
+    {
+        m_DamagerID = INVALID_ELEMENT_ID;
+        m_ucDamageWeapon = WEAPONTYPE_INVALID;
+        m_ucDamageBodyPiece = BODYPART_INVALID;
+        m_ulDamageTime = 0;
+        m_serverProcessedDeath = true;
+    }
+
+    void ResetDeathProcessingFlag() noexcept { m_serverProcessedDeath = false; }
+
+    void SetScriptedDeathData()
+    {
+        auto* localPlayer = GetLocalPlayer();
+        if (!localPlayer)
+        {
+            m_DamagerID = INVALID_ELEMENT_ID;
+            m_ucDamageWeapon = WEAPONTYPE_INVALID;
+            m_ucDamageBodyPiece = BODYPART_INVALID;
+            m_ulDamageTime = CClientTime::GetTime();
+            m_serverProcessedDeath = false;
+            return;
+        }
+
+        m_DamagerID = INVALID_ELEMENT_ID;
+        m_ucDamageWeapon = TryGetCurrentWeapon(localPlayer);
+        m_ucDamageBodyPiece = BODYPART_TORSO;
+        m_ulDamageTime = CClientTime::GetTime();
+        m_serverProcessedDeath = false;
+    }
+
+    void SetExplosionDamageData() noexcept
+    {
+        m_DamagerID = INVALID_ELEMENT_ID;
+        m_ucDamageWeapon = WEAPONTYPE_EXPLOSION;
+        m_ucDamageBodyPiece = BODYPART_TORSO;
+        m_ulDamageTime = CClientTime::GetTime();
+        m_serverProcessedDeath = false;
+    }
+
     CClientGUIElement* GetClickedGUIElement() { return m_pClickedGUIElement; }
     void               SetClickedGUIElement(CClientGUIElement* pElement) { m_pClickedGUIElement = NULL; }
 
@@ -400,11 +457,22 @@ public:
     bool SetGlitchEnabled(unsigned char cGlitch, bool bEnabled);
     bool IsGlitchEnabled(unsigned char cGlitch);
 
+    bool SetWorldSpecialProperty(const WorldSpecialProperty property, const bool enabled) noexcept;
+    bool IsWorldSpecialProperty(const WorldSpecialProperty property);
+
     bool SetCloudsEnabled(bool bEnabled);
     bool GetCloudsEnabled();
 
     bool SetBirdsEnabled(bool bEnabled);
     bool GetBirdsEnabled();
+
+    void SetWeaponRenderEnabled(bool enabled);
+    bool IsWeaponRenderEnabled() const;
+
+    void SetVehicleEngineAutoStartEnabled(bool enabled);
+    bool IsVehicleEngineAutoStartEnabled() const;
+
+    void ResetWorldProperties(const ResetWorldPropsInfo& resetPropsInfo);
 
     CTransferBox* GetTransferBox() { return m_pTransferBox; };
 
@@ -438,10 +506,15 @@ public:
     bool    IsHighFloatPrecision() const;
 
     bool TriggerBrowserRequestResultEvent(const std::unordered_set<SString>& newPages);
-    void RestreamModel(unsigned short usModel);
-    void RestreamWorld(bool removeBigBuildings);
+    bool RestreamModel(std::uint16_t model);
+    void RestreamWorld();
+    void Restream(std::optional<RestreamOption> option);
+    void ReinitMarkers();
 
     void OnWindowFocusChange(bool state);
+
+    void                      SetAllowMultiCommandHandlers(MultiCommandHandlerPolicy policy) noexcept { m_allowMultiCommandHandlers = policy; }
+    MultiCommandHandlerPolicy GetAllowMultiCommandHandlers() const noexcept { return m_allowMultiCommandHandlers; }
 
 private:
     // CGUI Callbacks
@@ -458,6 +531,7 @@ private:
     bool OnSize(CGUIElement* pElement);
     bool OnFocusGain(CGUIFocusEventArgs Args);
     bool OnFocusLoss(CGUIFocusEventArgs Args);
+    void TriggerGUIClickEvent(CGUIMouseEventArgs Args, const char* szState, const char* minClientVersion);
 
     // Network update functions
     void DoVehicleInKeyCheck();
@@ -472,17 +546,17 @@ private:
 
     void DrawFPS();
 
-    #ifdef MTA_DEBUG
+#ifdef MTA_DEBUG
     void DrawTasks(CClientPlayer* pPlayer);
     void DrawPlayerDetails(CClientPlayer* pPlayer);
     void UpdateMimics();
     void DoPaintballs();
     void DrawWeaponsyncData(CClientPlayer* pPlayer);
-    #endif
+#endif
 
-    #ifdef MTA_WEPSYNCDBG
+#ifdef MTA_WEPSYNCDBG
     void DrawWeaponsyncData(CClientPlayer* pPlayer);
-    #endif
+#endif
 
     void DownloadSingularResourceFiles();
 
@@ -495,17 +569,20 @@ private:
 
     static bool                              StaticDamageHandler(CPed* pDamagePed, CEventDamage* pEvent);
     static void                              StaticDeathHandler(CPed* pKilledPed, unsigned char ucDeathReason, unsigned char ucBodyPart);
-    static void                              StaticFireHandler(CFire* pFire);
+    static bool                              StaticFireHandler(CEntitySAInterface* target, CEntitySAInterface* creator);
     static bool                              StaticBreakTowLinkHandler(CVehicle* pTowedVehicle);
     static void                              StaticDrawRadarAreasHandler();
     static void                              StaticRender3DStuffHandler();
     static void                              StaticPreRenderSkyHandler();
     static void                              StaticRenderHeliLightHandler();
+    static void                              StaticRenderEverythingBarRoadsHandler();
     static bool                              StaticChokingHandler(unsigned char ucWeaponType);
+    static void                              StaticPreWeatherUpdateHandler();
     static void                              StaticPreWorldProcessHandler();
     static void                              StaticPostWorldProcessHandler();
     static void                              StaticPostWorldProcessPedsAfterPreRenderHandler();
     static void                              StaticPreFxRenderHandler();
+    static void                              StaticPostColorFilterRenderHandler();
     static void                              StaticPreHudRenderHandler();
     static void                              StaticCAnimBlendAssocDestructorHandler(CAnimBlendAssociationSAInterface* pThis);
     static CAnimBlendAssociationSAInterface* StaticAddAnimationHandler(RpClump* pClump, AssocGroupId animGroup, AnimationId animID);
@@ -518,7 +595,7 @@ private:
     static bool StaticProcessCollisionHandler(CEntitySAInterface* pThisInterface, CEntitySAInterface* pOtherInterface);
     static bool StaticVehicleCollisionHandler(CVehicleSAInterface*& pThisInterface, CEntitySAInterface* pOtherInterface, int iModelIndex,
                                               float fDamageImpulseMag, float fCollidingDamageImpulseMag, uint16 usPieceType, CVector vecCollisionPos,
-                                              CVector vecCollisionVelocity);
+                                              CVector vecCollisionVelocity, bool isProjectile);
     static bool StaticVehicleDamageHandler(CEntitySAInterface* pVehicleInterface, float fLoss, CEntitySAInterface* pAttackerInterface, eWeaponType weaponType,
                                            const CVector& vecDamagePos, uchar ucTyre);
     static bool StaticHeliKillHandler(CVehicleSAInterface* pHeli, CEntitySAInterface* pHitInterface);
@@ -544,12 +621,13 @@ private:
 
     bool                              DamageHandler(CPed* pDamagePed, CEventDamage* pEvent);
     void                              DeathHandler(CPed* pKilledPed, unsigned char ucDeathReason, unsigned char ucBodyPart);
-    void                              FireHandler(CFire* pFire);
+    bool                              FireHandler(CEntitySAInterface* target, CEntitySAInterface* creator);
     bool                              BreakTowLinkHandler(CVehicle* pTowedVehicle);
     void                              DrawRadarAreasHandler();
     void                              Render3DStuffHandler();
     void                              PreRenderSkyHandler();
     bool                              ChokingHandler(unsigned char ucWeaponType);
+    void                              PreWeatherUpdateHandler();
     void                              PreWorldProcessHandler();
     void                              PostWorldProcessHandler();
     void                              PostWorldProcessPedsAfterPreRenderHandler();
@@ -563,7 +641,8 @@ private:
                                                RpClump* pClump);
     bool        ProcessCollisionHandler(CEntitySAInterface* pThisInterface, CEntitySAInterface* pOtherInterface);
     bool        VehicleCollisionHandler(CVehicleSAInterface*& pCollidingVehicle, CEntitySAInterface* pCollidedVehicle, int iModelIndex, float fDamageImpulseMag,
-                                        float fCollidingDamageImpulseMag, uint16 usPieceType, CVector vecCollisionPos, CVector vecCollisionVelocity);
+                                        float fCollidingDamageImpulseMag, uint16 usPieceType, CVector vecCollisionPos, CVector vecCollisionVelocity,
+                                        bool isProjectile);
     bool        VehicleDamageHandler(CEntitySAInterface* pVehicleInterface, float fLoss, CEntitySAInterface* pAttackerInterface, eWeaponType weaponType,
                                      const CVector& vecDamagePos, uchar ucTyre);
     bool        HeliKillHandler(CVehicleSAInterface* pHeli, CEntitySAInterface* pHitInterface);
@@ -582,6 +661,9 @@ private:
     AnimationId DrivebyAnimationHandler(AnimationId animGroup, AssocGroupId animId);
     void        AudioZoneRadioSwitchHandler(DWORD dwStationID);
 
+    // Helper method to get current weapon type with error handling
+    std::uint8_t TryGetCurrentWeapon(CClientPlayer* player);
+
     static bool StaticProcessMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     bool        ProcessMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -599,7 +681,8 @@ public:
     bool VerifySADataFiles(int iEnableClientChecks = 0);
     void DebugElementRender();
 
-    void SendExplosionSync(const CVector& vecPosition, eExplosionType Type, CClientEntity* pOrigin = NULL);
+    void SendExplosionSync(const CVector& vecPosition, eExplosionType Type, CClientEntity* pOrigin = nullptr,
+                           std::optional<VehicleBlowState> vehicleBlowState = std::nullopt);
     void SendFireSync(CFire* pFire);
     void SendProjectileSync(CClientProjectile* pProjectile);
 
@@ -676,7 +759,7 @@ private:
     CNetworkStats*         m_pNetworkStats;
     CSyncDebug*            m_pSyncDebug;
     // CScreenshot*                          m_pScreenshot;
-    CRadarMap*                    m_pRadarMap;
+    CPlayerMap*                   m_pPlayerMap;
     CTransferBox*                 m_pTransferBox;
     CResourceManager*             m_pResourceManager;
     CScriptKeyBinds*              m_pScriptKeyBinds;
@@ -693,6 +776,8 @@ private:
     CDebugHookManager*            m_pDebugHookManager;
     CRemoteCalls*                 m_pRemoteCalls;
     CResourceFileDownloadManager* m_pResourceFileDownloadManager;
+
+    std::unique_ptr<CModelRenderer> m_pModelRenderer;
 
     // Revised facilities
     CServer m_Server;
@@ -734,6 +819,7 @@ private:
     unsigned char  m_ucDamageBodyPiece;
     unsigned long  m_ulDamageTime;
     bool           m_bDamageSent;
+    bool           m_serverProcessedDeath{false};  // Flag to track server-processed deaths
 
     eWeaponSlot                            m_lastWeaponSlot;
     SFixedArray<DWORD, WEAPONSLOT_MAX + 1> m_wasWeaponAmmoInClip;
@@ -774,7 +860,7 @@ private:
     long long m_llLastTransgressionTime;
     SString   m_strLastDiagnosticStatus;
 
-    bool m_bBeingDeleted;            // To enable speedy disconnect
+    bool m_bBeingDeleted;  // To enable speedy disconnect
 
     bool m_bWasMinimized;
     bool m_bFocused;
@@ -787,11 +873,11 @@ private:
     std::map<CEntitySAInterface*, CClientEntity*> m_CachedCollisionMap;
     bool                                          m_BuiltCollisionMapThisFrame;
 
-    #if defined (MTA_DEBUG) || defined (MTA_BETA)
+#if defined(MTA_DEBUG) || defined(MTA_BETA)
     bool m_bShowSyncingInfo;
-    #endif
+#endif
 
-    #ifdef MTA_DEBUG
+#ifdef MTA_DEBUG
     CClientPlayer*            m_pShowPlayerTasks;
     CClientPlayer*            m_pShowPlayer;
     std::list<CClientPlayer*> m_Mimics;
@@ -803,14 +889,10 @@ private:
     CVector                   m_vecLastMimicRot;
     bool                      m_bDoPaintballs;
     bool                      m_bShowInterpolation;
-    #endif
+#endif
     bool m_bDevelopmentMode;
     bool m_bShowCollision;
     bool m_bShowSound;
-
-    // Debug class. Empty in release.
-public:
-    CFoo m_Foo;
 
 private:
     CEvents                                     m_Events;
@@ -844,6 +926,10 @@ private:
     AnimAssociations_type                                m_mapOfCustomAnimationAssociations;
     // Key is the task and value is the CClientPed*
     RunNamedAnimTask_type m_mapOfRunNamedAnimTasks;
+
+    MultiCommandHandlerPolicy m_allowMultiCommandHandlers;
+
+    long long m_timeLastDiscordStateUpdate;
 };
 
 extern CClientGame* g_pClientGame;

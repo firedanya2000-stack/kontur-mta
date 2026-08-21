@@ -5,7 +5,7 @@
  *  FILE:        xml/XML.cpp
  *  PURPOSE:     XML module entry
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,9 +17,6 @@ MTAEXPORT CXML* InitXMLInterface(const char* szSaveFlagDirectory)
 {
     // Initialize and do any file recovery as necessary
     CXMLFileImpl::InitFileRecovery(szSaveFlagDirectory);
-
-    // this is required during parsing, see resources project fallout/help.xml @r659
-    TiXmlBase::SetCondenseWhiteSpace(false);
 
     pXMLInterface = new CXMLImpl;
     return pXMLInterface;

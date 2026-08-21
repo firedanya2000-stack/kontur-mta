@@ -5,12 +5,14 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaWaterDefs.cpp
  *  PURPOSE:     Lua definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 #include "CLuaDefs.h"
+
+class CClientWater;
 
 class CLuaWaterDefs : public CLuaDefs
 {
@@ -32,4 +34,5 @@ public:
     LUA_DECLARE(GetWaterLevel);
     LUA_DECLARE(IsWaterDrawnLast);
     LUA_DECLARE(GetWaterVertexPosition);
+    static std::variant<CLuaMultiReturn<float, float, float>, CVector, bool> OOP_GetWaterVertexPosition(lua_State* luaVM, CClientWater* water, int vertexIndex);
 };

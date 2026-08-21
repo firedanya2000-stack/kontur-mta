@@ -5,7 +5,7 @@
  *  FILE:        CFastList.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -52,21 +52,21 @@ public:
         T          item;
     };
 
-    uint                             uiRevision;                  // Incremented every time the ordered map changes
-    uint                             uiNextFrontIndex;            // Next (decrementing) index to use as a map key for items added to the front
-    uint                             uiNextBackIndex;             // Next (incrementing) index to use as a map key for items added to the back
-    MapType                          orderedMap;                  // Ordered map of items
-    InfoType                         infoMap;                     // info for each item
+    uint                             uiRevision;        // Incremented every time the ordered map changes
+    uint                             uiNextFrontIndex;  // Next (decrementing) index to use as a map key for items added to the front
+    uint                             uiNextBackIndex;   // Next (incrementing) index to use as a map key for items added to the back
+    MapType                          orderedMap;        // Ordered map of items
+    InfoType                         infoMap;           // info for each item
     bool                             m_bSuspendingModifyOperations;
     std::vector<SSuspendedOperation> m_SuspendedOperationList;
 
     CFastList() : uiRevision(1), uiNextFrontIndex(UINT_MAX / 2 - 1), uiNextBackIndex(UINT_MAX / 2), m_bSuspendingModifyOperations(false)
     {
-        #ifdef MTA_DEBUG
+#ifdef MTA_DEBUG
         // T must be a pointer
         void* ptr = (T)NULL;
         ptr = NULL;
-        #endif
+#endif
     }
 
     const T& front() const { return orderedMap.begin()->second; }
@@ -307,6 +307,8 @@ public:
 template <class T, class U>
 bool ListContains(const CFastList<T*>& itemList, const U& item)
 {
+    if (itemList.empty())
+        return false;
     return itemList.contains(item);
 }
 

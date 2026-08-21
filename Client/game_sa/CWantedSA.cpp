@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CWantedSA.cpp
  *  PURPOSE:     Wanted level management
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -42,12 +42,14 @@ void CWantedSA::SetWantedLevel(DWORD dwWantedLevel)
 {
     DWORD dwThis = (DWORD)GetInterface();
     DWORD dwFunc = FUNC_SetWantedLevel;
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThis
         push    dwWantedLevel
         call    dwFunc
     }
+    // clang-format on
 }
 void CWantedSA::SetWantedLevelNoFlash(DWORD dwWantedLevel)
 {

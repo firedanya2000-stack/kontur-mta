@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CFlyingHandlingEntry.h
  *  PURPOSE:     Vehicle handling entry interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,7 +15,7 @@ class CFlyingHandlingEntry
 {
 public:
     // Destructor
-    virtual ~CFlyingHandlingEntry(){};
+    virtual ~CFlyingHandlingEntry() {};
 
     // Use this to copy data from an another handling class to this
     virtual void Assign(const CFlyingHandlingEntry* pData) = 0;

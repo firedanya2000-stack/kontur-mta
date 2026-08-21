@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CPoolsSA.cpp
  *  PURPOSE:     Game entity pools
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,8 +13,11 @@
 #include "CBikeSA.h"
 #include "CBmxSA.h"
 #include "CBoatSA.h"
+#include "CBuildingSA.h"
+#include "CColModelSA.h"
 #include "CGameSA.h"
 #include "CHeliSA.h"
+#include "CModelInfoSA.h"
 #include "CMonsterTruckSA.h"
 #include "CPlaneSA.h"
 #include "CPlayerPedSA.h"
@@ -23,6 +26,9 @@
 #include "CTrailerSA.h"
 #include "CTrainSA.h"
 #include "CWorldSA.h"
+
+#include "enums/VehicleClass.h"
+#include <new>
 
 extern CGameSA* pGame;
 
@@ -70,68 +76,106 @@ inline bool CPoolsSA::AddVehicleToPool(CClientVehicle* pClientVehicle, CVehicleS
     return true;
 }
 
-CVehicle* CPoolsSA::AddVehicle(CClientVehicle* pClientVehicle, eVehicleTypes eVehicleType, unsigned char ucVariation, unsigned char ucVariation2)
+CVehicle* CPoolsSA::AddVehicle(CClientVehicle* pClientVehicle, std::uint16_t model, std::uint8_t variation, std::uint8_t variation2) noexcept
 {
-    CVehicleSA* pVehicle = nullptr;
+    if (m_vehiclePool.ulCount >= MAX_VEHICLES)
+        return nullptr;
 
-    if (m_vehiclePool.ulCount < MAX_VEHICLES)
+    // Ensure collision model is fully loaded to prevent crash at 0x002a65ef in SetupSuspensionLines
+    CModelInfoSA* pModelInfo = static_cast<CModelInfoSA*>(pGame->GetModelInfo(model));
+    if (!pModelInfo || !pModelInfo->GetInterface())
+        return nullptr;
+
+    CBaseModelInfoSAInterface* pModelInterface = pModelInfo->GetInterface();
+
+    if (!pModelInterface->pColModel)
     {
-        MemSetFast((void*)VAR_CVehicle_Variation1, ucVariation, 1);
-        MemSetFast((void*)VAR_CVehicle_Variation2, ucVariation2, 1);
+        // Collision model pointer is NULL - try loading
+        pGame->GetStreaming()->LoadAllRequestedModels(false, "CPoolsSA::AddVehicle");
 
-        // CCarCtrl::CreateCarForScript
-        CVehicleSAInterface* pInterface =
-            ((CVehicleSAInterface * (__cdecl*)(int, CVector, unsigned char)) FUNC_CCarCtrlCreateCarForScript)(eVehicleType, CVector(0, 0, 0), 0);
+        // Re-check after loading - still NULL means loading failed
+        if (!pModelInterface->pColModel)
+            return nullptr;
+    }
 
-        auto vehicleClass = static_cast<VehicleClass>(pGame->GetModelInfo(eVehicleType)->GetVehicleType());
+    // Check if collision data (m_pColData) is loaded
+    if (!pModelInterface->pColModel->m_data)
+    {
+        // Collision data not loaded - force load
+        pGame->GetStreaming()->LoadAllRequestedModels(false, "CPoolsSA::AddVehicle");
 
+        // Re-check after loading - still not loaded means loading failed
+        if (!pModelInterface->pColModel->m_data)
+            return nullptr;
+    }
+
+    MemSetFast((void*)VAR_CVehicle_Variation1, variation, 1);
+    MemSetFast((void*)VAR_CVehicle_Variation2, variation2, 1);
+
+    // CCarCtrl::CreateCarForScript
+    auto* pInterface = ((CVehicleSAInterface * (__cdecl*)(int, CVector, std::uint8_t)) FUNC_CCarCtrlCreateCarForScript)(model, CVector(), 0);
+    if (!pInterface)
+        return nullptr;
+
+    // Valid model?
+    if (!CModelInfoSA::IsVehicleModel(model))
+        return nullptr;
+
+    auto vehicleClass = static_cast<VehicleClass>(pGame->GetModelInfo(model)->GetVehicleType());
+
+    std::unique_ptr<CVehicleSA> vehicle = nullptr;
+
+    // Failed construct
+    try
+    {
         switch (vehicleClass)
         {
             case VehicleClass::MONSTER_TRUCK:
-                pVehicle = new CMonsterTruckSA(reinterpret_cast<CMonsterTruckSAInterface*>(pInterface));
+                vehicle = std::make_unique<CMonsterTruckSA>(reinterpret_cast<CMonsterTruckSAInterface*>(pInterface));
                 break;
             case VehicleClass::QUAD:
-                pVehicle = new CQuadBikeSA(reinterpret_cast<CQuadBikeSAInterface*>(pInterface));
+                vehicle = std::make_unique<CQuadBikeSA>(reinterpret_cast<CQuadBikeSAInterface*>(pInterface));
                 break;
             case VehicleClass::HELI:
-                pVehicle = new CHeliSA(reinterpret_cast<CHeliSAInterface*>(pInterface));
+                vehicle = std::make_unique<CHeliSA>(reinterpret_cast<CHeliSAInterface*>(pInterface));
                 break;
             case VehicleClass::PLANE:
-                pVehicle = new CPlaneSA(reinterpret_cast<CPlaneSAInterface*>(pInterface));
+                vehicle = std::make_unique<CPlaneSA>(reinterpret_cast<CPlaneSAInterface*>(pInterface));
                 break;
             case VehicleClass::BOAT:
-                pVehicle = new CBoatSA(reinterpret_cast<CBoatSAInterface*>(pInterface));
+                vehicle = std::make_unique<CBoatSA>(reinterpret_cast<CBoatSAInterface*>(pInterface));
                 break;
             case VehicleClass::TRAIN:
-                pVehicle = new CTrainSA(reinterpret_cast<CTrainSAInterface*>(pInterface));
+                vehicle = std::make_unique<CTrainSA>(reinterpret_cast<CTrainSAInterface*>(pInterface));
                 break;
             case VehicleClass::BIKE:
-                pVehicle = new CBikeSA(reinterpret_cast<CBikeSAInterface*>(pInterface));
+                vehicle = std::make_unique<CBikeSA>(reinterpret_cast<CBikeSAInterface*>(pInterface));
                 break;
             case VehicleClass::BMX:
-                pVehicle = new CBmxSA(reinterpret_cast<CBmxSAInterface*>(pInterface));
+                vehicle = std::make_unique<CBmxSA>(reinterpret_cast<CBmxSAInterface*>(pInterface));
                 break;
             case VehicleClass::TRAILER:
-                pVehicle = new CTrailerSA(reinterpret_cast<CTrailerSAInterface*>(pInterface));
+                vehicle = std::make_unique<CTrailerSA>(reinterpret_cast<CTrailerSAInterface*>(pInterface));
                 break;
             default:
-                pVehicle = new CAutomobileSA(reinterpret_cast<CAutomobileSAInterface*>(pInterface));
+                vehicle = std::make_unique<CAutomobileSA>(reinterpret_cast<CAutomobileSAInterface*>(pInterface));
                 break;
         }
-
-        if (pVehicle && AddVehicleToPool(pClientVehicle, pVehicle))
-        {
-            pVehicle->m_ucVariant = ucVariation;
-            pVehicle->m_ucVariant2 = ucVariation2;
-        }
-        else
-        {
-            delete pVehicle;
-            pVehicle = nullptr;
-        }
+    }
+    catch (...)
+    {
+        return nullptr;
     }
 
-    return pVehicle;
+    if (!vehicle || !AddVehicleToPool(pClientVehicle, vehicle.get()))
+        return nullptr;
+
+    vehicle->m_ucVariant = variation;
+    vehicle->m_ucVariant2 = variation2;
+
+    vehicle->DumpVehicleFrames();
+
+    return vehicle.release();
 }
 
 void CPoolsSA::RemoveVehicle(CVehicle* pVehicle, bool bDelete)
@@ -177,7 +221,12 @@ SClientEntity<CVehicleSA>* CPoolsSA::GetVehicle(DWORD* pGameInterface)
 
             if (dwElementIndexInPool < MAX_VEHICLES)
             {
-                return &m_vehiclePool.arrayOfClientEntities[dwElementIndexInPool];
+                // Return only if MTA has an entity for this slot
+                SClientEntity<CVehicleSA>* pSlot = &m_vehiclePool.arrayOfClientEntities[dwElementIndexInPool];
+                if (!pSlot->pEntity)
+                    return nullptr;
+
+                return pSlot;
             }
         }
     }
@@ -229,7 +278,7 @@ CObject* CPoolsSA::AddObject(CClientObject* pClientObject, DWORD dwModelID, bool
 
     if (m_objectPool.ulCount < MAX_OBJECTS)
     {
-        pObject = new CObjectSA(dwModelID, bBreakingDisabled);
+        pObject = new (std::nothrow) CObjectSA(dwModelID, bBreakingDisabled);
 
         if (pObject && AddObjectToPool(pClientObject, pObject))
         {
@@ -294,7 +343,12 @@ SClientEntity<CObjectSA>* CPoolsSA::GetObject(DWORD* pGameInterface)
 
         if (dwElementIndexInPool < MAX_OBJECTS)
         {
-            return &m_objectPool.arrayOfClientEntities[dwElementIndexInPool];
+            // Return only if MTA has an entity for this slot
+            SClientEntity<CObjectSA>* pSlot = &m_objectPool.arrayOfClientEntities[dwElementIndexInPool];
+            if (!pSlot->pEntity)
+                return nullptr;
+
+            return pSlot;
         }
     }
     return nullptr;
@@ -324,6 +378,30 @@ void CPoolsSA::DeleteAllObjects()
         CObjectSA* pObject = m_objectPool.arrayOfClientEntities[m_objectPool.ulCount - 1].pEntity;
 
         RemoveObject(pObject);
+    }
+}
+
+//
+// Detached car parts (e.g. doors spawned by CAutomobile::SpawnFlyingComponent) keep the model
+// index of the vehicle they came from, so CObject::Render can repaint them with that vehicle's
+// colours and CObject's destructor can release its model reference. Called when a vehicle model
+// info is deallocated, so the parts can't dereference the freed model info anymore.
+//
+void CPoolsSA::ResetDetachedCarPartsRefModel(std::uint16_t usModelID) noexcept
+{
+    CPoolSAInterface<CObjectSAInterface>* pObjectPool = *m_ppObjectPoolInterface;
+
+    for (int i = 0; i < pObjectPool->m_nSize; i++)
+    {
+        if (pObjectPool->IsEmpty(i))
+            continue;
+
+        CObjectSAInterface* pObject = pObjectPool->GetObject(i);
+        if (pObject->sRefModelIndex == static_cast<short>(usModelID))
+        {
+            pObject->sRefModelIndex = -1;
+            pObject->bChangesVehColor = false;
+        }
     }
 }
 
@@ -407,7 +485,7 @@ CPed* CPoolsSA::AddPed(CClientPed* pClientPed, DWORD* pGameInterface)
 
 void CPoolsSA::RemovePed(CPed* pPed, bool bDelete)
 {
-    static bool bIsDeletingPedAlready = false;            // to prevent delete being called twice
+    static bool bIsDeletingPedAlready = false;  // to prevent delete being called twice
 
     if (!bIsDeletingPedAlready)
     {
@@ -463,7 +541,12 @@ SClientEntity<CPedSA>* CPoolsSA::GetPed(DWORD* pGameInterface)
 
         if (dwElementIndexInPool < MAX_PEDS)
         {
-            return &m_pedPool.arrayOfClientEntities[dwElementIndexInPool];
+            // Return only if MTA has an entity for this slot
+            SClientEntity<CPedSA>* pSlot = &m_pedPool.arrayOfClientEntities[dwElementIndexInPool];
+            if (!pSlot->pEntity)
+                return nullptr;
+
+            return pSlot;
         }
     }
     return nullptr;
@@ -490,13 +573,15 @@ CPedSAInterface* CPoolsSA::GetPedInterface(DWORD dwGameRef)
     DWORD dwReturn;
     DWORD dwFunction = FUNC_GetPed;
 
-    _asm {
+    // clang-format off
+    __asm {
         mov     ecx, dword ptr ds : [CLASS_CPool_Ped]
         push    dwGameRef
         call    dwFunction
         add     esp, 0x4
         mov     dwReturn, eax
     }
+    // clang-format on
 
     CPedSAInterface* pInterface = (CPedSAInterface*)dwReturn;
     return pInterface;
@@ -532,6 +617,12 @@ CEntity* CPoolsSA::GetEntity(DWORD* pGameInterface)
         {
             return pThePedEntity->pEntity;
         }
+
+        auto pTheBuildingEntity = m_BuildingsPool.GetBuilding(reinterpret_cast<CBuildingSAInterface*>(pGameInterface));
+        if (pTheBuildingEntity)
+        {
+            return pTheBuildingEntity;
+        }
     }
     return NULL;
 }
@@ -557,112 +648,91 @@ CClientEntity* CPoolsSA::GetClientEntity(DWORD* pGameInterface)
         {
             return pThePedEntity->pClientEntity;
         }
+
+        auto clientBuilding = m_BuildingsPool.GetClientBuilding(reinterpret_cast<CBuildingSAInterface*>(pGameInterface));
+        if (clientBuilding)
+            return clientBuilding;
     }
-    return NULL;
+    return nullptr;
 }
 
-CVehicle* CPoolsSA::AddTrain(CClientVehicle* pClientVehicle, CVector* vecPosition, DWORD dwModels[], int iSize, bool bDirection, uchar ucTrackId)
+static void CreateMissionTrain(const CVector& vecPos, bool bDirection, std::uint32_t uiTrainType, CTrainSAInterface** ppTrainBeginning,
+                               CTrainSAInterface** ppTrainEnd, int iNodeIndex, int iTrackId, bool bMissionTrain) noexcept
+{
+    auto createMissionTrain = reinterpret_cast<void(__cdecl*)(CVector, bool, std::uint32_t, CTrainSAInterface**, CTrainSAInterface**, int, int, bool)>(
+        FUNC_CTrain_CreateMissionTrain);
+
+    createMissionTrain(vecPos, bDirection, uiTrainType, ppTrainBeginning, ppTrainEnd, iNodeIndex, iTrackId, bMissionTrain);
+}
+
+CVehicle* CPoolsSA::AddTrain(CClientVehicle* pClientVehicle, const CVector& vecPosition, std::vector<DWORD> models, bool bDirection,
+                             std::uint8_t ucTrackId) noexcept
 {
     // clean the existing array
     MemSetFast((void*)VAR_TrainModelArray, 0, 32 * sizeof(DWORD));
 
     // now load the models we're going to use and add them to the array
-    for (int i = 0; i < iSize; i++)
+    std::size_t count = 0;
+    for (const auto model : models)
     {
-        if (dwModels[i] == 449 || dwModels[i] == 537 || dwModels[i] == 538 || dwModels[i] == 569 || dwModels[i] == 590 || dwModels[i] == 570)
+        // Valid model?
+        if (!CModelInfoSA::IsVehicleModel(model))
+            return nullptr;
+
+        if (model == 449 || model == 537 || model == 538 || model == 569 || model == 590 || model == 570)
         {
-            MemPutFast<DWORD>(VAR_TrainModelArray + i * 4, dwModels[i]);
+            MemPutFast<DWORD>(VAR_TrainModelArray + count * 4, model);
+            count += 1;
         }
     }
-
-    CTrainSAInterface* pTrainBeginning = nullptr;
-    CTrainSAInterface* pTrainEnd = nullptr;
-
-    float fX = vecPosition->fX;
-    float fY = vecPosition->fY;
-    float fZ = vecPosition->fZ;
 
     // Disable GetVehicle because CreateMissionTrain calls it before our CVehicleSA instance is inited
     m_bGetVehicleEnabled = false;
 
     // Find closest track node
     float fRailDistance;
-    int   iNodeId = pGame->GetWorld()->FindClosestRailTrackNode(*vecPosition, ucTrackId, fRailDistance);
+    int   iNodeId = pGame->GetWorld()->FindClosestRailTrackNode(vecPosition, ucTrackId, fRailDistance);
     int   iDesiredTrackId = ucTrackId;
 
-    DWORD dwFunc = FUNC_CTrain_CreateMissionTrain;
-    _asm
-    {
-        push    0            // place as close to point as possible (rather than at node)? (maybe) (actually seems to have an effect on the speed, so changed from
-                             // 1 to 0)
-                             push    iDesiredTrackId            // track ID
-                             push    iNodeId            // node to start at (-1 for closest node)
-                             lea     ecx, pTrainEnd
-                             push    ecx            // end of train
-                             lea     ecx, pTrainBeginning
-                             push    ecx            // begining of train
-                             push    0            // train type (always use 0 as thats where we're writing to)
-                             push    bDirection            // direction
-                             push    fZ            // z
-                             push    fY            // y
-                             push    fX            // x
-                             call    dwFunc
-                             add     esp, 0x28
-    }
+    CTrainSAInterface* pTrainBeginning = nullptr;
+    CTrainSAInterface* pTrainEnd = nullptr;
+
+    CreateMissionTrain(vecPosition, bDirection, 0, &pTrainBeginning, &pTrainEnd, iNodeId, iDesiredTrackId, false);
 
     // Enable GetVehicle
     m_bGetVehicleEnabled = true;
 
-    CVehicleSA* trainHead = NULL;
-    if (pTrainBeginning)
-    {
-        DWORD vehicleIndex = 0;
+    if (!pTrainBeginning || m_vehiclePool.ulCount >= MAX_VEHICLES)
+        return nullptr;
 
-        if (m_vehiclePool.ulCount < MAX_VEHICLES)
+    std::size_t vehicleIndex = 0;
+
+    std::unique_ptr<CVehicleSA> train = std::make_unique<CTrainSA>(pTrainBeginning);
+    if (!train || !AddVehicleToPool(pClientVehicle, train.get()))
+        return nullptr;
+
+    ++vehicleIndex;
+
+    CVehicleSA* pCarriage = train.get();
+    while (m_vehiclePool.ulCount < MAX_VEHICLES && pCarriage && pCarriage->GetNextCarriageInTrain())
+    {
+        CTrainSAInterface* pVehCarriage = pCarriage->GetNextCarriageInTrain();
+        if (!pVehCarriage)
+            break;
+
+        auto newCarriage = std::make_unique<CTrainSA>(pVehCarriage);
+        if (!newCarriage || !AddVehicleToPool(pClientVehicle, newCarriage.get()))
         {
-            trainHead = new CTrainSA(pTrainBeginning);
-            if (!AddVehicleToPool(pClientVehicle, trainHead))
-            {
-                delete trainHead;
-                trainHead = NULL;
-            }
-            else
-                ++vehicleIndex;
+            newCarriage.reset();
+            break;
         }
 
-        CVehicleSA* carriage = trainHead;
-
-        while (carriage)
-        {
-            if (m_vehiclePool.ulCount < MAX_VEHICLES)
-            {
-                CTrainSAInterface* vehCarriage = carriage->GetNextCarriageInTrain();
-                if (vehCarriage)
-                {
-                    carriage = new CTrainSA(vehCarriage);
-                    if (!AddVehicleToPool(pClientVehicle, carriage))
-                    {
-                        delete carriage;
-                        carriage = NULL;
-                    }
-                    else
-                        ++vehicleIndex;
-                }
-                else
-                    carriage = NULL;
-            }
-        }
+        pCarriage = newCarriage.release();
+        ++vehicleIndex;
     }
 
-    // Stops the train from moving at ludacrist speeds right after creation
-    // due to some glitch in the node finding in CreateMissionTrain
-    CVector vec(0, 0, 0);
-    if (trainHead)
-    {
-        trainHead->SetMoveSpeed(&vec);
-    }
-
-    return trainHead;
+    train->SetMoveSpeed(CVector());
+    return train.release();
 }
 
 DWORD CPoolsSA::GetPedPoolIndex(std::uint8_t* pInterface)
@@ -765,17 +835,17 @@ int CPoolsSA::GetPoolDefaultCapacity(ePools pool)
         case PED_POOL:
             return 140;
         case OBJECT_POOL:
-            return 350;            // Modded to 700   @ CGameSA.cpp
+            return 350;  // Modded to 700   @ CGameSA.cpp
         case DUMMY_POOL:
             return 2500;
         case VEHICLE_POOL:
             return 110;
         case COL_MODEL_POOL:
-            return 10150;            // Modded to 12000  @ CGameSA.cpp
+            return 10150;  // Modded to 12000  @ CGameSA.cpp
         case TASK_POOL:
-            return 500;            // Modded to 5000   @ CGameSA.cpp
+            return 500;  // Modded to 5000   @ CGameSA.cpp
         case EVENT_POOL:
-            return 200;            // Modded to 5000   @ CGameSA.cpp
+            return 200;  // Modded to 5000   @ CGameSA.cpp
         case TASK_ALLOCATOR_POOL:
             return 16;
         case PED_INTELLIGENCE_POOL:
@@ -783,7 +853,7 @@ int CPoolsSA::GetPoolDefaultCapacity(ePools pool)
         case PED_ATTRACTOR_POOL:
             return 64;
         case ENTRY_INFO_NODE_POOL:
-            return 500;            // Modded to 4096   @ CGameSA.cpp
+            return 500;  // Modded to 4096   @ CGameSA.cpp
         case NODE_ROUTE_POOL:
             return 64;
         case PATROL_ROUTE_POOL:
@@ -791,15 +861,63 @@ int CPoolsSA::GetPoolDefaultCapacity(ePools pool)
         case POINT_ROUTE_POOL:
             return 64;
         case POINTER_DOUBLE_LINK_POOL:
-            return 3200;            // Modded to 8000   @ CGameSA.cpp
+            return 3200;  // Modded to 8000   @ CGameSA.cpp
         case POINTER_SINGLE_LINK_POOL:
             return 70000;
         case ENV_MAP_MATERIAL_POOL:
-            return 4096;            // Modded to 16000   @ CGameSA.cpp
+            return 4096;  // Modded to 16000   @ CGameSA.cpp
         case ENV_MAP_ATOMIC_POOL:
-            return 1024;            // Modded to 8000    @ CGameSA.cpp
+            return 1024;  // Modded to 8000    @ CGameSA.cpp
         case SPEC_MAP_MATERIAL_POOL:
-            return 4096;            // Modded to 16000   @ CGameSA.cpp
+            return 4096;  // Modded to 16000   @ CGameSA.cpp
+    }
+    return 0;
+}
+
+int CPoolsSA::GetPoolDefaultModdedCapacity(ePools pool)
+{
+    switch (pool)
+    {
+        case BUILDING_POOL:
+            return MAX_BUILDINGS;
+        case PED_POOL:
+            return 140;
+        case OBJECT_POOL:
+            return MAX_OBJECTS;
+        case DUMMY_POOL:
+            return 2500;
+        case VEHICLE_POOL:
+            return 110;
+        case COL_MODEL_POOL:
+            return 12000;
+        case TASK_POOL:
+            return 5000;
+        case EVENT_POOL:
+            return 5000;
+        case TASK_ALLOCATOR_POOL:
+            return 16;
+        case PED_INTELLIGENCE_POOL:
+            return 140;
+        case PED_ATTRACTOR_POOL:
+            return 64;
+        case ENTRY_INFO_NODE_POOL:
+            return MAX_ENTRY_INFO_NODES;
+        case NODE_ROUTE_POOL:
+            return 64;
+        case PATROL_ROUTE_POOL:
+            return 32;
+        case POINT_ROUTE_POOL:
+            return 64;
+        case POINTER_DOUBLE_LINK_POOL:
+            return MAX_POINTER_DOUBLE_LINKS;
+        case POINTER_SINGLE_LINK_POOL:
+            return MAX_POINTER_SINGLE_LINKS;
+        case ENV_MAP_MATERIAL_POOL:
+            return 16000;
+        case ENV_MAP_ATOMIC_POOL:
+            return 4000;
+        case SPEC_MAP_MATERIAL_POOL:
+            return 16000;
     }
     return 0;
 }
@@ -811,8 +929,7 @@ int CPoolsSA::GetPoolCapacity(ePools pool)
     switch (pool)
     {
         case BUILDING_POOL:
-            iPtr = 0x55105F;
-            break;
+            return GetBuildingsPool().GetSize();
         case PED_POOL:
             iPtr = 0x550FF2;
             break;
@@ -859,8 +976,7 @@ int CPoolsSA::GetPoolCapacity(ePools pool)
             iPtr = 0x550F82;
             break;
         case POINTER_SINGLE_LINK_POOL:
-            iPtr = 0x550F46;
-            break;
+            return GetPtrNodeSingleLinkPool().GetCapacity();
         case ENV_MAP_MATERIAL_POOL:
             iPtr = 0x5DA08E;
             break;
@@ -913,25 +1029,25 @@ void CPoolsSA::SetPoolCapacity(ePools pool, int iValue)
             break;
         case TASK_ALLOCATOR_POOL:
             cPtr = 0x55124E;
-            break;            // 0 - 127
+            break;  // 0 - 127
         case PED_INTELLIGENCE_POOL:
             iPtr = 0x551283;
             break;
         case PED_ATTRACTOR_POOL:
             cPtr = 0x5512BB;
-            break;            // 0 - 127
+            break;  // 0 - 127
         case ENTRY_INFO_NODE_POOL:
             iPtr = 0x550FBA;
             break;
         case NODE_ROUTE_POOL:
             cPtr = 0x551218;
-            break;            // 0 - 127
+            break;  // 0 - 127
         case PATROL_ROUTE_POOL:
             cPtr = 0x5511E4;
-            break;            // 0 - 127
+            break;  // 0 - 127
         case POINT_ROUTE_POOL:
             cPtr = 0x5511AF;
-            break;            // 0 - 127
+            break;  // 0 - 127
         case POINTER_DOUBLE_LINK_POOL:
             iPtr = 0x550F82;
             break;
@@ -949,10 +1065,10 @@ void CPoolsSA::SetPoolCapacity(ePools pool, int iValue)
             break;
     }
     if (iPtr)
-        MemPut<int>(iPtr, iValue);
+        MemPut(iPtr, iValue);
 
     if (cPtr)
-        MemPut<char>(cPtr, iValue);
+        MemPut(cPtr, static_cast<char>(iValue));
 }
 
 int CPoolsSA::GetNumberOfUsedSpaces(ePools pool)
@@ -1026,9 +1142,7 @@ int CPoolsSA::GetNumberOfUsedSpaces(ePools pool)
             dwThis = CLASS_CPtrNodeDoubleLinkPool;
             break;
         case POINTER_SINGLE_LINK_POOL:
-            dwFunc = FUNC_CPtrNodeSingleLinkPool_GetNoOfUsedSpaces;
-            dwThis = CLASS_CPtrNodeSingleLinkPool;
-            break;
+            return GetPtrNodeSingleLinkPool().GetUsedSize();
         default:
             return -1;
     }
@@ -1036,7 +1150,8 @@ int CPoolsSA::GetNumberOfUsedSpaces(ePools pool)
     int iOut = -2;
     if (*(DWORD*)dwThis != NULL)
     {
-        _asm
+        // clang-format off
+        __asm
         {
             mov     ecx, dwThis
             mov     ecx, [ecx]
@@ -1044,6 +1159,7 @@ int CPoolsSA::GetNumberOfUsedSpaces(ePools pool)
             mov     iOut, eax
 
         }
+        // clang-format on
     }
 
     return iOut;

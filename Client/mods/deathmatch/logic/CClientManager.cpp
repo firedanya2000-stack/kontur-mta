@@ -54,6 +54,7 @@ CClientManager::CClientManager()
     m_pModelManager = new CClientModelManager();
     m_pPacketRecorder = new CClientPacketRecorder(this);
     m_pImgManager = new CClientIMGManager(this);
+    m_pBuildingManager = new CClientBuildingManager(this);
 
     m_bBeingDeleted = false;
     m_bGameUnloadedFlag = false;
@@ -177,6 +178,9 @@ CClientManager::~CClientManager()
 
     delete m_pImgManager;
     m_pImgManager = nullptr;
+
+    delete m_pBuildingManager;
+    m_pBuildingManager = nullptr;
 }
 
 //
@@ -197,7 +201,7 @@ void CClientManager::DoPulse(bool bDoStandardPulses, bool bDoVehicleManagerPulse
             are no longer a frame behind when attached to other entities.
             m_pMarkerManager->DoPulse (); */
             m_pRadarAreaManager->DoPulse(
-                false);            // DoPulse, but do not render (we render them from a hook to avoid render issues - the mask not blocking the edges)
+                false);  // DoPulse, but do not render (we render them from a hook to avoid render issues - the mask not blocking the edges)
         }
 
         if (bDoVehicleManagerPulse)

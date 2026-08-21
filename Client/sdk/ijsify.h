@@ -5,7 +5,7 @@
  *  FILE:        sdk/ijsify.h
  *  PURPOSE:     Misc defines and ijsify logic
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -71,10 +71,10 @@ inline void __cdecl operator delete[](LPVOID pPointer)
     #include <stdlib.h>
     #include <windows.h>
 
-    // DOESNT WORK FOR 64-BIT APPS !
+// DOESNT WORK FOR 64-BIT APPS !
 
-    #pragma warning ( disable:4311 )
-    #pragma warning ( disable:4312 )
+    #pragma warning(disable : 4311)
+    #pragma warning(disable : 4312)
 
 extern bool   g_bBoundsChecker;
 extern DWORD* g_Table;

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CClientPerfStat.PacketUsage.cpp
  *  PURPOSE:     Performance stats manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -247,7 +247,7 @@ void CClientPerfStatPacketUsageImpl::GetStats(CClientPerfStatResult* pResult, co
             row[c++] = SString("%d", (statInDelta.iCount + 4) / 5);
             row[c++] = SString("%d", (statInDelta.iTotalBytes + 4) / 5);
             row[c++] = SString("%2.2f%%",
-                               statInDelta.totalTime / 50000.f);            // Number of microseconds in sample period ( 5sec * 1000000 ) into percent ( * 100 )
+                               statInDelta.totalTime / 50000.f);  // Number of microseconds in sample period ( 5sec * 1000000 ) into percent ( * 100 )
         }
         else
         {

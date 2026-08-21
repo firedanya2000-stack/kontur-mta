@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPerfStat.DebugInfo.cpp
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -20,7 +20,7 @@ namespace
         SString strHead;
         SString strData;
     };
-}            // namespace
+}  // namespace
 
 ///////////////////////////////////////////////////////////////
 //

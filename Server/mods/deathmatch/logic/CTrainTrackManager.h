@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,16 +14,19 @@ class CTrainTrackManager
 {
 public:
     CTrainTrackManager();
-    void Reset();
 
     CTrainTrack* CreateTrainTrack(const std::vector<STrackNode>& nodes, bool linkLastNodes, CElement* pParent, uchar defaultTrackId = 0xFF);
     void         DestroyTrainTrack(CTrainTrack* pTrainTrack);
 
     const std::vector<CTrainTrack*>& GetTracks() { return m_Tracks; }
 
-    CTrainTrack* GetTrainTrackByIndex(unsigned int index);
+    CTrainTrack* GetDefaultTrackByIndex(uchar index);
 
 private:
     constexpr static std::size_t MaxTracks = 255;
-    std::vector<CTrainTrack*>    m_Tracks;
+    constexpr static std::size_t MaxDefaultTracks = 4;
+
+    std::vector<CTrainTrack*> m_Tracks;
+
+    CTrainTrack* m_DefaultTracks[MaxDefaultTracks];
 };
