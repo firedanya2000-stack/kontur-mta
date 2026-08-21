@@ -409,7 +409,6 @@ utils/DXFiles/
 !*.dll
 !*.exe
 utils/vswhere.exe
-<<<<<<< HEAD
 # Kontur MTA
 /_dist/
 /_source/
@@ -417,6 +416,4 @@ utils/vswhere.exe
 /dist/
 *.pdb
 *.key
-=======
 *.generated.h
->>>>>>> upstream/master
