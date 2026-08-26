@@ -23,7 +23,7 @@
 
 // FreeBSD links /dev/urandom -> /dev/random. It showed up when we added
 // O_NOFOLLOW to harden the non-blocking generator. Use Arc4Random instead
-// for a non-blocking generator. Arc4Random is cryptograhic quality prng
+// for a non-blocking generator. Arc4Random is cryptographic quality prng
 // based on ChaCha20. The ChaCha20 generator is seeded from /dev/random,
 // so we can't completely avoid the blocking.
 // https://www.freebsd.org/cgi/man.cgi?query=arc4random_buf.
@@ -31,6 +31,19 @@
 # define DONT_USE_O_NOFOLLOW 1
 # define USE_FREEBSD_ARC4RANDOM 1
 # include <stdlib.h>
+#endif
+
+#if defined(__APPLE__)
+/* OS X 10.10+, iOS 8.0+ */
+#if defined(__MACH__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000
+#define USE_CCRANDOMGENERATEBYTES
+#elif defined(__AVAILABILITY_INTERNAL__IPHONE_8_0_DEP__IPHONE_8_0)
+#define USE_CCRANDOMGENERATEBYTES
+#endif
+#endif
+
+#ifdef USE_CCRANDOMGENERATEBYTES
+#include <CommonCrypto/CommonRandom.h>
 #endif
 
 // Solaris links /dev/urandom -> ../devices/pseudo/random@0:urandom
@@ -100,12 +113,12 @@ OS_RNG_Err::OS_RNG_Err(const std::string &operation)
 #if defined(USE_MS_CNGAPI)
 inline DWORD NtStatusToErrorCode(NTSTATUS status)
 {
-	if (status == STATUS_INVALID_PARAMETER)
+	if (status == static_cast<NTSTATUS>(STATUS_INVALID_PARAMETER))
 		return ERROR_INVALID_PARAMETER;
-	else if (status == STATUS_INVALID_HANDLE)
+	else if (status == static_cast<NTSTATUS>(STATUS_INVALID_HANDLE))
 		return ERROR_INVALID_HANDLE;
 	else
-		return (DWORD)status;
+		return static_cast<DWORD>(status);
 }
 #endif
 
@@ -156,7 +169,7 @@ MicrosoftCryptoProvider::~MicrosoftCryptoProvider()
 
 NonblockingRng::NonblockingRng()
 {
-#if !defined(CRYPTOPP_WIN32_AVAILABLE) && !defined(USE_FREEBSD_ARC4RANDOM)
+#if !defined(CRYPTOPP_WIN32_AVAILABLE) && !defined(USE_FREEBSD_ARC4RANDOM) && !defined(USE_CCRANDOMGENERATEBYTES)
 # ifndef DONT_USE_O_NOFOLLOW
 	const int flags = O_RDONLY|O_NOFOLLOW;
 # else
@@ -172,19 +185,19 @@ NonblockingRng::NonblockingRng()
 
 NonblockingRng::~NonblockingRng()
 {
-#if !defined(CRYPTOPP_WIN32_AVAILABLE) && !defined(USE_FREEBSD_ARC4RANDOM)
+#if !defined(CRYPTOPP_WIN32_AVAILABLE) && !defined(USE_FREEBSD_ARC4RANDOM) && !defined(USE_CCRANDOMGENERATEBYTES)
 	close(m_fd);
 #endif
 }
 
-void NonblockingRng::GenerateBlock(byte *output, size_t size)
+void NonblockingRng::GenerateBlock(byte* output, size_t size)
 {
 #ifdef CRYPTOPP_WIN32_AVAILABLE
 	// Acquiring a provider is expensive. Do it once and retain the reference.
 # if defined(CRYPTOPP_CXX11_STATIC_INIT)
 	static const MicrosoftCryptoProvider hProvider = MicrosoftCryptoProvider();
 # else
-	const MicrosoftCryptoProvider &hProvider = Singleton<MicrosoftCryptoProvider>().Ref();
+	const MicrosoftCryptoProvider& hProvider = Singleton<MicrosoftCryptoProvider>().Ref();
 # endif
 # if defined(USE_MS_CRYPTOAPI)
 	DWORD dwSize;
@@ -206,7 +219,11 @@ void NonblockingRng::GenerateBlock(byte *output, size_t size)
 		SetLastError(ERROR_INCORRECT_SIZE);
 		throw OS_RNG_Err("GenerateBlock size");
 	}
+#if WINVER >= 0x0A00 
+	NTSTATUS ret = BCryptGenRandom(BCRYPT_RNG_ALG_HANDLE, output, ulSize, 0);
+#else
 	NTSTATUS ret = BCryptGenRandom(hProvider.GetProviderHandle(), output, ulSize, 0);
+#endif
 	CRYPTOPP_ASSERT(BCRYPT_SUCCESS(ret));
 	if (!(BCRYPT_SUCCESS(ret)))
 	{
@@ -221,6 +238,11 @@ void NonblockingRng::GenerateBlock(byte *output, size_t size)
 	// Cryptographic quality prng based on ChaCha20,
 	// https://www.freebsd.org/cgi/man.cgi?query=arc4random_buf
 	arc4random_buf(output, size);
+# elif defined(USE_CCRANDOMGENERATEBYTES)
+	// Cryptographic quality prng built into macOS 10.10+ and iOS 8.0+
+	// https://opensource.apple.com/source/CommonCrypto/CommonCrypto-60074/include/CommonRandom.h.auto.html
+	if (CCRandomGenerateBytes(output, size) != kCCSuccess)
+		throw OS_RNG_Err("CCRandomGenerateBytes");
 # else
 	while (size)
 	{

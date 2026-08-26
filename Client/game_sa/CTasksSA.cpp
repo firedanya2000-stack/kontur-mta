@@ -1,11 +1,11 @@
 /*****************************************************************************
  *
- *  PROJECT:     Multi Theft Auto v1.0
+ *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
- *  FILE:        game_sa/CTasksSA.cpp
+ *  FILE:        Client/game_sa/CTasksSA.cpp
  *  PURPOSE:     Task creation
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,6 +23,7 @@
 #include "TaskPhysicalResponseSA.h"
 #include "TaskSA.h"
 #include "TaskSecondarySA.h"
+#include "CAnimManagerSA.h"
 
 extern CGameSA* pGame;
 
@@ -123,8 +124,8 @@ CTaskSimpleChoking* CTasksSA::CreateTaskSimpleChoking(CPed* pAttacker, bool bIsT
     return pTask;
 }
 
-CTaskSimpleClimb* CTasksSA::CreateTaskSimpleClimb(CEntity* pClimbEnt, const CVector& vecTarget, float fHeading, unsigned char nSurfaceType, char nHeight,
-                                                  const bool bForceClimb)
+CTaskSimpleClimb* CTasksSA::CreateTaskSimpleClimb(CEntitySAInterface* pClimbEnt, const CVector& vecTarget, float fHeading, unsigned char nSurfaceType,
+                                                  eClimbHeights nHeight, const bool bForceClimb)
 {
     CTaskSimpleClimbSA* pTask = NewTask<CTaskSimpleClimbSA>(pClimbEnt, vecTarget, fHeading, nSurfaceType, nHeight, bForceClimb);
     m_pTaskManagementSystem->AddTask(pTask);
@@ -141,6 +142,9 @@ CTaskSimpleJetPack* CTasksSA::CreateTaskSimpleJetpack(const CVector* pVecTargetP
 CTaskSimpleRunAnim* CTasksSA::CreateTaskSimpleRunAnim(const AssocGroupId animGroup, const AnimationId animID, const float fBlendDelta, const int iTaskType,
                                                       const char* pTaskName, const bool bHoldLastFrame)
 {
+    if (!pGame->GetAnimManager()->IsValidAnim(animGroup, animID))
+        return nullptr;
+
     CTaskSimpleRunAnimSA* pTask = NewTask<CTaskSimpleRunAnimSA>(animGroup, animID, fBlendDelta, iTaskType, pTaskName, bHoldLastFrame);
     m_pTaskManagementSystem->AddTask(pTask);
     return pTask;
@@ -156,10 +160,20 @@ CTaskSimpleRunNamedAnim* CTasksSA::CreateTaskSimpleRunNamedAnim(const char* pAni
     return pTask;
 }
 
+CTaskComplexInWater* CTasksSA::CreateTaskComplexInWater()
+{
+    CTaskComplexInWaterSA* task = NewTask<CTaskComplexInWaterSA>();
+    m_pTaskManagementSystem->AddTask(task);
+    return task;
+}
+
 CTaskComplexDie* CTasksSA::CreateTaskComplexDie(const eWeaponType eMeansOfDeath, const AssocGroupId animGroup, const AnimationId anim, const float fBlendDelta,
                                                 const float fAnimSpeed, const bool bBeingKilledByStealth, const bool bFallingToDeath, const int iFallToDeathDir,
                                                 const bool bFallToDeathOverRailing)
 {
+    if (!pGame->GetAnimManager()->IsValidAnim(animGroup, anim))
+        return nullptr;
+
     CTaskComplexDieSA* pTask = NewTask<CTaskComplexDieSA>(eMeansOfDeath, animGroup, anim, fBlendDelta, fAnimSpeed, bBeingKilledByStealth, bFallingToDeath,
                                                           iFallToDeathDir, bFallToDeathOverRailing);
     m_pTaskManagementSystem->AddTask(pTask);
@@ -168,6 +182,9 @@ CTaskComplexDie* CTasksSA::CreateTaskComplexDie(const eWeaponType eMeansOfDeath,
 
 CTaskSimpleStealthKill* CTasksSA::CreateTaskSimpleStealthKill(bool bKiller, class CPed* pPed, const AnimationId animGroup)
 {
+    if (!pGame->GetAnimManager()->IsValidGroup(animGroup))
+        return nullptr;
+
     CTaskSimpleStealthKillSA* pTask = NewTask<CTaskSimpleStealthKillSA>(bKiller, pPed, animGroup);
     m_pTaskManagementSystem->AddTask(pTask);
     return pTask;
@@ -261,13 +278,16 @@ __declspec(noinline) void _cdecl OnCEventHandler_ComputeDamageResponse_Mid(CPedS
 }
 
 // Hook info
-#define HOOKPOS_CEventHandler_ComputeDamageResponse_Mid        0x4C0593
-#define HOOKSIZE_CEventHandler_ComputeDamageResponse_Mid       5
-DWORD RETURN_CEventHandler_ComputeDamageResponse_Mid = 0x4C0598;
-DWORD CTaskSimpleBeHit_constructor = FUNC_CTaskSimpleBeHit__Constructor;
-void _declspec(naked) HOOK_CEventHandler_ComputeDamageResponse_Mid()
+#define HOOKPOS_CEventHandler_ComputeDamageResponse_Mid  0x4C0593
+#define HOOKSIZE_CEventHandler_ComputeDamageResponse_Mid 5
+DWORD                         RETURN_CEventHandler_ComputeDamageResponse_Mid = 0x4C0598;
+DWORD                         CTaskSimpleBeHit_constructor = FUNC_CTaskSimpleBeHit__Constructor;
+static void __declspec(naked) HOOK_CEventHandler_ComputeDamageResponse_Mid()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*3]
@@ -283,6 +303,7 @@ void _declspec(naked) HOOK_CEventHandler_ComputeDamageResponse_Mid()
         call    CTaskSimpleBeHit_constructor
         jmp     RETURN_CEventHandler_ComputeDamageResponse_Mid
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto v1.0
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -21,7 +21,7 @@ namespace
     bool               ms_bEnableRequest = false;
     CNetServerBuffer*  ms_pNetServerBuffer = NULL;
     CSimPlayerManager* ms_pSimPlayerManager = NULL;
-}            // namespace
+}  // namespace
 
 ///////////////////////////////////////////////////////////////
 //
@@ -92,7 +92,7 @@ void CSimControl::DoPulse()
         g_pNetServer = ms_pNetServerBuffer;
 
         // Replace packet handler
-        ms_pNetServerBuffer->RegisterPacketHandler(CGame::StaticProcessPacket);
+        ms_pNetServerBuffer->RegisterPacketHandler(CGame::StaticProcessNetworkPacket);
 
         // Let the pulsing begin
         ms_pNetServerBuffer->SetAutoPulseEnabled(true);
@@ -107,7 +107,7 @@ void CSimControl::DoPulse()
 
         // Restore packet handler - This is blocking so will drain the outgoing queue
         ms_pNetServerBuffer->RegisterPacketHandler(NULL);
-        g_pRealNetServer->RegisterPacketHandler(CGame::StaticProcessPacket);
+        g_pRealNetServer->RegisterPacketHandler(CGame::StaticProcessNetworkPacket);
 
         // Drain the incoming queue
         ms_pNetServerBuffer->ProcessIncoming();

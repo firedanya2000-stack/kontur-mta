@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CPlane.h
  *  PURPOSE:     Plane vehicle entity interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,5 +16,5 @@
 class CPlane : public virtual CAutomobile
 {
 public:
-    virtual ~CPlane(){};
+    virtual ~CPlane() {};
 };

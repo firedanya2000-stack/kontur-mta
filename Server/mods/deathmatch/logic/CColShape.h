@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CColShape.h
  *  PURPOSE:     Base shaped collision entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -45,6 +45,7 @@ public:
 
     void                CallHitCallback(CElement& Element);
     void                CallLeaveCallback(CElement& Element);
+    class CColCallback* GetCallback() { return m_pCallback; };
     class CColCallback* SetCallback(class CColCallback* pCallback) { return (m_pCallback = pCallback); };
 
     bool GetAutoCallEvent() { return m_bAutoCallEvent; };

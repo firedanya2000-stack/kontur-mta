@@ -5,7 +5,7 @@
  *  FILE:        sdk/CVector.h
  *  PURPOSE:     3D vector math implementation
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,6 +14,8 @@
 #include <cmath>
 
 #include "CVector4D.h"
+
+class CVector2D;
 
 /**
  * CVector Structure used to store a 3D vertex.
@@ -24,13 +26,18 @@ private:
     static constexpr float FLOAT_EPSILON = 0.0001f;
 
 public:
-    float fX = 0.0f;
-    float fY = 0.0f;
-    float fZ = 0.0f;
+    float fX;
+    float fY;
+    float fZ;
 
-    constexpr CVector() = default;
+    struct NoInit
+    {
+    };
+    CVector(NoInit) noexcept {}
 
-    constexpr CVector(float x, float y, float z) : fX(x), fY(y), fZ(z) {}
+    constexpr CVector() noexcept : fX(0.0f), fY(0.0f), fZ(0.0f) {}
+
+    constexpr explicit CVector(float x, float y = 0.0f, float z = 0.0f) noexcept : fX(x), fY(y), fZ(z) {}
 
     constexpr CVector(const CVector4D& vec) noexcept : fX(vec.fX), fY(vec.fY), fZ(vec.fZ) {}
 
@@ -137,15 +144,15 @@ public:
     }
 
     // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-    bool IntersectsSegmentTriangle(const CVector& vecSegment, const CVector& vecVert1, const CVector& vecVert2, const CVector& vecVert3,
-                                   CVector* outVec) const noexcept
+    bool IntersectsSegmentTriangle(const CVector& dir, const CVector& vecVert1, const CVector& vecVert2, const CVector& vecVert3, CVector* outVec,
+                                   CVector* outHitBary = nullptr) const noexcept
     {
         constexpr float fEpsilon = 1e-6f;
 
         CVector vecEdge1, vecEdge2, h, s;
         float   a, f, u, v;
 
-        CVector vecRay = vecSegment;
+        CVector vecRay = dir;
         vecRay.Normalize();
         h = vecRay;
 
@@ -177,12 +184,38 @@ public:
         }
 
         float t = f * vecEdge2.DotProduct(&sCrossE1);
-        if (t > fEpsilon && t <= vecSegment.Length())
+        if (t > fEpsilon && t <= dir.Length())
         {
             *outVec = *this + vecRay * t;
+            if (outHitBary)
+            {                                              // Calculate all barycentric coords if necessary
+                *outHitBary = CVector(1.f - u - v, u, v);  // For vertices A, B, C [I assume?]
+            }
             return true;
         }
+
         return false;
+    }
+
+    [[nodiscard]] bool IsValid() const noexcept { return std::isfinite(fX) && std::isfinite(fY) && std::isfinite(fZ); }
+
+    // Checks if the vector is within the world bounds.
+    // If maxLimit = false (default), it checks coordinates in the range -3000 to 3000.
+    // If maxLimit = true, it checks the full map range from -8192 to 8192.
+    // Currently, the effective map size is limited to 16384x16384 due to synchronization constraints.
+    // Z follows the sync layer position limit instead of the map bound, so
+    // high-altitude and deep-underground shots on custom maps are accepted.
+    [[nodiscard]] bool IsInWorldBounds(bool maxLimit = false) const noexcept
+    {
+        const float minXY = maxLimit ? -8192.0f : -3000.0f;
+        const float maxXY = maxLimit ? 8192.0f : 3000.0f;
+        // Matches SYNC_POSITION_LIMIT in net/SyncStructures.h, which already
+        // bounds Z on the wire. A tighter range would reject legitimate shots
+        // without adding any protection the wire doesnt already provide.
+        const float minZ = -100000.0f;
+        const float maxZ = 100000.0f;
+
+        return fX >= minXY && fX <= maxXY && fY >= minXY && fY <= maxXY && fZ >= minZ && fZ <= maxZ;
     }
 
     constexpr CVector operator+(const CVector& vecRight) const noexcept { return CVector(fX + vecRight.fX, fY + vecRight.fY, fZ + vecRight.fZ); }
@@ -261,4 +294,6 @@ public:
     }
 
     bool operator!=(const CVector& param) const noexcept { return !(*this == param); }
+
+    float operator[](size_t i) const noexcept { return ((float*)this)[i]; }
 };

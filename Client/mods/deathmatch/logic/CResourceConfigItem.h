@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CResourceConfigItem.h
  *  PURPOSE:     Header for resource config item class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 #include <list>
 
 #ifndef MAX_PATH
-#define MAX_PATH        260
+    #define MAX_PATH 260
 #endif
 
 class CResourceConfigItem : public CDownloadableResource

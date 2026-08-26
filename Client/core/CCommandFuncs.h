@@ -5,7 +5,7 @@
  *  FILE:        core/CCommandFuncs.h
  *  PURPOSE:     Header file for command functionality class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,7 +13,7 @@
 
 #include <string>
 
-#define DECLARE_COMMAND_HANDLER(a) static void a ( const char * szParameters );
+#define DECLARE_COMMAND_HANDLER(a) static void a(const char* szParameters);
 
 class CCommandFuncs
 {

@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/TaskCarAccessories.h
  *  PURPOSE:     Car accessories task interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -18,7 +18,7 @@ class CVehicle;
 class CTaskSimpleCarSetPedInAsDriver : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleCarSetPedInAsDriver(){};
+    virtual ~CTaskSimpleCarSetPedInAsDriver() {};
 
     virtual void SetIsWarpingPedIntoCar() = 0;
     virtual void SetDoorFlagsToClear(const unsigned char nDoorFlagsToClear) = 0;
@@ -28,7 +28,7 @@ public:
 class CTaskSimpleCarSetPedOut : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleCarSetPedOut(){};
+    virtual ~CTaskSimpleCarSetPedOut() {};
 
     virtual void SetIsWarpingPedOutOfCar() = 0;
     virtual void SetKnockedOffBike() = 0;
@@ -40,7 +40,7 @@ public:
 class CTaskSimpleCarSetPedInAsPassenger : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleCarSetPedInAsPassenger(){};
+    virtual ~CTaskSimpleCarSetPedInAsPassenger() {};
 
     virtual void SetIsWarpingPedIntoCar() = 0;
     virtual void SetDoorFlagsToClear(const unsigned char nDoorFlagsToClear) = 0;

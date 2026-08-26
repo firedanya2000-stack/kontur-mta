@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CAnimBlendStaticAssocation.h
  *  PURPOSE:     Animation blend static association interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -28,6 +28,6 @@ public:
     virtual short                                   GetAnimID() = 0;
     virtual short                                   GetAnimGroup() = 0;
     virtual short                                   GetFlags() = 0;
-    virtual CAnimBlendHierarchySAInterface*         GetAnimHierachyInterface() = 0;
+    virtual CAnimBlendHierarchySAInterface*         GetAnimHierarchyInterface() = 0;
     virtual CAnimBlendStaticAssociationSAInterface* GetInterface() = 0;
 };

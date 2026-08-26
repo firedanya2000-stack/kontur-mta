@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIStaticImage_Impl.h
  *  PURPOSE:     Static image widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -45,5 +45,5 @@ private:
     CEGUI::Imageset*        m_pImageset;
     const CEGUI::Image*     m_pImage;
 
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 };

@@ -5,7 +5,7 @@
  *  FILE:        mods/shared_logic/CClientColPolygon.cpp
  *  PURPOSE:     Polygon-shaped collision entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -195,7 +195,7 @@ void CClientColPolygon::DebugRender(const CVector& vecPosition, float fDrawRadiu
         for (uint s = iSkipEndSlices; s < uiNumSlices - iSkipEndSlices; s++)
         {
             float fZ = vecPosition.fZ - fDrawRadius + fDrawRadius * 2.0f * (s / (float)(uiNumSlices - 1));
-            fZ += 4;            // Extra bit so a slice is on the same Z coord as the camera
+            fZ += 4;  // Extra bit so a slice is on the same Z coord as the camera
             if (m_fFloor <= fZ && fZ <= m_fCeil)
             {
                 for (uint i = 0; i < uiNumPoints; i++)
@@ -205,7 +205,7 @@ void CClientColPolygon::DebugRender(const CVector& vecPosition, float fDrawRadiu
 
                     CVector vecBegin(vecPointBegin.fX, vecPointBegin.fY, fZ);
                     CVector vecEnd(vecPointEnd.fX, vecPointEnd.fY, fZ);
-                    pGraphics->DrawLine3DQueued(vecBegin, vecEnd, fLineWidth, color, false);
+                    pGraphics->DrawLine3DQueued(vecBegin, vecEnd, fLineWidth, color, eRenderStage::POST_FX);
                 }
             }
         }
@@ -219,7 +219,7 @@ void CClientColPolygon::DebugRender(const CVector& vecPosition, float fDrawRadiu
 
             CVector vecBegin(vecPoint.fX, vecPoint.fY, std::max(vecPosition.fZ - fDrawRadius, m_fFloor));
             CVector vecEnd(vecPoint.fX, vecPoint.fY, std::min(vecPosition.fZ + fDrawRadius, m_fCeil));
-            pGraphics->DrawLine3DQueued(vecBegin, vecEnd, fLineWidth, color, false);
+            pGraphics->DrawLine3DQueued(vecBegin, vecEnd, fLineWidth, color, eRenderStage::POST_FX);
         }
     }
 
@@ -231,10 +231,10 @@ void CClientColPolygon::DebugRender(const CVector& vecPosition, float fDrawRadiu
 
         CVector vecFloorBegin(vecPointBegin.fX, vecPointBegin.fY, m_fFloor);
         CVector vecFloorEnd(vecPointEnd.fX, vecPointEnd.fY, m_fFloor);
-        pGraphics->DrawLine3DQueued(vecFloorBegin, vecFloorEnd, fLineWidth, color, false);
+        pGraphics->DrawLine3DQueued(vecFloorBegin, vecFloorEnd, fLineWidth, color, eRenderStage::POST_FX);
 
         CVector vecCeilBegin(vecPointBegin.fX, vecPointBegin.fY, m_fCeil);
         CVector vecCeilEnd(vecPointEnd.fX, vecPointEnd.fY, m_fCeil);
-        pGraphics->DrawLine3DQueued(vecCeilBegin, vecCeilEnd, fLineWidth, color, false);
+        pGraphics->DrawLine3DQueued(vecCeilBegin, vecCeilEnd, fLineWidth, color, eRenderStage::POST_FX);
     }
 }

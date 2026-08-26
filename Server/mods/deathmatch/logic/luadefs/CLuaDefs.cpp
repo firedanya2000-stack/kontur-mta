@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/luadefs/CLuaDefs.cpp
  *  PURPOSE:     Lua definitions base class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -36,7 +36,7 @@ namespace
     };
     std::list<STimingFunction> ms_TimingFunctionStack;
     bool                       ms_bRegisterdPostCallHook = false;
-}            // namespace
+}  // namespace
 
 CElementDeleter*           CLuaDefs::m_pElementDeleter = NULL;
 CBlipManager*              CLuaDefs::m_pBlipManager = NULL;
@@ -44,6 +44,7 @@ CHandlingManager*          CLuaDefs::m_pHandlingManager = NULL;
 CLuaManager*               CLuaDefs::m_pLuaManager = NULL;
 CMarkerManager*            CLuaDefs::m_pMarkerManager = NULL;
 CObjectManager*            CLuaDefs::m_pObjectManager = NULL;
+CBuildingManager*          CLuaDefs::m_pBuildingManager = nullptr;
 CPickupManager*            CLuaDefs::m_pPickupManager = NULL;
 CPlayerManager*            CLuaDefs::m_pPlayerManager = NULL;
 CRadarAreaManager*         CLuaDefs::m_pRadarAreaManager = NULL;
@@ -67,6 +68,7 @@ void CLuaDefs::Initialize(CGame* pGame)
     m_pLuaManager = pGame->GetLuaManager();
     m_pMarkerManager = pGame->GetMarkerManager();
     m_pObjectManager = pGame->GetObjectManager();
+    m_pBuildingManager = pGame->GetBuildingManager();
     m_pPickupManager = pGame->GetPickupManager();
     m_pPlayerManager = pGame->GetPlayerManager();
     m_pRadarAreaManager = pGame->GetRadarAreaManager();
@@ -230,7 +232,7 @@ void CLuaDefs::DidUseFunction(lua_CFunction f, lua_State* luaVM)
                 if (pFunction)
                 {
                     CResource* pResource = g_pGame->GetResourceManager()->GetResourceFromLuaState(info.luaVM);
-                    SString    strResourceName = pResource ? pResource->GetName() : "unknown";
+                    SString    strResourceName = pResource ? pResource->GetName() : SStringX("unknown");
                     CPerfStatFunctionTiming::GetSingleton()->UpdateTiming(strResourceName, pFunction->GetName().c_str(), elapsedTime, uiDeltaBytes);
                 }
             }

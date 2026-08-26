@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/CServer.h
  *  PURPOSE:     Server interface handler class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -28,6 +28,7 @@ public:
     void GetTag(char* szInfoTag, int iInfoTag);
     void HandleInput(char* szCommand);
 
+    bool IsReadyToAcceptConnections() const noexcept override;
     bool IsFinished();
     bool PendingWorkToDo();
     bool GetSleepIntervals(int& iSleepBusyMs, int& iSleepIdleMs, int& iLogicFpsLimit);

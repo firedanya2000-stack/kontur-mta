@@ -5,7 +5,7 @@
  *  FILE:        core/CProxyDirectInput8.cpp
  *  PURPOSE:     DirectInput 8 function hooking proxy
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,7 +15,7 @@ CProxyDirectInput8::CProxyDirectInput8(IDirectInput8* pDevice)
 {
     WriteDebugEvent(SString("CProxyDirectInput8::CProxyDirectInput8 %08x", this));
 
-    // Initalize our local variable.
+    // Initialize our local variable.
     m_pDevice = pDevice;
 }
 

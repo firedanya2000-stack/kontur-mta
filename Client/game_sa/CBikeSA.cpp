@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CBikeSA.cpp
  *  PURPOSE:     Bike vehicle entity
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -36,4 +36,14 @@ void CBikeSA::RecalculateBikeHandling()
 {
     if (m_pBikeHandlingData)
         m_pBikeHandlingData->Recalculate();
+}
+
+bool CBikeSA::IsAnyWheelTouchingGround() const
+{
+    CBikeSAInterface* bikeInterface = GetBikeInterface();
+    if (!bikeInterface)
+        return false;
+
+    return bikeInterface->m_wheelRatios[0] < 1.0f || bikeInterface->m_wheelRatios[1] < 1.0f || bikeInterface->m_wheelRatios[2] < 1.0f ||
+           bikeInterface->m_wheelRatios[3] < 1.0f;
 }

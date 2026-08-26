@@ -4,7 +4,7 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        Client/core/CQueryReceiver.cpp
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -22,11 +22,11 @@ CQueryReceiver::~CQueryReceiver()
 
 void CQueryReceiver::RequestQuery(in_addr address, ushort port)
 {
-    if (m_Socket == INVALID_SOCKET)            // Create the socket
+    if (m_Socket == INVALID_SOCKET)  // Create the socket
     {
         m_Socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
         u_long flag = 1;
-        ioctlsocket(m_Socket, FIONBIO, &flag);            // Nonblocking I/O
+        ioctlsocket(m_Socket, FIONBIO, &flag);  // Nonblocking I/O
     }
 
     sockaddr_in addr;
@@ -88,7 +88,7 @@ SQueryInfo CQueryReceiver::GetServerResponse()
     SQueryInfo info;
 
     if (m_Socket == INVALID_SOCKET)
-        return info;            // Query not sent
+        return info;  // Query not sent
 
     char szBuffer[SERVER_LIST_QUERY_BUFFER] = {0};
 
@@ -162,8 +162,14 @@ SQueryInfo CQueryReceiver::GetServerResponse()
             SString strJoinedPlayers, strMaxPlayers;
             if (strPlayerCount.Split("/", &strJoinedPlayers, &strMaxPlayers))
             {
-                info.players = atoi(strJoinedPlayers);
-                info.playerSlot = atoi(strMaxPlayers);
+                const int joinedPlayers = atoi(strJoinedPlayers);
+                const int maxPlayers = atoi(strMaxPlayers);
+
+                if (joinedPlayers >= 0 && joinedPlayers <= 0xFFFF)
+                    info.players = static_cast<ushort>(joinedPlayers);
+
+                if (maxPlayers >= 0 && maxPlayers <= 0xFFFF)
+                    info.playerSlot = static_cast<ushort>(maxPlayers);
             }
         }
 
@@ -183,14 +189,18 @@ SQueryInfo CQueryReceiver::GetServerResponse()
 
         // Recover server ping status if present
         const SString strPingStatus = strBuildNumber.Right(strBuildNumber.length() - strlen(strBuildNumber) - 1);
-        CCore::GetSingleton().GetNetwork()->UpdatePingStatus(*strPingStatus, info.players);
+        CCore::GetSingleton().GetNetwork()->UpdatePingStatus(strPingStatus.c_str(), strPingStatus.length(), info.players, info.isStatusVerified);
 
         // Recover server http port if present
         const SString strNetRoute = strPingStatus.Right(strPingStatus.length() - strlen(strPingStatus) - 1);
         const SString strUpTime = strNetRoute.Right(strNetRoute.length() - strlen(strNetRoute) - 1);
         const SString strHttpPort = strUpTime.Right(strUpTime.length() - strlen(strUpTime) - 1);
         if (!strHttpPort.empty())
-            info.httpPort = atoi(strHttpPort);
+        {
+            const int httpPort = atoi(strHttpPort);
+            if (httpPort >= 0 && httpPort <= 0xFFFF)
+                info.httpPort = static_cast<ushort>(httpPort);
+        }
 
         // Get player nicks
         while (i < len)
@@ -213,7 +223,15 @@ SQueryInfo CQueryReceiver::GetServerResponse()
                 return info;
             }
         }
+
         InvalidateSocket();
+
+        if (info.players > info.playerSlot)
+        {
+            info.players = info.playerSlot;
+            info.isStatusVerified = false;
+        }
+
         info.containingInfo = true;
     }
 

@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUICallback.h
  *  PURPOSE:     Event callback interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,10 +14,10 @@
 class CGUIElement;
 
 // Define callbacks
-#define GUI_CALLBACK            CGUICallback < bool, CGUIElement * >
-#define GUI_CALLBACK_KEY        CGUICallback < bool, CGUIKeyEventArgs >
-#define GUI_CALLBACK_MOUSE      CGUICallback < bool, CGUIMouseEventArgs >
-#define GUI_CALLBACK_FOCUS      CGUICallback < bool, CGUIFocusEventArgs >
+#define GUI_CALLBACK       CGUICallback<bool, CGUIElement*>
+#define GUI_CALLBACK_KEY   CGUICallback<bool, CGUIKeyEventArgs>
+#define GUI_CALLBACK_MOUSE CGUICallback<bool, CGUIMouseEventArgs>
+#define GUI_CALLBACK_FOCUS CGUICallback<bool, CGUIFocusEventArgs>
 
 // Represents any callback
 template <typename Ret, typename Arguments>
@@ -98,5 +98,5 @@ public:
     operator bool() const { return *(DWORD*)m_Callback != NULL; }
 
 protected:
-    char m_Callback[4 + 4 + 20];            // vtable + pObj + pMemFn
+    char m_Callback[4 + 4 + 20];  // vtable + pObj + pMemFn
 };

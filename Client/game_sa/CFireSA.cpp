@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CFireSA.cpp
  *  PURPOSE:     Fire
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,6 +14,8 @@
 #include "CFireSA.h"
 #include "CGameSA.h"
 #include "CPoolsSA.h"
+#include <game/CTaskManager.h>
+#include <game/TaskTypes.h>
 
 extern CGameSA* pGame;
 
@@ -24,11 +26,13 @@ void CFireSA::Extinguish()
 {
     DWORD dwFunction = FUNC_Extinguish;
     DWORD dwPointer = (DWORD)internalInterface;
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwPointer
         call    dwFunction
     }
+    // clang-format on
     internalInterface->bActive = false;
 }
 
@@ -182,13 +186,15 @@ void CFireSA::Ignite()
     CVector* vecPosition = GetPosition();
     DWORD    dwFunc = FUNC_CreateFxSysForStrength;
     DWORD    dwThis = (DWORD)internalInterface;
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThis
         push    0
         push    vecPosition
         call    dwFunc
     }
+    // clang-format on
 
     internalInterface->bBeingExtinguished = 0;
     internalInterface->bFirstGeneration = 1;
@@ -208,4 +214,61 @@ void CFireSA::SetStrength(float fStrength)
 void CFireSA::SetNumGenerationsAllowed(char generations)
 {
     internalInterface->nNumGenerationsAllowed = generations;
+}
+
+////////////////////////////////////////////////////////////////////////
+// CFire::Extinguish
+//
+// Fix GH #3249 (PLAYER_ON_FIRE task is not aborted after the fire is extinguished)
+////////////////////////////////////////////////////////////////////////
+static void AbortFireTask(CEntitySAInterface* entityOnFire, DWORD returnAddress)
+{
+    // We can't and shouldn't remove the task if we're in CTaskSimplePlayerOnFire::ProcessPed. Otherwise we will crash.
+    if (returnAddress == 0x633783)
+        return;
+
+    auto* ped = pGame->GetPools()->GetPed(reinterpret_cast<DWORD*>(entityOnFire));
+    if (!ped || !ped->pEntity)
+        return;
+
+    CTaskManager* taskManager = ped->pEntity->GetPedIntelligence()->GetTaskManager();
+    if (!taskManager)
+        return;
+
+    taskManager->RemoveTaskSecondary(TASK_SECONDARY_PARTIAL_ANIM, TASK_SIMPLE_PLAYER_ON_FIRE);
+}
+
+#define HOOKPOS_CFire_Extinguish  0x539429
+#define HOOKSIZE_CFire_Extinguish 6
+static constexpr intptr_t     CONTINUE_CFire_Extinguish = 0x53942F;
+static void __declspec(naked) HOOK_CFire_Extinguish()
+{
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
+    {
+        mov     [eax+730h], edi
+
+        push    ebx
+        mov     ebx, [esp+12]
+        push    edi
+        push    esi
+
+        push    ebx     // returnAddress
+        push    eax     // entityOnFire
+        call    AbortFireTask
+        add     esp, 8
+
+        pop     esi
+        pop     edi
+        pop     ebx
+        jmp     CONTINUE_CFire_Extinguish
+    }
+    // clang-format on
+}
+
+void CFireSA::StaticSetHooks()
+{
+    EZHookInstall(CFire_Extinguish);
 }

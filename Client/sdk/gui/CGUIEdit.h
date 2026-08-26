@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIEdit.h
  *  PURPOSE:     Edit box widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUIEdit : public CGUIElement
 {
 public:
-    virtual ~CGUIEdit(){};
+    virtual ~CGUIEdit() {};
 
     virtual void SetReadOnly(bool bReadOnly) = 0;
     virtual bool IsReadOnly() = 0;

@@ -5,12 +5,14 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaObjectDefs.h
  *  PURPOSE:     Lua object definitions class header
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 #include "CLuaDefs.h"
+
+class CClientObject;
 
 class CLuaObjectDefs : public CLuaDefs
 {
@@ -25,10 +27,12 @@ public:
     LUA_DECLARE(IsObjectStatic);
     static bool IsObjectMoving(CClientEntity* pEntity);
     LUA_DECLARE(GetObjectScale);
+    static std::variant<CLuaMultiReturn<float, float, float>, CVector, bool> OOP_GetObjectScale(lua_State* luaVM, CClientObject* object);
     LUA_DECLARE(IsObjectBreakable);
     LUA_DECLARE(GetObjectMass);
     LUA_DECLARE(GetObjectProperty);
     LUA_DECLARE(GetObjectProperties);
+    static bool IsObjectRespawnable(CClientEntity* const pEntity) noexcept;
 
     // Object set funcs
     LUA_DECLARE(SetObjectRotation);

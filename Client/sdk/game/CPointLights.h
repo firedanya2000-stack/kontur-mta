@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CPointLightsSA.h
  *  PURPOSE:     Point lights sdk header
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -29,5 +29,6 @@ public:
 
     virtual void PreRenderHeliLights() = 0;
     virtual void PostRenderHeliLights() = 0;
-    virtual void RenderHeliLight(const CVector& vecStart, const CVector& vecEnd, float startRadius, float endRadius, bool renderSpot) = 0;
+    virtual void RenderHeliLight(const CVector& vecStart, const CVector& vecEnd, float startRadius, float endRadius, bool renderSpot,
+                                 const SharedUtil::SColor& color) = 0;
 };

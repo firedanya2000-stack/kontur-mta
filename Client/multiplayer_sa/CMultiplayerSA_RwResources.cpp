@@ -5,15 +5,20 @@
  *  FILE:        multiplayer_sa/CMultiplayerSA_RwResources.cpp
  *  PORPOISE:    Record usage of certain Renderware resources
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
+#include <cstddef>
 
 namespace
 {
     SRwResourceStats ms_Stats;
+
+    constexpr std::size_t kTextureRefsReadableSize = offsetof(RwTexture, refs) + sizeof(int);
+    constexpr std::size_t kGeometryRefsReadableSize = offsetof(RwGeometry, refs) + sizeof(short);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -27,20 +32,22 @@ void OnMY_RwTextureCreate_Pre(DWORD calledFrom)
 
 void OnMY_RwTextureCreate_Post(RwTexture* pTexture, DWORD calledFrom)
 {
+    if (!pTexture)
+        return;
+
     ms_Stats.uiTextures++;
 }
 
 // Hook info
-#define HOOKPOS_RwTextureCreate_US                         0x7F37C0
-#define HOOKPOS_RwTextureCreate_EU                         0x7F3800
-#define HOOKSIZE_RwTextureCreate_US                        5
-#define HOOKSIZE_RwTextureCreate_EU                        5
-DWORD RETURN_RwTextureCreate_US = 0x7F37C5;
-DWORD RETURN_RwTextureCreate_EU = 0x7F3805;
-DWORD RETURN_RwTextureCreate_BOTH = 0;
-void _declspec(naked) HOOK_RwTextureCreate()
+#define HOOKPOS_RwTextureCreate  0x7F37C0
+#define HOOKSIZE_RwTextureCreate 5
+DWORD                         RETURN_RwTextureCreate = 0x7F37C5;
+static void __declspec(naked) HOOK_RwTextureCreate()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*0]
@@ -63,8 +70,9 @@ void _declspec(naked) HOOK_RwTextureCreate()
 
 inner:
         mov     eax,dword ptr ds:[00C97B24h]
-        jmp     RETURN_RwTextureCreate_BOTH
+        jmp     RETURN_RwTextureCreate
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -74,21 +82,30 @@ inner:
 //////////////////////////////////////////////////////////////////////////////////////////
 void OnMY_RwTextureDestroy(RwTexture* pTexture, DWORD calledFrom)
 {
-    if (pTexture->refs == 1)
+    if (!pTexture)
+        return;
+
+    if (SharedUtil::IsReadablePointer(pTexture, kTextureRefsReadableSize))
+    {
+        if (pTexture->refs == 1 && ms_Stats.uiTextures > 0)
+            ms_Stats.uiTextures--;
+        return;
+    }
+
+    if (ms_Stats.uiTextures > 0)
         ms_Stats.uiTextures--;
 }
 
 // Hook info
-#define HOOKPOS_RwTextureDestroy_US                         0x7F3820
-#define HOOKPOS_RwTextureDestroy_EU                         0x7F3860
-#define HOOKSIZE_RwTextureDestroy_EU                        5
-#define HOOKSIZE_RwTextureDestroy_US                        5
-DWORD RETURN_RwTextureDestroy_US = 0x7F3825;
-DWORD RETURN_RwTextureDestroy_EU = 0x7F3865;
-DWORD RETURN_RwTextureDestroy_BOTH = 0;
-void _declspec(naked) HOOK_RwTextureDestroy()
+#define HOOKPOS_RwTextureDestroy  0x7F3820
+#define HOOKSIZE_RwTextureDestroy 5
+DWORD                         RETURN_RwTextureDestroy = 0x7F3825;
+static void __declspec(naked) HOOK_RwTextureDestroy()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         push    esi
         mov         esi,dword ptr [esp+8]
@@ -99,8 +116,9 @@ void _declspec(naked) HOOK_RwTextureDestroy()
         add     esp, 4*1+4
         popad
 
-        jmp     RETURN_RwTextureDestroy_BOTH
+        jmp     RETURN_RwTextureDestroy
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -114,16 +132,15 @@ void OnMY_RwRasterCreate(DWORD calledFrom)
 }
 
 // Hook info
-#define HOOKPOS_RwRasterCreate_US                         0x7FB230
-#define HOOKPOS_RwRasterCreate_EU                         0x7FB270
-#define HOOKSIZE_RwRasterCreate_US                        5
-#define HOOKSIZE_RwRasterCreate_EU                        5
-DWORD RETURN_RwRasterCreate_US = 0x7FB235;
-DWORD RETURN_RwRasterCreate_EU = 0x7FB275;
-DWORD RETURN_RwRasterCreate_BOTH = 0;
-void _declspec(naked) HOOK_RwRasterCreate()
+#define HOOKPOS_RwRasterCreate  0x7FB230
+#define HOOKSIZE_RwRasterCreate 5
+DWORD                         RETURN_RwRasterCreate = 0x7FB235;
+static void __declspec(naked) HOOK_RwRasterCreate()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         mov         eax,dword ptr ds:[00C97B24h]
 
@@ -133,8 +150,9 @@ void _declspec(naked) HOOK_RwRasterCreate()
         add     esp, 4*1
         popad
 
-        jmp     RETURN_RwRasterCreate_BOTH
+        jmp     RETURN_RwRasterCreate
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -148,16 +166,15 @@ void OnMY_RwRasterDestroy(DWORD calledFrom)
 }
 
 // Hook info
-#define HOOKPOS_RwRasterDestroy_US                         0x7FB020
-#define HOOKPOS_RwRasterDestroy_EU                         0x7FB060
-#define HOOKSIZE_RwRasterDestroy_US                        5
-#define HOOKSIZE_RwRasterDestroy_EU                        5
-DWORD RETURN_RwRasterDestroy_US = 0x7FB025;
-DWORD RETURN_RwRasterDestroy_EU = 0x7FB065;
-DWORD RETURN_RwRasterDestroy_BOTH = 0;
-void _declspec(naked) HOOK_RwRasterDestroy()
+#define HOOKPOS_RwRasterDestroy  0x7FB020
+#define HOOKSIZE_RwRasterDestroy 5
+DWORD                         RETURN_RwRasterDestroy = 0x7FB025;
+static void __declspec(naked) HOOK_RwRasterDestroy()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         push    esi
         mov         esi,dword ptr [esp+8]
@@ -167,8 +184,9 @@ void _declspec(naked) HOOK_RwRasterDestroy()
         add     esp, 4*1
         popad
 
-        jmp     RETURN_RwRasterDestroy_BOTH
+        jmp     RETURN_RwRasterDestroy
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -182,20 +200,22 @@ void OnMY_RwGeometryCreate_Pre(DWORD calledFrom)
 
 void OnMY_RwGeometryCreate_Post(RwGeometry* pGeometry, DWORD calledFrom)
 {
+    if (!pGeometry)
+        return;
+
     ms_Stats.uiGeometries++;
 }
 
 // Hook info
-#define HOOKPOS_RwGeometryCreate_US                         0x74CA90
-#define HOOKPOS_RwGeometryCreate_EU                         0x74CAE0
-#define HOOKSIZE_RwGeometryCreate_US                        7
-#define HOOKSIZE_RwGeometryCreate_EU                        7
-DWORD RETURN_RwGeometryCreate_US = 0x74CA97;
-DWORD RETURN_RwGeometryCreate_EU = 0x74CAE7;
-DWORD RETURN_RwGeometryCreate_BOTH = 0;
-void _declspec(naked) HOOK_RwGeometryCreate()
+#define HOOKPOS_RwGeometryCreate  0x74CA90
+#define HOOKSIZE_RwGeometryCreate 7
+DWORD                         RETURN_RwGeometryCreate = 0x74CA97;
+static void __declspec(naked) HOOK_RwGeometryCreate()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*0]
@@ -221,8 +241,9 @@ void _declspec(naked) HOOK_RwGeometryCreate()
 inner:
         mov     eax, [esp+04h]
         sub     esp, 8
-        jmp     RETURN_RwGeometryCreate_BOTH
+        jmp     RETURN_RwGeometryCreate
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -232,21 +253,30 @@ inner:
 //////////////////////////////////////////////////////////////////////////////////////////
 void OnMY_RwGeometryDestroy(DWORD calledFrom, RwGeometry* pGeometry)
 {
-    if (pGeometry->refs == 1)
+    if (!pGeometry)
+        return;
+
+    if (SharedUtil::IsReadablePointer(pGeometry, kGeometryRefsReadableSize))
+    {
+        if (pGeometry->refs == 1 && ms_Stats.uiGeometries > 0)
+            ms_Stats.uiGeometries--;
+        return;
+    }
+
+    if (ms_Stats.uiGeometries > 0)
         ms_Stats.uiGeometries--;
 }
 
 // Hook info
-#define HOOKPOS_RwGeometryDestroy_US                         0x74CCC0
-#define HOOKPOS_RwGeometryDestroy_EU                         0x74CD10
-#define HOOKSIZE_RwGeometryDestroy_US                        5
-#define HOOKSIZE_RwGeometryDestroy_EU                        5
-DWORD RETURN_RwGeometryDestroy_US = 0x74CCC5;
-DWORD RETURN_RwGeometryDestroy_EU = 0x74CD15;
-DWORD RETURN_RwGeometryDestroy_BOTH = 0;
-void _declspec(naked) HOOK_RwGeometryDestroy()
+#define HOOKPOS_RwGeometryDestroy  0x74CCC0
+#define HOOKSIZE_RwGeometryDestroy 5
+DWORD                         RETURN_RwGeometryDestroy = 0x74CCC5;
+static void __declspec(naked) HOOK_RwGeometryDestroy()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*1]
@@ -257,8 +287,9 @@ void _declspec(naked) HOOK_RwGeometryDestroy()
 
         push    esi
         mov         esi,dword ptr [esp+8]
-        jmp     RETURN_RwGeometryDestroy_BOTH
+        jmp     RETURN_RwGeometryDestroy
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/TaskGoTo.h
  *  PURPOSE:     Go to task interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -34,12 +34,12 @@ enum
     WANDER_TYPE_PROSTITUTE
 };
 
-#define NO_WANDER_TYPE      9999
+#define NO_WANDER_TYPE 9999
 
 class CTaskComplexWander : public virtual CTaskComplex
 {
 public:
-    virtual ~CTaskComplexWander(){};
+    virtual ~CTaskComplexWander() {};
 
     virtual CNodeAddress* GetNextNode() = 0;
     virtual CNodeAddress* GetLastNode() = 0;
@@ -50,5 +50,5 @@ public:
 class CTaskComplexWanderStandard : public virtual CTaskComplexWander
 {
 public:
-    virtual ~CTaskComplexWanderStandard(){};
+    virtual ~CTaskComplexWanderStandard() {};
 };

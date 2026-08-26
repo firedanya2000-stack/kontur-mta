@@ -12,8 +12,10 @@
 
 #include <vector>
 
-void ShowSplash(HINSTANCE hInstance);
+void ShowSplash(HINSTANCE instance);
 void HideSplash();
+void SuspendSplash();
+void ResumeSplash();
 
 void ShowProgressDialog(HINSTANCE hInstance, const SString& strTitle, bool bAllowCancel = false);
 void HideProgressDialog();
@@ -24,10 +26,11 @@ void StopPseudoProgress();
 
 SString ShowCrashedDialog(HINSTANCE hInstance, const SString& strMessage);
 void    HideCrashedDialog();
+void    ShowOOMMessageBox(HINSTANCE hInstance);
 
 struct GraphicsLibrary
 {
-    SString stem;            // filename without the final extension
+    SString stem;  // filename without the final extension
     SString absoluteFilePath;
     SString md5Hash;
     SString appLastHash;

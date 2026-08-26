@@ -5,7 +5,7 @@
  *  FILE:        sdk/xml/CXML.h
  *  PURPOSE:     XML handler interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -19,7 +19,7 @@ class CXMLAttribute;
 typedef struct SXMLString
 {
     CXMLNode* node;
-    virtual ~SXMLString(){};
+    virtual ~SXMLString() {};
 } SXMLString;
 
 class CXML

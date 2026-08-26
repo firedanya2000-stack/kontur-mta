@@ -45,13 +45,18 @@ public:
     void SetVisible(bool bVisible) { m_bVisible = bVisible; };
 
     SColor GetColor() const { return m_Color; }
-    void   SetColor(const SColor& color) { m_Color = color; }
+    void   SetColor(const SColor& color) noexcept;
 
     float GetSize() const { return m_fSize; };
     void  SetSize(float fSize) { m_fSize = fSize; };
 
     float GetPulseFraction() { return static_cast<float>(m_pMarker->GetPulseFraction()); };
     void  SetPulseFraction(float fFraction) { m_pMarker->SetPulseFraction(fFraction); };
+
+    void SetIgnoreAlphaLimits(bool ignore) noexcept { m_ignoreAlphaLimits = ignore; };
+    bool AreAlphaLimitsIgnored() const noexcept override { return m_ignoreAlphaLimits; };
+
+    class RpAtomic* GetAtomic() const override;
 
 protected:
     void StreamIn();
@@ -70,4 +75,5 @@ private:
     C3DMarker*   m_pMarker;
     unsigned int m_ulIdentifier;
     bool         m_bMarkerStreamedIn;
+    bool         m_ignoreAlphaLimits;
 };

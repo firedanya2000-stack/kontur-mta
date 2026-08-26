@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CAccount.cpp
  *  PURPOSE:     User account class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -14,6 +14,7 @@
 #include "CAccountManager.h"
 #include "CIdArray.h"
 #include "CClient.h"
+#include <regex>
 
 CAccount::CAccount(CAccountManager* pManager, EAccountType accountType, const std::string& strName, const std::string& strPassword, int iUserID,
                    const std::string& strIP, const std::string& strSerial, const SString& strHttpPassAppend)
@@ -33,7 +34,7 @@ CAccount::CAccount(CAccountManager* pManager, EAccountType accountType, const st
     m_pManager->AddToList(this);
 
     if (m_Password.SetPassword(strPassword))
-        m_pManager->MarkAsChanged(this);            // Save if password upgraded
+        m_pManager->MarkAsChanged(this);  // Save if password upgraded
 }
 
 CAccount::~CAccount()
@@ -142,7 +143,7 @@ std::shared_ptr<CLuaArgument> CAccount::GetData(const std::string& strKey)
                 break;
 
             default:
-                dassert(0);            // It never should hit this, if so, something corrupted
+                dassert(0);  // It never should hit this, if so, something corrupted
                 break;
         }
     }
@@ -210,7 +211,7 @@ void CAccount::EnsureLoadedSerialUsage()
     }
 }
 
-bool CAccount::HasLoadedSerialUsage()
+bool CAccount::HasLoadedSerialUsage() const
 {
     return m_bLoadedSerialUsage;
 }
@@ -238,11 +239,7 @@ CAccount::SSerialUsage* CAccount::GetSerialUsage(const SString& strSerial)
 bool CAccount::IsSerialAuthorized(const SString& strSerial)
 {
     SSerialUsage* pInfo = GetSerialUsage(strSerial);
-    if (pInfo)
-    {
-        return pInfo->IsAuthorized();
-    }
-    return false;
+    return pInfo ? pInfo->IsAuthorized() : false;
 }
 
 //
@@ -260,22 +257,35 @@ bool CAccount::IsIpAuthorized(const SString& strIp)
 }
 
 //
+// Check if the serial has 32 hexadecimal characters
+//
+bool CAccount::IsValidSerial(const std::string& serial) const noexcept
+{
+    const std::regex serialPattern("^[A-Fa-f0-9]{32}$");
+
+    try
+    {
+        return std::regex_match(serial, serialPattern);
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+//
 // Mark pending serial as authorized for this account
 //
 bool CAccount::AuthorizeSerial(const SString& strSerial, const SString& strWho)
 {
     SSerialUsage* pInfo = GetSerialUsage(strSerial);
-    if (pInfo)
-    {
-        if (!pInfo->IsAuthorized())
-        {
-            pInfo->tAuthDate = time(nullptr);
-            pInfo->strAuthWho = strWho;
-            m_pManager->MarkAsChanged(this);
-            return true;
-        }
-    }
-    return false;
+    if (!pInfo || pInfo->IsAuthorized())
+        return false;
+
+    pInfo->tAuthDate = time(nullptr);
+    pInfo->strAuthWho = strWho;
+    m_pManager->MarkAsChanged(this);
+    return true;
 }
 
 //
@@ -295,6 +305,19 @@ bool CAccount::RemoveSerial(const SString& strSerial)
         }
     }
     return false;
+}
+
+//
+// Replace the serial number for a specific account
+//
+bool CAccount::SetAccountSerial(const std::string& serial) noexcept
+{
+    if (!IsValidSerial(serial))
+        return false;
+
+    m_strSerial = serial;
+    m_pManager->MarkAsChanged(this);
+    return true;
 }
 
 //
@@ -320,29 +343,28 @@ void CAccount::RemoveUnauthorizedSerials()
 bool CAccount::AddSerialForAuthorization(const SString& strSerial, const SString& strIp)
 {
     SSerialUsage* pInfo = GetSerialUsage(strSerial);
-    if (!pInfo)
+    if (pInfo)
+        return false;
+
+    // Only one new serial at a time, so remove all other unauthorized serials for this account
+    RemoveUnauthorizedSerials();
+
+    SSerialUsage info;
+    info.strSerial = strSerial;
+    info.strAddedIp = strIp;
+    info.tAddedDate = time(nullptr);
+    info.tAuthDate = 0;
+    info.tLastLoginDate = 0;
+    info.tLastLoginHttpDate = 0;
+
+    // First one doesn't require authorization
+    if (m_SerialUsageList.size() == 0)
     {
-        // Only one new serial at a time, so remove all other unauthorized serials for this account
-        RemoveUnauthorizedSerials();
-
-        SSerialUsage info;
-        info.strSerial = strSerial;
-        info.strAddedIp = strIp;
-        info.tAddedDate = time(nullptr);
-        info.tAuthDate = 0;
-        info.tLastLoginDate = 0;
-        info.tLastLoginHttpDate = 0;
-
-        // First one doesn't require authorization
-        if (m_SerialUsageList.size() == 0)
-        {
-            info.tAuthDate = time(nullptr);
-        }
-        m_SerialUsageList.push_back(info);
-        m_pManager->MarkAsChanged(this);
-        return true;
+        info.tAuthDate = time(nullptr);
     }
-    return false;
+    m_SerialUsageList.push_back(info);
+    m_pManager->MarkAsChanged(this);
+    return true;
 }
 
 //
@@ -372,10 +394,10 @@ void CAccount::OnLoginHttpSuccess(const SString& strIp)
     EnsureLoadedSerialUsage();
     for (auto& info : m_SerialUsageList)
     {
-        if (info.strLastLoginIp == strIp && info.IsAuthorized())
-        {
-            info.tLastLoginHttpDate = time(nullptr);
-            m_pManager->MarkAsChanged(this);
-        }
+        if (info.strLastLoginIp != strIp || !info.IsAuthorized())
+            continue;
+
+        info.tLastLoginHttpDate = time(nullptr);
+        m_pManager->MarkAsChanged(this);
     }
 }

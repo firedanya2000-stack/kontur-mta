@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CResource.h
  *  PURPOSE:     Resource object class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,11 +15,12 @@
 #include "CClientEntity.h"
 #include "CResourceConfigItem.h"
 #include "CResourceFile.h"
+#include "CResourceModelStreamer.h"
 #include "CElementGroup.h"
 #include <list>
 
-#define MAX_RESOURCE_NAME_LENGTH    255
-#define MAX_FUNCTION_NAME_LENGTH    50
+#define MAX_RESOURCE_NAME_LENGTH 255
+#define MAX_FUNCTION_NAME_LENGTH 50
 
 struct SNoClientCacheScript
 {
@@ -69,6 +70,7 @@ public:
     void                 SetResourceEntity(CClientEntity* pEntity) { m_pResourceEntity = pEntity; }
     class CClientEntity* GetResourceDynamicEntity() { return m_pResourceDynamicEntity; }
     void                 SetResourceDynamicEntity(CClientEntity* pEntity) { m_pResourceDynamicEntity = pEntity; }
+    SString              GetResourceDirectoryPath() { return GetResourceDirectoryPath(eAccessType::ACCESS_PUBLIC, ""); }
     SString              GetResourceDirectoryPath(eAccessType accessType, const SString& strMetaPath);
     class CClientEntity* GetResourceGUIEntity() { return m_pResourceGUIEntity; }
     void                 SetResourceGUIEntity(CClientEntity* pEntity) { m_pResourceGUIEntity = pEntity; }
@@ -77,6 +79,8 @@ public:
     CClientEntity*       GetResourceTXDRoot() { return m_pResourceTXDRoot; };
     CClientEntity*       GetResourceIFPRoot() { return m_pResourceIFPRoot; };
     CClientEntity*       GetResourceIMGRoot() { return m_pResourceIMGRoot; };
+
+    CResourceModelStreamer* GetResourceModelStreamer() { return &m_modelStreamer; };
 
     // This is to delete all the elements created in this resource that are created locally in this client
     void DeleteClientChildren();
@@ -89,6 +93,13 @@ public:
     std::list<CResourceFile*>::iterator IterBeginResourceFiles() { return m_ResourceFiles.begin(); }
     std::list<CResourceFile*>::iterator IterEndResourceFiles() { return m_ResourceFiles.end(); }
 
+    /**
+     * @brief Searches for a CResourceFile with the given relative path.
+     * @param relativePath Relative resource file path (from meta)
+     * @return A pointer to CResourceFile on success, null otherwise
+     */
+    CResourceFile* GetResourceFile(const SString& relativePath) const;
+
     void               SetRemainingNoClientCacheScripts(unsigned short usRemaining) { m_usRemainingNoClientCacheScripts = usRemaining; }
     void               LoadNoClientCacheScript(const char* chunk, unsigned int length, const SString& strFilename);
     const CMtaVersion& GetMinServerReq() const { return m_strMinServerReq; }
@@ -99,9 +110,13 @@ public:
     int                GetDownloadPriorityGroup() { return m_iDownloadPriorityGroup; }
     void               SetDownloadPriorityGroup(int iDownloadPriorityGroup) { m_iDownloadPriorityGroup = iDownloadPriorityGroup; }
 
+    void         SetStartCounter(unsigned int startCounter) { m_startCounter = startCounter; }
+    unsigned int GetStartCounter() const noexcept { return m_startCounter; }
+
 private:
     unsigned short       m_usNetID;
     uint                 m_uiScriptID;
+    unsigned int         m_startCounter{};
     SString              m_strResourceName;
     CLuaMain*            m_pLuaVM;
     CLuaManager*         m_pLuaManager;
@@ -109,8 +124,8 @@ private:
     bool                 m_bActive;
     bool                 m_bStarting;
     bool                 m_bStopping;
-    class CClientEntity* m_pResourceEntity;                   // no idea what this is used for anymore
-    class CClientEntity* m_pResourceDynamicEntity;            // parent of elements created by the resource
+    class CClientEntity* m_pResourceEntity;         // no idea what this is used for anymore
+    class CClientEntity* m_pResourceDynamicEntity;  // parent of elements created by the resource
     class CClientEntity* m_pResourceCOLRoot;
     class CClientEntity* m_pResourceDFFEntity;
     class CClientEntity* m_pResourceGUIEntity;
@@ -127,14 +142,20 @@ private:
     // To control cursor show/hide
     static int m_iShowingCursor;
     bool       m_bShowingCursor;
+    static int m_iToggleControls;
+    bool       m_bToggleControls;
 
-    SString m_strResourceDirectoryPath;                      // stores the path to /mods/deathmatch/resources/resource_name
-    SString m_strResourcePrivateDirectoryPath;               // stores the path to /mods/deathmatch/priv/server-id/resource_name
-    SString m_strResourcePrivateDirectoryPathOld;            // stores the path to /mods/deathmatch/priv/old-server-id/resource_name
+    SString m_strResourceDirectoryPath;            // stores the path to /mods/deathmatch/resources/resource_name
+    SString m_strResourcePrivateDirectoryPath;     // stores the path to /mods/deathmatch/priv/server-id/resource_name
+    SString m_strResourcePrivateDirectoryPathOld;  // stores the path to /mods/deathmatch/priv/old-server-id/resource_name
 
     std::list<class CResourceFile*>       m_ResourceFiles;
     std::list<class CResourceConfigItem*> m_ConfigFiles;
     CFastHashSet<SString>                 m_exportedFunctions;
-    CElementGroup*                        m_pDefaultElementGroup;            // stores elements created by scripts in this resource
+    CElementGroup*                        m_pDefaultElementGroup;  // stores elements created by scripts in this resource
     std::list<SNoClientCacheScript>       m_NoClientCacheScriptList;
+
+    CResourceModelStreamer m_modelStreamer{};
+
+    bool VerifyPendingClientChecksums();
 };

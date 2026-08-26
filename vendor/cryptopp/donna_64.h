@@ -14,10 +14,14 @@
 
 #include "config.h"
 
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 # include <intrin.h>
-# pragma intrinsic(_umul128)
-# pragma intrinsic(__shiftright128)
+# ifndef _M_ARM64EC
+#  pragma intrinsic(_umul128)
+#  pragma intrinsic(__shiftright128)
+# else
+#  include <minwindef.h>
+# endif
 #endif
 
 NAMESPACE_BEGIN(CryptoPP)
@@ -52,7 +56,7 @@ using CryptoPP::word128;
 # define shr128(out,in,shift) out = (word64)(in >> (shift));
 # define shl128(out,in,shift) out = (word64)((in << shift) >> 64);
 
-#elif defined(_MSC_VER)
+#elif defined(CRYPTOPP_MSC_VERSION)
 struct word128 { word64 lo, hi; };
 # define mul64x64_128(out,a,b) out.lo = _umul128(a,b,&out.hi);
 # define shr128_pair(out,hi,lo,shift) out = __shiftright128(lo, hi, shift);

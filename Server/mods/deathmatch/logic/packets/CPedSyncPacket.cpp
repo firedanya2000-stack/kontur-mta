@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPedSyncPacket.cpp
  *  PURPOSE:     Ped synchronization packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -38,24 +38,13 @@ bool CPedSyncPacket::Read(NetBitStreamInterface& BitStream)
             return false;
         Data.ucFlags = ucFlags;
 
+        if (!BitStream.Read(Data.flags2))
+            return false;
+
         // Did we recieve position?
         if (ucFlags & 0x01)
         {
-            if (!BitStream.Read(Data.vecPosition.fX) || !BitStream.Read(Data.vecPosition.fY) || !BitStream.Read(Data.vecPosition.fZ))
-                return false;
-        }
-
-        // Rotation
-        if (ucFlags & 0x02)
-        {
-            if (!BitStream.Read(Data.fRotation))
-                return false;
-        }
-
-        // Velocity
-        if (ucFlags & 0x04)
-        {
-            if (!BitStream.Read(Data.vecVelocity.fX) || !BitStream.Read(Data.vecVelocity.fY) || !BitStream.Read(Data.vecVelocity.fZ))
+            if (!Data.ReadSpatialData(BitStream))
                 return false;
         }
 
@@ -71,10 +60,24 @@ bool CPedSyncPacket::Read(NetBitStreamInterface& BitStream)
                 return false;
         }
 
+        if (Data.flags2 & 0x01)
+        {
+            SCameraRotationSync camRotation;
+            if (!BitStream.Read(&camRotation))
+                return false;
+            Data.cameraRotation = camRotation.data.fRotation;
+        }
+
         // On Fire
         if (ucFlags & 0x20)
         {
             if (!BitStream.ReadBit(Data.bOnFire))
+                return false;
+        }
+
+        if (ucFlags & 0x60)
+        {
+            if (!BitStream.ReadBit(Data.isReloadingWeapon))
                 return false;
         }
 
@@ -107,37 +110,90 @@ bool CPedSyncPacket::Write(NetBitStreamInterface& BitStream) const
     BitStream.Write(Data.ucSyncTimeContext);
 
     BitStream.Write(Data.ucFlags);
+    BitStream.Write(Data.flags2);
 
     // Position and rotation
     if (Data.ucFlags & 0x01)
-    {
-        BitStream.Write(Data.vecPosition.fX);
-        BitStream.Write(Data.vecPosition.fY);
-        BitStream.Write(Data.vecPosition.fZ);
-    }
+        BitStream.Write(&Data.position);
 
     if (Data.ucFlags & 0x02)
-    {
-        BitStream.Write(Data.fRotation);
-    }
+        BitStream.Write(&Data.rotation);
 
     // Velocity
     if (Data.ucFlags & 0x04)
-    {
-        BitStream.Write(Data.vecVelocity.fX);
-        BitStream.Write(Data.vecVelocity.fY);
-        BitStream.Write(Data.vecVelocity.fZ);
-    }
+        BitStream.Write(&Data.velocity);
 
     // Health, armour, on fire and is in water
     if (Data.ucFlags & 0x08)
         BitStream.Write(Data.fHealth);
     if (Data.ucFlags & 0x10)
         BitStream.Write(Data.fArmor);
+
+    if (Data.flags2 & 0x01)
+    {
+        SCameraRotationSync camRotation;
+        camRotation.data.fRotation = Data.cameraRotation;
+        BitStream.Write(&camRotation);
+    }
+
     if (Data.ucFlags & 0x20)
         BitStream.WriteBit(Data.bOnFire);
+    if (Data.ucFlags & 0x60)
+        BitStream.Write(Data.isReloadingWeapon);
     if (Data.ucFlags & 0x40)
         BitStream.Write(Data.bIsInWater);
+
+    return true;
+}
+
+bool CPedSyncPacket::SyncData::ReadSpatialData(NetBitStreamInterface& BitStream)
+{
+    // Did we recieve position?
+    if (ucFlags & 0x01)
+    {
+        if (!BitStream.Read(&position))
+            return false;
+    }
+
+    // Rotation
+    if (ucFlags & 0x02)
+    {
+        if (!BitStream.Read(&rotation))
+            return false;
+    }
+
+    // Velocity
+    if (ucFlags & 0x04)
+    {
+        if (!BitStream.Read(&velocity))
+            return false;
+    }
+
+    return true;
+}
+
+bool CPedSyncPacket::SyncData::ReadSpatialDataBC(NetBitStreamInterface& BitStream)
+{
+    // Did we recieve position?
+    if (ucFlags & 0x01)
+    {
+        if (!BitStream.Read(position.data.vecPosition.fX) || !BitStream.Read(position.data.vecPosition.fY) || !BitStream.Read(position.data.vecPosition.fZ))
+            return false;
+    }
+
+    // Rotation
+    if (ucFlags & 0x02)
+    {
+        if (!BitStream.Read(rotation.data.fRotation))
+            return false;
+    }
+
+    // Velocity
+    if (ucFlags & 0x04)
+    {
+        if (!BitStream.Read(velocity.data.vecVelocity.fX) || !BitStream.Read(velocity.data.vecVelocity.fY) || !BitStream.Read(velocity.data.vecVelocity.fZ))
+            return false;
+    }
 
     return true;
 }

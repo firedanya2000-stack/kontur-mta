@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPacketTranslator.cpp
  *  PURPOSE:     Network packet translator class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -48,6 +48,7 @@
 #include "packets/CPlayerNoSocketPacket.h"
 #include "packets/CPlayerNetworkStatusPacket.h"
 #include "packets/CPlayerResourceStartPacket.h"
+#include "packets/CPlayerWorldSpecialPropertyPacket.h"
 
 CPacketTranslator::CPacketTranslator(CPlayerManager* pPlayerManager)
 {
@@ -212,6 +213,10 @@ CPacket* CPacketTranslator::Translate(const NetServerPlayerID& Socket, ePacketID
             pTemp = new CPlayerResourceStartPacket;
             break;
 
+        case PACKET_ID_PLAYER_WORLD_SPECIAL_PROPERTY:
+            pTemp = new CPlayerWorldSpecialPropertyPacket;
+            break;
+
         default:
             break;
     }
@@ -245,10 +250,10 @@ CPacket* CPacketTranslator::Translate(const NetServerPlayerID& Socket, ePacketID
         else
             // Attempt to read the content, if we fail, delete the packet again
             if (!pTemp->Read(BitStream))
-        {
-            delete pTemp;
-            pTemp = NULL;
-        }
+            {
+                delete pTemp;
+                pTemp = NULL;
+            }
     }
 
     // Return the class

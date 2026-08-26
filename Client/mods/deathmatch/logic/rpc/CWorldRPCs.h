@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/rpc/CWorldRPCs.h
  *  PURPOSE:     Header for world RPC calls
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -64,4 +64,6 @@ public:
     DECLARE_RPC(SetMoonSize);
     DECLARE_RPC(ResetMoonSize);
     DECLARE_RPC(SetSyncIntervals);
+    DECLARE_RPC(SetWorldSpecialPropertyEnabled);
+    DECLARE_RPC(ResetWorldProperties);
 };

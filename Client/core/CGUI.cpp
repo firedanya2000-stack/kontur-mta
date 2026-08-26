@@ -5,7 +5,7 @@
  *  FILE:        core/CGUI.cpp
  *  PURPOSE:     Core graphical user interface container class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -20,11 +20,11 @@ template <>
 CLocalGUI* CSingleton<CLocalGUI>::m_pSingleton = NULL;
 
 #ifndef HIWORD
-    #define HIWORD(l)           ((WORD)((DWORD_PTR)(l) >> 16))
+    #define HIWORD(l) ((WORD)((DWORD_PTR)(l) >> 16))
 #endif
-#define GET_WHEEL_DELTA_WPARAM(wParam)  ((short)HIWORD(wParam))
+#define GET_WHEEL_DELTA_WPARAM(wParam) ((short)HIWORD(wParam))
 
-const char* const DEFAULT_SKIN_NAME = "Default 2023";            // TODO: Change to whatever the default skin is if it changes
+const char* const DEFAULT_SKIN_NAME = "Default 2023";  // TODO: Change to whatever the default skin is if it changes
 
 CLocalGUI::CLocalGUI()
 {
@@ -44,6 +44,8 @@ CLocalGUI::CLocalGUI()
 
     m_LastSettingsRevision = -1;
     m_LocaleChangeCounter = 0;
+    m_bHasQueuedLocaleChange = false;
+    m_bPendingRestartPrompt = false;
 }
 
 CLocalGUI::~CLocalGUI()
@@ -56,9 +58,35 @@ CLocalGUI::~CLocalGUI()
 
 void CLocalGUI::SetSkin(const char* szName)
 {
+    // Guard against re-entrant calls. MessageBoxW pumps the message loop, so the
+    // fatal CC51 dialog below would otherwise trigger pulse calls that touch
+    // m_pConsole while windows are half-destroyed (DestroyWindows called but
+    // CreateWindows not yet reached). The guard also clears the flag if a
+    // window rebuild throws, so a failed skin change cannot disable later ones.
+    static bool s_bInSetSkin = false;
+    if (s_bInSetSkin)
+        return;
+    struct SetSkinGuard
+    {
+        bool& flag;
+        explicit SetSkinGuard(bool& inFlag) : flag(inFlag) { flag = true; }
+        ~SetSkinGuard() { flag = false; }
+    } guard(s_bInSetSkin);
+
+    // A fatal fault dialog may be pumping the message loop; do not rebuild the
+    // windows inside that pump.
+    if (CLocalGUI::IsFaultDialogOpen())
+        return;
+
+    CVector2D consolePos, consoleSize;
+
     bool guiWasLoaded = m_pMainMenu != NULL;
     if (guiWasLoaded)
+    {
+        consolePos = m_pConsole->GetPosition();
+        consoleSize = m_pConsole->GetSize();
         DestroyWindows();
+    }
 
     std::string error;
 
@@ -82,7 +110,11 @@ void CLocalGUI::SetSkin(const char* szName)
         }
         catch (...)
         {
-            // Even the default skin doesn't work, so give up
+            // Both the selected and the default skin failed. MessageBoxW pumps the
+            // message loop (re-entrant), but the guard above prevents further damage
+            // before TerminateProcess takes effect. Mark the dialog as open so a
+            // nested fault during the pump terminates instead of stacking another.
+            CLocalGUI::SetFaultDialogOpen(true);
             MessageBoxUTF8(0, _("The skin you selected could not be loaded, and the default skin also could not be loaded, please reinstall MTA."),
                            _("Error") + _E("CC51"), MB_OK | MB_ICONERROR | MB_TOPMOST);
             TerminateProcess(GetCurrentProcess(), 9);
@@ -93,7 +125,13 @@ void CLocalGUI::SetSkin(const char* szName)
     m_LastSettingsRevision = cvars->GetRevision();
 
     if (guiWasLoaded)
+    {
         CreateWindows(guiWasLoaded);
+        m_pConsole->SetPosition(consolePos);
+        m_pConsole->SetSize(consoleSize);
+        // QuestionBox was destroyed with MainMenu; re-show if settings still need a restart
+        TryShowRestartPrompt();
+    }
 
     if (CCore::GetSingleton().GetConsole() && !error.empty())
         CCore::GetSingleton().GetConsole()->Echo(error.c_str());
@@ -101,11 +139,21 @@ void CLocalGUI::SetSkin(const char* szName)
 
 void CLocalGUI::ChangeLocale(const char* szName)
 {
+    // Guard against re-entrant calls while the windows are half-destroyed during
+    // a skin change (the fatal skin dialog pumps the message loop).
+    if (!m_pConsole) [[unlikely]]
+        return;
+
+    // A fatal fault dialog may be pumping the message loop; do not rebuild the
+    // windows inside that pump.
+    if (CLocalGUI::IsFaultDialogOpen())
+        return;
+
     bool guiWasLoaded = m_pMainMenu != NULL;
     assert(guiWasLoaded);
 
-    CVector2D vPos = m_pConsole->GetPosition();
-    CVector2D vSize = m_pConsole->GetSize();
+    CVector2D consolePos = m_pConsole->GetPosition();
+    CVector2D consoleSize = m_pConsole->GetSize();
 
     if (guiWasLoaded)
         DestroyWindows();
@@ -113,18 +161,27 @@ void CLocalGUI::ChangeLocale(const char* szName)
     CClientVariables* cvars = CCore::GetSingleton().GetCVars();
     m_LastSettingsRevision = cvars->GetRevision();
 
-    g_pLocalization->SetCurrentLanguage();
-    m_LastLocaleName = szName;
+    g_pLocalization->SetCurrentLanguage(szName ? szName : "");
+
+    SString strCanonicalLocale = g_pLocalization->GetLanguageCode();
+    if (strCanonicalLocale.empty())
+        strCanonicalLocale = CVARS_GET_VALUE<SString>("locale");
+    if (strCanonicalLocale.empty() && szName)
+        strCanonicalLocale = szName;
+
+    m_LastLocaleName = strCanonicalLocale;
+
+    // Attempt CEGUI cleanup
+    if (CGUI* pGUI = CCore::GetSingleton().GetGUI())
+        pGUI->Cleanup();
 
     if (guiWasLoaded)
     {
         CreateWindows(guiWasLoaded);
-
-        if (m_pConsole != nullptr)
-        {
-            m_pConsole->SetPosition(vPos);
-            m_pConsole->SetSize(vSize);
-        }
+        m_pConsole->SetPosition(consolePos);
+        m_pConsole->SetSize(consoleSize);
+        // QuestionBox was destroyed with MainMenu; re-show if settings still need a restart
+        TryShowRestartPrompt();
     }
 }
 
@@ -152,7 +209,8 @@ void CLocalGUI::CreateWindows(bool bGameIsAlreadyLoaded)
     m_pLabelVersionTag->SetTextColor(255, 255, 255);
     m_pLabelVersionTag->SetZOrderingEnabled(false);
     m_pLabelVersionTag->MoveToBack();
-    m_pLabelVersionTag->SetVisible(false);
+    if (MTASA_VERSION_TYPE < VERSION_TYPE_UNTESTED)
+        m_pLabelVersionTag->SetAlwaysOnTop(true);
 
     // Create mainmenu
     m_pMainMenu = new CMainMenu(pGUI);
@@ -204,6 +262,132 @@ void CLocalGUI::DestroyObjects()
     SAFE_DELETE(m_pLabelVersionTag);
 }
 
+void CLocalGUI::RequestLocaleChange(const SString& strLocale)
+{
+    if (strLocale.empty())
+        return;
+
+    if (m_bHasQueuedLocaleChange && strLocale == m_QueuedLocaleChange)
+        return;
+
+    const SString strCurrentLocale = CVARS_GET_VALUE<SString>("locale");
+    if (!m_bHasQueuedLocaleChange && strLocale == strCurrentLocale && strLocale == m_LastLocaleName)
+        return;
+
+    if (m_LocaleChangeCounter > 0)
+        CCore::GetSingleton().RemoveMessageBox();
+
+    m_QueuedLocaleChange = strLocale;
+    m_bHasQueuedLocaleChange = true;
+    m_LocaleChangeCounter = 0;
+
+    // Keep the cvar at the last applied locale so dependent systems remain stable while we rebuild UI
+    if (!m_LastLocaleName.empty() && strCurrentLocale != m_LastLocaleName)
+        CVARS_SET("locale", m_LastLocaleName);
+}
+
+void CLocalGUI::RequestRestartPrompt()
+{
+    m_bPendingRestartPrompt = true;
+    TryShowRestartPrompt();
+}
+
+void CLocalGUI::TryShowRestartPrompt()
+{
+    if (!m_bPendingRestartPrompt || !m_pMainMenu)
+        return;
+
+    // Wait until locale/skin rebuilds finish so the prompt is not destroyed with MainMenu
+    if (m_bHasQueuedLocaleChange)
+        return;
+
+    SString strCurrentSkinName;
+    CVARS_GET("current_skin", strCurrentSkinName);
+    if (!strCurrentSkinName.empty() && strCurrentSkinName != m_LastSkinName)
+        return;
+
+    CQuestionBox* pQuestionBox = m_pMainMenu->GetQuestionWindow();
+    if (pQuestionBox->IsVisible())
+        return;
+
+    SString strMessage = _("Some settings will be changed when you next start MTA");
+    strMessage += _("\n\nDo you want to restart now?");
+    pQuestionBox->Reset();
+    pQuestionBox->SetTitle(_("RESTART REQUIRED"));
+    pQuestionBox->SetMessage(strMessage);
+    pQuestionBox->SetButton(0, _("No"));
+    pQuestionBox->SetButton(1, _("Yes"));
+    pQuestionBox->SetCallback(RestartPromptCallBack);
+    pQuestionBox->Show();
+}
+
+void CLocalGUI::RestartPromptCallBack(void* pData, unsigned int uiButton)
+{
+    CLocalGUI* pLocalGUI = CLocalGUI::GetSingletonPtr();
+    if (!pLocalGUI)
+        return;
+
+    if (CMainMenu* pMainMenu = pLocalGUI->GetMainMenu())
+        pMainMenu->GetQuestionWindow()->Reset();
+
+    pLocalGUI->ClearRestartPrompt();
+
+    if (uiButton == 1)
+    {
+        SetOnQuitCommand("restart");
+        CCore::GetSingleton().Quit();
+    }
+}
+
+void CLocalGUI::ApplyQueuedLocale()
+{
+    if (!m_bHasQueuedLocaleChange)
+        return;
+
+    CClientVariables* cvars = CCore::GetSingleton().GetCVars();
+
+    if (m_QueuedLocaleChange.empty())
+    {
+        m_bHasQueuedLocaleChange = false;
+        m_LocaleChangeCounter = 0;
+        CCore::GetSingleton().RemoveMessageBox();
+        return;
+    }
+
+    if (CCore::GetSingleton().GetModManager()->IsLoaded())
+    {
+        if (CConsoleInterface* pConsole = CCore::GetSingleton().GetConsole())
+            pConsole->Printf("Please disconnect before changing language");
+        if (cvars)
+            cvars->Set("locale", m_LastLocaleName);
+
+        m_bHasQueuedLocaleChange = false;
+        m_QueuedLocaleChange.clear();
+        m_LocaleChangeCounter = 0;
+        CCore::GetSingleton().RemoveMessageBox();
+        return;
+    }
+
+    ChangeLocale(m_QueuedLocaleChange);
+
+    m_bHasQueuedLocaleChange = false;
+    SString strAppliedLocale = m_LastLocaleName;
+    m_QueuedLocaleChange.clear();
+    m_LocaleChangeCounter = 0;
+
+    if (!strAppliedLocale.empty())
+    {
+        SString strCurrentLocale = CVARS_GET_VALUE<SString>("locale");
+        if (strCurrentLocale != strAppliedLocale)
+            CVARS_SET("locale", strAppliedLocale);
+    }
+
+    if (cvars)
+        m_LastSettingsRevision = cvars->GetRevision();
+
+    CCore::GetSingleton().RemoveMessageBox();
+}
+
 void CLocalGUI::DoPulse()
 {
     m_pVersionUpdater->DoPulse();
@@ -225,7 +409,8 @@ void CLocalGUI::DoPulse()
                 SetSkin(currentSkinName);
             else
             {
-                CCore::GetSingleton().GetConsole()->Printf("Please disconnect before changing skin");
+                if (CConsoleInterface* pConsole = CCore::GetSingleton().GetConsole())
+                    pConsole->Printf("Please disconnect before changing skin");
                 cvars->Set("current_skin", m_LastSkinName);
             }
         }
@@ -240,72 +425,110 @@ void CLocalGUI::DoPulse()
         {
             m_LastLocaleName = currentLocaleName;
         }
-        if (currentLocaleName != m_LastLocaleName)
+        else if (!m_bHasQueuedLocaleChange && currentLocaleName != m_LastLocaleName)
         {
-            m_LocaleChangeCounter++;
-            if (m_LocaleChangeCounter < 5)
-            {
-                // Do GUI stuff for first 5 frames
-                // Force pulse next time
-                m_LastSettingsRevision = cvars->GetRevision() - 1;
-
-                if (m_LocaleChangeCounter == 2)
-                    CCore::GetSingleton().ShowMessageBox(_E("CC99"), ("Changing language, please wait..."), MB_ICON_INFO);
-            }
-            else
-            {
-                // Do actual locale change
-                m_LocaleChangeCounter = 0;
-                CCore::GetSingleton().RemoveMessageBox();
-
-                if (!CCore::GetSingleton().GetModManager()->IsLoaded())
-                    ChangeLocale(currentLocaleName);
-                else
-                {
-                    CCore::GetSingleton().GetConsole()->Printf("Please disconnect before changing language");
-                    cvars->Set("locale", m_LastLocaleName);
-                }
-            }
+            RequestLocaleChange(currentLocaleName);
         }
+    }
+
+    if (m_bHasQueuedLocaleChange)
+    {
+        m_LocaleChangeCounter++;
+
+        if (m_LocaleChangeCounter == 2)
+            CCore::GetSingleton().ShowMessageBox(_E("CC99"), ("Changing language, please wait..."), MB_ICON_INFO);
+
+        if (m_LocaleChangeCounter >= 5)
+            ApplyQueuedLocale();
+    }
+
+    // Show after any deferred locale/skin work so a prior prompt is not lost
+    TryShowRestartPrompt();
+}
+// Set while a fatal GUI fault dialog is open, so a nested fault during the
+// dialog's message-loop pump terminates without stacking more dialogs.
+static bool s_bFaultDialogOpen = false;
+bool        CLocalGUI::IsFaultDialogOpen() noexcept
+{
+    return s_bFaultDialogOpen;
+}
+void CLocalGUI::SetFaultDialogOpen(bool bOpen) noexcept
+{
+    s_bFaultDialogOpen = bOpen;
+}
+
+// Error reporting for SEH faults in GUI rendering
+static void ReportGUISEHFault(DWORD dwExceptionCode, const char* szContext)
+{
+    // A nested fault can fire while this dialog pumps the message loop (the
+    // game frame keeps running). Show one dialog, then terminate immediately.
+    if (CLocalGUI::IsFaultDialogOpen())
+    {
+        TerminateProcess(GetCurrentProcess(), 9);
+        return;
+    }
+    CLocalGUI::SetFaultDialogOpen(true);
+
+    SString strMsg(
+        "Rendering fault in %s (code 0x%08X).\n\n"
+        "Usually caused by missing GUI/loading-screen assets.\n\n"
+        "Please verify game files or reinstall.",
+        szContext, dwExceptionCode);
+    WriteDebugEvent(SString("CLocalGUI::Draw SEH fault in %s code=0x%08X", szContext, dwExceptionCode));
+    MessageBoxUTF8(0, strMsg, _("Error") + _E("CC54"), MB_OK | MB_ICONERROR | MB_TOPMOST);
+    TerminateProcess(GetCurrentProcess(), 9);
+}
+
+// SEH filter for GUI rendering faults. Access violations and C++ exceptions
+// (CEGUI errors) are the common failures with missing or corrupt GUI assets;
+// other faults are left for the wider OnPresent guard.
+static int FilterGUISehFault(unsigned int uiExceptionCode)
+{
+    if (uiExceptionCode == EXCEPTION_ACCESS_VIOLATION || uiExceptionCode == CPP_EXCEPTION_CODE)
+        return EXCEPTION_EXECUTE_HANDLER;
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+// SEH wrapper for the entire Draw body.
+static void DrawSEHGuard(CLocalGUI* pLocalGUI)
+{
+    __try
+    {
+        pLocalGUI->DrawInternal();
+    }
+    __except (FilterGUISehFault(GetExceptionCode()))
+    {
+        ReportGUISEHFault(GetExceptionCode(), "CLocalGUI::Draw");
     }
 }
 
 void CLocalGUI::Draw()
 {
+    DrawSEHGuard(this);
+}
+
+void CLocalGUI::DrawInternal()
+{
     // Get the game interface
-    CGame*       pGame = CCore::GetSingleton().GetGame();
-    eSystemState SystemState = pGame->GetSystemState();
-    CGUI*        pGUI = CCore::GetSingleton().GetGUI();
+    CGame*      pGame = CCore::GetSingleton().GetGame();
+    SystemState systemState = pGame->GetSystemState();
+    CGUI*       pGUI = CCore::GetSingleton().GetGUI();
+
+    // The windows may be half-destroyed while a fatal dialog pumps the message
+    // loop during a skin or locale change, so skip drawing until they are back.
+    if (!m_pMainMenu) [[unlikely]]
+        return;
 
     // Update mainmenu stuff
     m_pMainMenu->Update();
 
-    // Make sure our version labels are always visible
-    static short WaitForMenu = 0;
-
-    // Cope with early finish
-    if (pGame->HasCreditScreenFadedOut())
-        WaitForMenu = 250;
-
-    if (SystemState == 7 || SystemState == 9)
-    {
-        if (WaitForMenu < 250)
-        {
-            WaitForMenu++;
-        }
-        else
-        {
-            m_pLabelVersionTag->SetVisible(true);
-            if (MTASA_VERSION_TYPE < VERSION_TYPE_RELEASE)
-                m_pLabelVersionTag->SetAlwaysOnTop(true);
-        }
-    }
-
     // If we're ingame, make sure the chatbox is drawn
-    bool bChatVisible = (SystemState == 9 /* GS_INGAME */ && m_pMainMenu->GetIsIngame() && m_bChatboxVisible && !CCore::GetSingleton().IsOfflineMod());
+    bool bChatVisible =
+        (systemState == SystemState::GS_PLAYING_GAME && m_pMainMenu->GetIsIngame() && m_bChatboxVisible && !CCore::GetSingleton().IsOfflineMod());
     if (m_pChat->IsVisible() != bChatVisible)
         m_pChat->SetVisible(bChatVisible, !bChatVisible);
-    bool bDebugVisible = (SystemState == 9 /* GS_INGAME */ && m_pMainMenu->GetIsIngame() && m_pDebugViewVisible && !CCore::GetSingleton().IsOfflineMod());
+    bool bDebugVisible =
+        (systemState == SystemState::GS_PLAYING_GAME && m_pMainMenu->GetIsIngame() && m_pDebugViewVisible && !CCore::GetSingleton().IsOfflineMod());
     if (m_pDebugView->IsVisible() != bDebugVisible)
         m_pDebugView->SetVisible(bDebugVisible, true);
 
@@ -319,7 +542,7 @@ void CLocalGUI::Draw()
 
     // If we're not at the loadingscreen
     static bool bDelayedFrame = false;
-    if (SystemState != 8 || !bDelayedFrame /* GS_INIT_PLAYING_GAME */)
+    if (systemState != SystemState::GS_INIT_PLAYING_GAME || !bDelayedFrame)
     {
         // If we have a GUI manager, draw the GUI
         if (pGUI)
@@ -328,7 +551,7 @@ void CLocalGUI::Draw()
         }
 
         // If the system state was 8, make sure we don't do another delayed frame
-        if (SystemState == 8)
+        if (systemState == SystemState::GS_INIT_PLAYING_GAME)
         {
             bDelayedFrame = true;
         }
@@ -430,9 +653,7 @@ void CLocalGUI::SetMainMenuVisible(bool bVisible)
             pGUI->SelectInputHandlers(INPUT_MOD);
         }
 
-        if (bVisible)
-            pGUI->SetCursorAlpha(1.0f);
-        else
+        if (!bVisible)
             pGUI->SetCursorAlpha(pGUI->GetCurrentServerCursorAlpha());
     }
 }
@@ -449,6 +670,11 @@ bool CLocalGUI::IsMainMenuVisible()
 CChat* CLocalGUI::GetChat()
 {
     return m_pChat;
+}
+
+float CLocalGUI::GetChatBottomPosition() const noexcept
+{
+    return m_pChat->GetChatBottomPosition();
 }
 
 CDebugView* CLocalGUI::GetDebugView()
@@ -682,7 +908,7 @@ bool CLocalGUI::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
                 return true;
             case WM_IME_KEYDOWN:
             {
-                // Handle space/return seperately in this case
+                // Handle space/return separately in this case
                 if (wParam == VK_SPACE)
                     pGUI->ProcessCharacter(MapVirtualKey(wParam, MAPVK_VK_TO_CHAR));
 
@@ -711,8 +937,6 @@ bool CLocalGUI::InputGoesToGUI()
     if (!pGUI)
         return false;
 
-    // Here we're supposed to check if things like menues are up, console is up or the chatbox is expecting input
-    // If the console is visible OR the chat is expecting input OR the mainmenu is visible
     return (IsConsoleVisible() || IsMainMenuVisible() || IsChatBoxInputEnabled() || m_bForceCursorVisible || pGUI->GetGUIInputEnabled() ||
             !CCore::GetSingleton().IsFocused() || IsWebRequestGUIVisible());
 }
@@ -824,13 +1048,13 @@ DWORD CLocalGUI::TranslateScanCodeToGUIKey(DWORD dwCharacter)
         case VK_DELETE:
             return DIK_DELETE;
         case 0x56:
-            return DIK_V;            // V
+            return DIK_V;  // V
         case 0x43:
-            return DIK_C;            // C
+            return DIK_C;  // C
         case 0x58:
-            return DIK_X;            // X
+            return DIK_X;  // X
         case 0x41:
-            return DIK_A;            // A
+            return DIK_A;  // A
         default:
             return 0;
     }

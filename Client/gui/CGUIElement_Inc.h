@@ -6,7 +6,7 @@
  *  PURPOSE:     Element derived class inclusion header
  *               (fixes C++-language issues regarding inheritance)
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -98,7 +98,7 @@ void SetHeight(float fY, bool bRelative = false)
     CGUIElement_Impl::SetHeight(fY, bRelative);
 };
 
-#ifndef EXCLUDE_SET_SIZE // WTF? TODO: Refactor this
+#ifndef EXCLUDE_SET_SIZE  // WTF? TODO: Refactor this
 void SetSize(const CVector2D& vecSize, bool bRelative = false)
 {
     CGUIElement_Impl::SetSize(vecSize, bRelative);

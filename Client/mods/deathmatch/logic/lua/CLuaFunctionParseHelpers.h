@@ -13,7 +13,19 @@
 #include <game/CAudioEngine.h>
 #include <game/CRenderWare.h>
 #include <game/CHud.h>
+#include <game/CStreaming.h>
 #include <type_traits>
+
+#include "enums/VehicleComponent.h"
+#include "enums/WeaponProperty.h"
+#include "enums/FxParticleSystems.h"
+#include "enums/WorldProperty.h"
+#include "enums/ObjectProperty.h"
+#include "enums/VehicleAudioSettingProperty.h"
+#include "enums/SoundEffectParams.h"
+#include "enums/SoundEffectType.h"
+#include "enums/ObjectGroupPhysicalProperties.h"
+#include "enums/PostFXType.h"
 
 enum eLuaType
 {
@@ -31,7 +43,7 @@ DECLARE_ENUM(eAmbientSoundType)
 DECLARE_ENUM(eCGUIType);
 DECLARE_ENUM(eDxTestMode)
 DECLARE_ENUM(eWeaponType)
-DECLARE_ENUM(eWeaponProperty)
+DECLARE_ENUM_CLASS(WeaponProperty)
 DECLARE_ENUM(eWeaponSkill)
 DECLARE_ENUM(ERenderFormat);
 DECLARE_ENUM(ETextureType);
@@ -41,13 +53,13 @@ DECLARE_ENUM(EBlendModeType)
 DECLARE_ENUM(EEntityTypeMask);
 DECLARE_ENUM(eWeaponState);
 DECLARE_ENUM(eWeaponFlags);
-DECLARE_ENUM(eVehicleComponent);
-DECLARE_ENUM(eObjectProperty);
-DECLARE_ENUM(eObjectGroup::Modifiable);
-DECLARE_ENUM(eObjectGroup::DamageEffect);
-DECLARE_ENUM(eObjectGroup::CollisionResponse);
-DECLARE_ENUM(eObjectGroup::FxType);
-DECLARE_ENUM(eObjectGroup::BreakMode);
+DECLARE_ENUM_CLASS(VehicleComponent);
+DECLARE_ENUM_CLASS(ObjectProperty);
+DECLARE_ENUM_CLASS(ObjectGroupPhysicalProperties::Modifiable);
+DECLARE_ENUM_CLASS(ObjectGroupPhysicalProperties::DamageEffect);
+DECLARE_ENUM_CLASS(ObjectGroupPhysicalProperties::CollisionResponse);
+DECLARE_ENUM_CLASS(ObjectGroupPhysicalProperties::FxType);
+DECLARE_ENUM_CLASS(ObjectGroupPhysicalProperties::BreakMode);
 DECLARE_ENUM(eFontType);
 DECLARE_ENUM(eFontQuality);
 DECLARE_ENUM(eAudioLookupIndex);
@@ -59,8 +71,9 @@ DECLARE_ENUM(eTrayIconType)
 DECLARE_ENUM(eCursorType)
 DECLARE_ENUM(eWheelPosition)
 DECLARE_ENUM(D3DPRIMITIVETYPE);
-DECLARE_ENUM(eVehicleDummies);
-DECLARE_ENUM_CLASS(eResizableVehicleWheelGroup);
+DECLARE_ENUM_CLASS(VehicleDummies);
+DECLARE_ENUM_CLASS(eGrainMultiplierType);
+DECLARE_ENUM_CLASS(ResizableVehicleWheelGroup);
 DECLARE_ENUM(eSurfaceProperties);
 DECLARE_ENUM(eSurfaceAudio);
 DECLARE_ENUM(eSurfaceBulletEffect);
@@ -68,7 +81,7 @@ DECLARE_ENUM(eSurfaceWheelEffect);
 DECLARE_ENUM(eSurfaceSkidMarkType);
 DECLARE_ENUM(eSurfaceAdhesionGroup);
 DECLARE_ENUM_CLASS(eClientModelType);
-DECLARE_ENUM(eSoundEffectType);
+DECLARE_ENUM_CLASS(SoundEffectType);
 DECLARE_ENUM_CLASS(eSoundEffectParams::Chorus);
 DECLARE_ENUM_CLASS(eSoundEffectParams::Compressor);
 DECLARE_ENUM_CLASS(eSoundEffectParams::Distortion);
@@ -79,6 +92,18 @@ DECLARE_ENUM_CLASS(eSoundEffectParams::I3DL2Reverb);
 DECLARE_ENUM_CLASS(eSoundEffectParams::ParamEq);
 DECLARE_ENUM_CLASS(eSoundEffectParams::Reverb);
 DECLARE_ENUM_CLASS(eModelIdeFlag);
+DECLARE_ENUM_CLASS(_D3DFORMAT);
+DECLARE_ENUM_CLASS(eRenderStage);
+DECLARE_ENUM_CLASS(FxParticleSystems);
+DECLARE_ENUM(ePools);
+DECLARE_ENUM_CLASS(WorldProperty);
+DECLARE_ENUM_CLASS(eModelLoadState);
+DECLARE_ENUM_CLASS(PreloadAreaOption);
+DECLARE_ENUM_CLASS(RestreamOption);
+DECLARE_ENUM_CLASS(taskType);
+DECLARE_ENUM(eEntityType);
+DECLARE_ENUM_CLASS(VehicleAudioSettingProperty);
+DECLARE_ENUM_CLASS(PostFXType);
 
 class CRemoteCall;
 
@@ -99,6 +124,9 @@ enum eDXVerticalAlign
 DECLARE_ENUM(eDXVerticalAlign);
 
 DECLARE_ENUM(eHudComponent);
+DECLARE_ENUM_CLASS(eHudComponentProperty);
+DECLARE_ENUM_CLASS(eFontStyle);
+DECLARE_ENUM_CLASS(eFontAlignment);
 
 enum eFieldOfViewMode
 {
@@ -270,6 +298,10 @@ inline SString GetClassTypeName(CClientIMG*)
 {
     return "img";
 }
+inline SString GetClassTypeName(CClientBuilding*)
+{
+    return "building";
+}
 inline SString GetClassTypeName(CClientSound*)
 {
     return "sound";
@@ -420,7 +452,7 @@ inline SString GetClassTypeName(D3DPRIMITIVETYPE*)
 {
     return "primitive-type";
 }
-inline SString GetClassTypeName(eVehicleDummies*)
+inline SString GetClassTypeName(VehicleDummies*)
 {
     return "vehicle-dummy";
 }
@@ -448,7 +480,7 @@ inline SString GetClassTypeName(eSurfaceAdhesionGroup*)
 {
     return "surface-adhesion-group";
 }
-inline SString GetClassTypeName(eSoundEffectType*)
+inline SString GetClassTypeName(SoundEffectType*)
 {
     return "soundeffect-type";
 }
@@ -488,10 +520,19 @@ inline SString GetClassTypeName(eSoundEffectParams::Reverb*)
 {
     return "soundeffect-params-reverb";
 }
+inline SString GetClassTypeName(WorldProperty*)
+{
+    return "world-property";
+}
 
 inline SString GetClassTypeName(CClientVectorGraphic*)
 {
     return "svg";
+}
+
+inline SString GetClassByTypeName(VehicleAudioSettingProperty)
+{
+    return "vehicle-audio-setting";
 }
 
 //
@@ -567,7 +608,9 @@ class CScriptArgReader;
 void MixedReadDxFontString(CScriptArgReader& argStream, eFontType& outFontType, eFontType defaultFontType, CClientDxFont*& poutDxFontElement);
 void MixedReadGuiFontString(CScriptArgReader& argStream, SString& strFontName, const char* szDefaultFontName, CClientGuiFont*& poutGuiFontElement);
 void MixedReadMaterialString(CScriptArgReader& argStream, CClientMaterial*& pMaterialElement);
+bool IsValidMatrixLuaTable(lua_State* luaVM, std::uint32_t argIndex) noexcept;
 bool ReadMatrix(lua_State* luaVM, uint uiArgIndex, CMatrix& outMatrix);
+void MinClientReqCheck(lua_State* luaVM, const char* szVersionReq, const char* szReason);
 bool MinClientReqCheck(CScriptArgReader& argStream, const char* szVersionReq, const char* szReason = nullptr);
 void ReadPregFlags(CScriptArgReader& argStream, pcrecpp::RE_Options& pOptions);
 
@@ -582,5 +625,5 @@ void CheckCanAccessOtherResourceFile(CScriptArgReader& argStream, CResource* pTh
 //
 // Other misc helpers
 //
-bool IsWeaponPropertyFlag(eWeaponProperty weaponProperty);
-uint GetWeaponPropertyFlagBit(eWeaponProperty weaponProperty);
+bool IsWeaponPropertyFlag(WeaponProperty weaponProperty);
+uint GetWeaponPropertyFlagBit(WeaponProperty weaponProperty);

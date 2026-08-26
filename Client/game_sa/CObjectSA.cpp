@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CObjectSA.cpp
  *  PURPOSE:     Object entity
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,6 +15,7 @@
 #include "CPoolsSA.h"
 #include "CRopesSA.h"
 #include "CWorldSA.h"
+#include "CFireManagerSA.h"
 
 extern CGameSA* pGame;
 
@@ -25,19 +26,23 @@ static void CObject_PreRender(CObjectSAInterface* objectInterface)
         objectEntity->pEntity->SetPreRenderRequired(true);
 }
 
-const std::uintptr_t RETURN_CCObject_PreRender = 0x59FD56;
-static void _declspec(naked) HOOK_CCObject_PreRender()
+const std::uintptr_t          RETURN_CCObject_PreRender = 0x59FD56;
+static void __declspec(naked) HOOK_CCObject_PreRender()
 {
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
     __asm
     {
-        push ecx
-        call CObject_PreRender
-        pop  ecx
-        sub  esp, 10h
-        push esi
-        mov  esi, ecx
-        jmp  RETURN_CCObject_PreRender
+        push    ecx
+        call    CObject_PreRender
+        pop     ecx
+        sub     esp, 16
+        push    esi
+        mov     esi, ecx
+        jmp     RETURN_CCObject_PreRender
     }
+    // clang-format on
 }
 
 void CObjectSA::StaticSetHooks()
@@ -61,10 +66,10 @@ struct CFileObjectInstance
     float rx;
     float ry;
     float rz;
-    float rr;            // = 1
+    float rr;  // = 1
     DWORD modelId;
     DWORD areaNumber;
-    long  flags;            // = -1
+    long  flags;  // = -1
 };
 
 CObjectSA::CObjectSA(CObjectSAInterface* objectInterface)
@@ -88,7 +93,8 @@ CObjectSA::CObjectSA(DWORD dwModel, bool bBreakingDisabled)
 {
     DWORD CObjectCreate = FUNC_CObject_Create;
     DWORD dwObjectPtr = 0;
-    _asm
+    // clang-format off
+    __asm
     {
         push    1
         push    dwModel
@@ -96,6 +102,7 @@ CObjectSA::CObjectSA(DWORD dwModel, bool bBreakingDisabled)
         add     esp, 8
         mov     dwObjectPtr, eax
     }
+    // clang-format on
 
     if (dwObjectPtr)
     {
@@ -145,18 +152,12 @@ CObjectSA::~CObjectSA()
         {
             pGame->GetRopes()->RemoveEntityRope(pInterface);
 
-            if ((DWORD)pInterface->vtbl != VTBL_CPlaceable)
+            if (!pInterface->IsPlaceableVTBL())
             {
                 CWorldSA* world = (CWorldSA*)pGame->GetWorld();
                 world->Remove(pInterface, CObject_Destructor);
 
-                DWORD dwFunc = pInterface->vtbl->SCALAR_DELETING_DESTRUCTOR;            // we use the vtbl so we can be type independent
-                _asm
-                {
-                    mov     ecx, pInterface
-                    push    1            // delete too
-                    call    dwFunc
-                }
+                pInterface->Destructor(true);
             }
         }
 
@@ -170,11 +171,13 @@ void CObjectSA::Explode()
     DWORD dwFunc = FUNC_CObject_Explode;
     DWORD dwThis = (DWORD)GetInterface();
 
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThis
         call    dwFunc
     }
+    // clang-format on
 }
 
 void CObjectSA::Break()
@@ -182,9 +185,10 @@ void CObjectSA::Break()
     DWORD dwFunc = 0x5A0D90;
     DWORD dwThis = (DWORD)GetInterface();
 
-    float fHitVelocity = 1000.0f;            // has no direct influence, but should be high enough to trigger the break (effect)
+    float fHitVelocity = 1000.0f;  // has no direct influence, but should be high enough to trigger the break (effect)
 
-    _asm
+    // clang-format off
+    __asm
     {
         push    32h // most cases: between 30 and 37
         push    0 // colliding entity. To ignore it, we can set it to 0
@@ -194,6 +198,7 @@ void CObjectSA::Break()
         mov     ecx, dwThis
         call    dwFunc
     }
+    // clang-format on
 
     if (IsGlass())
     {
@@ -202,7 +207,8 @@ void CObjectSA::Break()
         float fZ = 0.0f;
         dwFunc = FUNC_CGlass_WindowRespondsToCollision;
 
-        _asm
+        // clang-format off
+        __asm
         {
             push 0
             push fZ
@@ -216,6 +222,7 @@ void CObjectSA::Break()
             call dwFunc
             add esp, 24h
         }
+        // clang-format on
     }
 }
 
@@ -232,22 +239,10 @@ float CObjectSA::GetHealth()
 void CObjectSA::SetModelIndex(unsigned long ulModel)
 {
     // Delete any existing RwObject first
-    DWORD dwFunc = GetInterface()->vtbl->DeleteRwObject;
-    DWORD dwThis = (DWORD)GetInterface();
-    _asm
-    {
-        mov     ecx, dwThis
-        call    dwFunc
-    }
+    GetInterface()->DeleteRwObject();
 
-    // Jax: I'm not sure if using the vtbl is right (as ped and vehicle dont), but it works
-    dwFunc = GetInterface()->vtbl->SetModelIndex;
-    _asm
-    {
-        mov     ecx, dwThis
-        push    ulModel
-        call    dwFunc
-    }
+    // Jax: I'm not sure if using the virtual method is right (as ped and vehicle dont), but it works
+    GetInterface()->SetModelIndex(ulModel);
 
     CheckForGangTag();
 }
@@ -278,13 +273,15 @@ bool CObjectSA::IsGlass()
     DWORD dwThis = (DWORD)GetInterface();
     bool  bResult;
 
-    _asm
+    // clang-format off
+    __asm
     {
         push dwThis
         call dwFunc
         mov bResult, al
         add esp, 4
     }
+    // clang-format on
     return bResult;
 }
 
@@ -303,4 +300,37 @@ CVector* CObjectSA::GetScale()
 void CObjectSA::ResetScale()
 {
     SetScale(1.0f, 1.0f, 1.0f);
+}
+
+bool CObjectSA::SetOnFire(bool onFire)
+{
+    CObjectSAInterface* objectInterface = GetObjectInterface();
+    if (onFire == !!objectInterface->pFire)
+        return false;
+
+    auto* fireManager = static_cast<CFireManagerSA*>(pGame->GetFireManager());
+
+    if (onFire)
+    {
+        CFire* fire = fireManager->StartFire(this, nullptr, static_cast<float>(DEFAULT_FIRE_PARTICLE_SIZE));
+        if (!fire)
+            return false;
+
+        fire->SetTarget(this);
+        fire->SetStrength(1.0f);
+        fire->Ignite();
+        fire->SetNumGenerationsAllowed(0);
+
+        objectInterface->pFire = fire->GetInterface();
+    }
+    else
+    {
+        CFire* fire = fireManager->GetFire(objectInterface->pFire);
+        if (!fire)
+            return false;
+
+        fire->Extinguish();
+    }
+
+    return true;
 }

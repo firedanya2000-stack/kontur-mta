@@ -66,7 +66,7 @@ CClientPlayer::CClientPlayer(CClientManager* pManager, ElementID ID, bool bIsLoc
         m_remoteDataStorage->SetProcessPlayerWeapon(true);
 
         // Enable voice playback for remote players
-        if (g_pClientGame->GetVoiceRecorder()->IsEnabled())            // If voice is enabled
+        if (g_pClientGame->GetVoiceRecorder()->IsEnabled())  // If voice is enabled
             m_voice = new CClientPlayerVoice(this, g_pClientGame->GetVoiceRecorder());
     }
 
@@ -269,7 +269,6 @@ void CClientPlayer::DischargeWeapon(eWeaponType weaponType, const CVector& vecSt
         if (weaponType != GetCurrentWeaponType())
         {
             GiveWeapon(weaponType, 99, true);
-            AddReportLog(5432, SString("DischargeWeapon adding missing weapon %d (%s)", weaponType, GetNick()), 30);
         }
 
         // Check weapon matches and is enabled for bullet sync
@@ -311,13 +310,13 @@ void CClientPlayer::DischargeWeapon(eWeaponType weaponType, const CVector& vecSt
                 //      CPlayerPed has post damage health/armor
 
                 float fPreviousHealth = pBackupDamagedPlayer->m_fHealth;
-                float fPreviousArmor = pBackupDamagedPlayer->m_fArmor;
+                float fPreviousArmor = pBackupDamagedPlayer->m_armor;
 
                 // Calculate how much damage should be applied to health/armor
-                float fArmorDamage = std::min(fBackupDamage, pBackupDamagedPlayer->m_fArmor);
+                float fArmorDamage = std::min(fBackupDamage, pBackupDamagedPlayer->m_armor);
                 float fHealthDamage = std::min(fBackupDamage - fArmorDamage, pBackupDamagedPlayer->m_fHealth);
 
-                float fNewArmor = pBackupDamagedPlayer->m_fArmor - fArmorDamage;
+                float fNewArmor = pBackupDamagedPlayer->m_armor - fArmorDamage;
                 float fNewHealth = pBackupDamagedPlayer->m_fHealth - fHealthDamage;
 
                 // Ensure CPlayerPed has post damage health/armor

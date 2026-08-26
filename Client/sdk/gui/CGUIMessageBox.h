@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIMessageBox.h
  *  PURPOSE:     Message box interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -18,7 +18,7 @@
 class CGUIMessageBox
 {
 public:
-    virtual ~CGUIMessageBox(){};
+    virtual ~CGUIMessageBox() {};
 
     virtual void SetAutoDestroy(bool bAutoDestroy) = 0;
     virtual bool GetAutoDestroy() = 0;

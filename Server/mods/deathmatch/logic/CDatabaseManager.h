@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CDatabaseManager.h
  *  PURPOSE:     Outside world interface for enjoying asynchronous database functionality
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 
 #define INVALID_DB_HANDLE             (0)
 #define DB_SQLITE_QUEUE_NAME_INTERNAL "sqlite internal"
-#define DB_SQLITE_QUEUE_NAME_DEFAULT  "sqlite"            // Note: MySql default queue name is the host string
+#define DB_SQLITE_QUEUE_NAME_DEFAULT  "sqlite"  // Note: MySql default queue name is the host string
 
 class CDatabaseJobQueue;
 typedef uint            SDbConnectionId;

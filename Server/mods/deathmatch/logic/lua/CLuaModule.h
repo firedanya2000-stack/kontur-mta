@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/lua/CLuaModule.h
  *  PURPOSE:     Lua module extension class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -59,7 +59,7 @@ public:
     void      DebugPrintf(lua_State* luaVM, const char* szFormat, ...);
     bool      RegisterFunction(lua_State* luaVM, const char* szFunctionName, lua_CFunction Func);
     bool      GetResourceName(lua_State*   luaVM,
-                              std::string& strName);            // This function might not work if module and MTA were compiled with different compiler versions
+                              std::string& strName);  // This function might not work if module and MTA were compiled with different compiler versions
     CChecksum GetResourceMetaChecksum(lua_State* luaVM);
     CChecksum GetResourceFileChecksum(lua_State* luaVM, const char* szFile);
 

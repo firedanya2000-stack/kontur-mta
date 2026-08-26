@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/luadefs/CLuaAccountDefs.cpp
  *  PURPOSE:     Lua function definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,6 +23,7 @@ void CLuaAccountDefs::LoadFunctions()
 
         // Account get functions
         {"getAccountName", GetAccountName},
+        {"getAccountType", ArgumentParser<GetAccountType>},
         {"getAccountPlayer", GetAccountPlayer},
         {"isGuestAccount", IsGuestAccount},
         {"getAccountData", GetAccountData},
@@ -41,6 +42,7 @@ void CLuaAccountDefs::LoadFunctions()
         {"addAccount", AddAccount},
         {"removeAccount", RemoveAccount},
         {"setAccountPassword", SetAccountPassword},
+        {"setAccountSerial", ArgumentParser<SetAccountSerial>},
         {"setAccountData", SetAccountData},
         {"setAccountName", SetAccountName},
         {"copyAccountData", CopyAccountData},
@@ -70,6 +72,7 @@ void CLuaAccountDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "setData", "setAccountData");
     lua_classfunction(luaVM, "setPassword", "setAccountPassword");
     lua_classfunction(luaVM, "setName", "setAccountName");
+    lua_classfunction(luaVM, "setSerial", "setAccountSerial");
 
     lua_classfunction(luaVM, "getSerial", "getAccountSerial");
     lua_classfunction(luaVM, "getIP", "getAccountIP");
@@ -77,10 +80,11 @@ void CLuaAccountDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "getData", "getAccountData");
     lua_classfunction(luaVM, "getAllData", "getAllAccountData");
     lua_classfunction(luaVM, "getName", "getAccountName");
+    lua_classfunction(luaVM, "getType", "getAccountType");
     lua_classfunction(luaVM, "getPlayer", "getAccountPlayer");
     lua_classfunction(luaVM, "isGuest", "isGuestAccount");
 
-    lua_classvariable(luaVM, "serial", NULL, "getAccountSerial");
+    lua_classvariable(luaVM, "serial", "setAccountSerial", "getAccountSerial");
     lua_classvariable(luaVM, "name", "setAccountName", "getAccountName");
     lua_classvariable(luaVM, "id", NULL, "getAccountID");
     lua_classvariable(luaVM, "ip", NULL, "getAccountIP");
@@ -114,6 +118,21 @@ int CLuaAccountDefs::GetAccountName(lua_State* luaVM)
 
     lua_pushboolean(luaVM, false);
     return 1;
+}
+
+std::string CLuaAccountDefs::GetAccountType(CAccount* pAccount)
+{
+    switch (pAccount->GetType())
+    {
+        case EAccountType::Guest:
+            return "guest";
+        case EAccountType::Console:
+            return "console";
+        case EAccountType::Player:
+            return "player";
+        default:
+            return "unknown";
+    }
 }
 
 int CLuaAccountDefs::GetAccountPlayer(lua_State* luaVM)
@@ -494,6 +513,11 @@ int CLuaAccountDefs::RemoveAccount(lua_State* luaVM)
 
     lua_pushboolean(luaVM, false);
     return 1;
+}
+
+bool CLuaAccountDefs::SetAccountSerial(CAccount* account, std::string serial) noexcept
+{
+    return CStaticFunctionDefinitions::SetAccountSerial(account, serial);
 }
 
 int CLuaAccountDefs::SetAccountName(lua_State* luaVM)

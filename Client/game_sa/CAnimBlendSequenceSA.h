@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CAnimBlendSequenceSA.cpp
  *  PURPOSE:     Header file for animation blend sequence class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -22,8 +22,8 @@ class CAnimBlendSequenceSAInterface
 public:
     union
     {
-        uint16_t m_boneId;            // m_boneId is set if ( sFlags & 0x10u ) is true
-        uint32_t m_hash;              // otherwise m_hash is set
+        uint16_t m_boneId;  // m_boneId is set if ( sFlags & 0x10u ) is true
+        uint32_t m_hash;    // otherwise m_hash is set
     };
     unsigned short sFlags;
     unsigned short sNumKeyFrames;

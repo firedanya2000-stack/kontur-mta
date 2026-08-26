@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/ASE.h
  *  PURPOSE:     All-Seeing Eye server query protocol handler class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -33,11 +33,11 @@ typedef int SOCKET;
 #include <stdio.h>
 #include <list>
 
-#define MAX_ASE_GAME_TYPE_LENGTH    200
-#define MAX_ASE_MAP_NAME_LENGTH     200
-#define MAX_RULE_KEY_LENGTH         200
-#define MAX_RULE_VALUE_LENGTH       200
-#define MAX_ANNOUNCE_VALUE_LENGTH   200
+#define MAX_ASE_GAME_TYPE_LENGTH  200
+#define MAX_ASE_MAP_NAME_LENGTH   200
+#define MAX_RULE_KEY_LENGTH       200
+#define MAX_RULE_VALUE_LENGTH     200
+#define MAX_ANNOUNCE_VALUE_LENGTH 200
 
 class CASERule;
 class CMainConfig;

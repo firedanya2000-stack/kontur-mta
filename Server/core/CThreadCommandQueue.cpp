@@ -5,14 +5,14 @@
  *  FILE:        core/CThreadCommandQueue.cpp
  *  PURPOSE:     Thread command queue class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #ifdef WIN32
-#include "CThreadCommandQueue.h"
-#include "CModManagerImpl.h"
+    #include "CThreadCommandQueue.h"
+    #include "CModManagerImpl.h"
 
 using std::string;
 

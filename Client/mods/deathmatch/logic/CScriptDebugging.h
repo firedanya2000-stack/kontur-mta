@@ -69,6 +69,7 @@ private:
     void LogString(const char* szPrePend, const SLuaDebugInfo& luaDebugInfo, const char* szMessage, unsigned int uiMinimumDebugLevel, unsigned char ucRed = 255,
                    unsigned char ucGreen = 255, unsigned char ucBlue = 255);
     void PrintLog(const char* szText);
+    bool CheckForSufficientDebugLevel(std::uint8_t playerDebugLevel, std::uint8_t messageDebugLevel) const noexcept;
 
 public:
     static FILE* m_pLogFile;

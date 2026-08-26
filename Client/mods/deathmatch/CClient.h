@@ -5,13 +5,15 @@
  *  FILE:        mods/deathmatch/CClient.h
  *  PURPOSE:     Header file for Client class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
 #include <core/CClientBase.h>
+
+extern bool g_bClientShuttingDown;
 
 class CClient : public CClientBase
 {

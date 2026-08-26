@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CHandlingEntry.h
  *  PURPOSE:     Vehicle handling entry interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,7 +15,7 @@ class CBikeHandlingEntry
 {
 public:
     // Destructor
-    virtual ~CBikeHandlingEntry(){};
+    virtual ~CBikeHandlingEntry() {};
 
     // Use this to copy data from an another handling class to this
     virtual void Assign(const CBikeHandlingEntry* pData) = 0;

@@ -5,7 +5,7 @@
  *  FILE:
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,8 +16,8 @@ class CProxyDirect3DVertexDeclaration : public IDirect3DVertexDeclaration9
 public:
     /*** IUnknown methods ***/
     HRESULT __stdcall QueryInterface(REFIID riid, void** ppvObj);
-    ULONG __stdcall AddRef() { return m_pOriginal->AddRef(); }
-    ULONG __stdcall Release();
+    ULONG __stdcall   AddRef() { return m_pOriginal->AddRef(); }
+    ULONG __stdcall   Release();
 
     /*** IDirect3DVertexDeclaration9 methods ***/
     HRESULT __stdcall GetDevice(IDirect3DDevice9** ppDevice) { return m_pOriginal->GetDevice(ppDevice); }

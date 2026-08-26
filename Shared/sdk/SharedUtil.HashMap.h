@@ -5,7 +5,7 @@
  *  FILE:        SharedUtil.HashMap.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -14,9 +14,9 @@
     #define CHashMap CMap
 #else
 
-#include <unordered_map>
-#include <functional>
-#include "SString.h"
+    #include <unordered_map>
+    #include <functional>
+    #include "SString.h"
 
 namespace SharedUtil
 {
@@ -95,7 +95,7 @@ namespace SharedUtil
         }
         return it->second;
     }
-}            // namespace SharedUtil
+}  // namespace SharedUtil
 
 // Calculate a hash value for SString
 namespace std
@@ -105,6 +105,6 @@ namespace std
     {
         size_t operator()(const SString& str) const { return std::hash<std::string>()(str); }
     };
-}            // namespace std
+}  // namespace std
 
 #endif  // WITH_ALLOC_TRACKING

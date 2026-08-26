@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CRenderWare.h
  *  PURPOSE:     RenderWare engine interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -39,8 +39,8 @@ struct SReplacementTextures
         bool                    bTexturesAreCopies;
     };
 
-    std::vector<RwTexture*> textures;              // List of textures we want to inject into TXD's
-    std::vector<SPerTxd>    perTxdList;            // TXD's which have been modified
+    std::vector<RwTexture*> textures;    // List of textures we want to inject into TXD's
+    std::vector<SPerTxd>    perTxdList;  // TXD's which have been modified
     std::vector<ushort>     usedInTxdIds;
     std::vector<ushort>     usedInModelIds;
 };
@@ -67,7 +67,7 @@ enum EEntityTypeMask
 
 typedef void (*PFN_WATCH_CALLBACK)(CSHADERDUMMY* pContext, CD3DDUMMY* pD3DDataNew, CD3DDUMMY* pD3DDataOld);
 
-#define MAX_ATOMICS_PER_CLUMP   128
+#define MAX_ATOMICS_PER_CLUMP 128
 
 class CRenderWare
 {
@@ -76,9 +76,12 @@ public:
                                                       bool bFilteringEnabled) = 0;
     virtual bool             ModelInfoTXDAddTextures(SReplacementTextures* pReplacementTextures, ushort usModelId) = 0;
     virtual void             ModelInfoTXDRemoveTextures(SReplacementTextures* pReplacementTextures) = 0;
-    virtual void             ClothesAddReplacementTxd(char* pFileData, ushort usFileId) = 0;
-    virtual void             ClothesRemoveReplacementTxd(char* pFileData) = 0;
+    virtual void             ClothesAddReplacement(char* pFileData, size_t fileSize, ushort usFileId) = 0;
+    virtual void             ClothesRemoveReplacement(char* pFileData) = 0;
     virtual bool             HasClothesReplacementChanged() = 0;
+    virtual bool             ClothesAddFile(const char* fileData, std::size_t fileSize, const char* fileName) = 0;
+    virtual bool             ClothesRemoveFile(char* fileData) = 0;
+    virtual bool             HasClothesFile(const char* fileName) const noexcept = 0;
     virtual RwTexDictionary* ReadTXD(const SString& strFilename, const SString& buffer) = 0;
     virtual RpClump*         ReadDFF(const SString& strFilename, const SString& buffer, unsigned short usModelID, bool bLoadEmbeddedCollisions) = 0;
     virtual CColModel*       ReadCOL(const SString& buffer) = 0;

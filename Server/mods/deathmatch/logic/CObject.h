@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CObject.h
  *  PURPOSE:     Object entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -81,6 +81,9 @@ public:
     bool IsBreakable() { return m_bBreakable; }
     void SetBreakable(bool bBreakable) { m_bBreakable = bBreakable; }
 
+    bool IsRespawnEnabled() const noexcept { return m_bRespawnable; }
+    void SetRespawnEnabled(bool bRespawn) noexcept { m_bRespawnable = bRespawn; }
+
 protected:
     bool ReadSpecialData(const int iLine) override;
 
@@ -96,13 +99,16 @@ private:
     bool            m_bSyncable;
     CPlayer*        m_pSyncer;
     bool            m_bVisibleInAllDimensions = false;
+    bool            m_bRespawnable;
+
+    void NotifyMovementComplete();
 
 protected:
     bool m_bCollisionsEnabled;
 
-    const bool            m_bIsLowLod;                    // true if this object is low LOD
-    CObject*              m_pLowLodObject;                // Pointer to low LOD version of this object
-    std::vector<CObject*> m_HighLodObjectList;            // List of objects that use this object as a low LOD version
+    const bool            m_bIsLowLod;          // true if this object is low LOD
+    CObject*              m_pLowLodObject;      // Pointer to low LOD version of this object
+    std::vector<CObject*> m_HighLodObjectList;  // List of objects that use this object as a low LOD version
 
 public:
     CPositionRotationAnimation* m_pMoveAnimation;

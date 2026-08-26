@@ -50,6 +50,7 @@ public:
     static bool HasDamageModel(unsigned long ulModel);
     static bool HasDamageModel(enum eClientVehicleType Type);
     static bool HasDoors(unsigned long ulModel);
+    static bool IsValidSeat(unsigned long ulModel, unsigned char ucSeat);
 
     bool Exists(CClientVehicle* pVehicle);
 
@@ -70,9 +71,15 @@ public:
     void OnCreation(CClientVehicle* pVehicle);
     void OnDestruction(CClientVehicle* pVehicle);
 
+    bool IsSpawnFlyingComponentEnabled() const noexcept { return m_spawnFlyingComponentsDuringRecreate; }
+    void SetSpawnFlyingComponentEnabled(bool isEnabled) noexcept { m_spawnFlyingComponentsDuringRecreate = isEnabled; }
+
+    void ResetNotControlledRotors(bool engineAutoStart);
+
 protected:
     CClientManager*               m_pManager;
     bool                          m_bCanRemoveFromList;
     CMappedArray<CClientVehicle*> m_List;
     CMappedArray<CClientVehicle*> m_StreamedIn;
+    bool                          m_spawnFlyingComponentsDuringRecreate{true};
 };

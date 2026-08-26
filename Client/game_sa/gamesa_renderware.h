@@ -5,7 +5,7 @@
  *  FILE:        game_sa/gamesa_renderware.h
  *  PURPOSE:     RenderWare interface mappings to Grand Theft Auto: San Andreas
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *  RenderWare is © Criterion Software
  *
  *****************************************************************************/
@@ -21,8 +21,8 @@ struct CColModelSAInterface;
 /*****************************************************************************/
 
 /* RenderWare macros */
-#define RpGetFrame(__c)            ((RwFrame*)(((RwObject *)(__c))->parent))
-#define RpSetFrame(__c,__f)        ((((RwObject *)(__c))->parent) = (void *)(__f))
+#define RpGetFrame(__c)      ((RwFrame*)(((RwObject*)(__c))->parent))
+#define RpSetFrame(__c, __f) ((((RwObject*)(__c))->parent) = (void*)(__f))
 
 /* RenderWare function defines */
 typedef RpAtomic*(__cdecl* RpAtomicCreate_t)();
@@ -38,6 +38,7 @@ typedef RwFrame*(__cdecl* RwFrameAddChild_t)(RwFrame* parent, RwFrame* child);
 typedef RwFrame*(__cdecl* RwFrameRemoveChild_t)(RwFrame* child);
 typedef RwFrame*(__cdecl* RwFrameForAllObjects_t)(RwFrame* frame, void* callback, void* data);
 typedef RwFrame*(__cdecl* RwFrameTranslate_t)(RwFrame* frame, const RwV3d* v, RwTransformOrder order);
+typedef RwFrame*(__cdecl* RwFrameTransform_t)(RwFrame* frame, const RwMatrix* m, RwOpCombineType combine);
 typedef RwFrame*(__cdecl* RwFrameScale_t)(RwFrame* frame, const RwV3d* v, RwTransformOrder order);
 typedef RwFrame*(__cdecl* RwFrameUpdateObjects_t)(RwFrame*);
 typedef RwFrame*(__cdecl* RwFrameCreate_t)();
@@ -69,6 +70,7 @@ typedef RwTexture*(__cdecl* RwTexDictionaryAddTexture_t)(RwTexDictionary* dict, 
 typedef RwTexDictionary*(__cdecl* RwTexDictionaryGetCurrent_t)();
 typedef RwTexture*(__cdecl* RwTexDictionaryFindNamedTexture_t)(RwTexDictionary* dict, const char* name);
 typedef void(__cdecl* RpPrtStdGlobalDataSetStreamEmbedded_t)(void* value);
+typedef RpClump*(__cdecl* RpClumpRender_t)(RpClump* clump);
 typedef RpWorld*(__cdecl* RpWorldAddAtomic_t)(RpWorld* world, RpAtomic* atomic);
 typedef RpWorld*(__cdecl* RpWorldAddClump_t)(RpWorld* world, RpClump* clump);
 typedef RpWorld*(__cdecl* RpWorldAddLight_t)(RpWorld* world, RpLight* light);
@@ -109,9 +111,9 @@ typedef RtQuat*(__cdecl* RtQuatRotate_t)(RtQuat* quat, const RwV3d* axis, float 
 /*****************************************************************************/
 
 #ifdef RWFUNC_IMPLEMENT
-    #define RWFUNC(a,b) a = b;
+    #define RWFUNC(a, b) a = b;
 #else
-    #define RWFUNC(a,b) extern a;
+    #define RWFUNC(a, b) extern a;
 #endif
 
 // US Versions
@@ -125,6 +127,7 @@ RWFUNC(RwStreamSkip_t RwStreamSkip, (RwStreamSkip_t)0xDEAD)
 RWFUNC(RpClumpDestroy_t RpClumpDestroy, (RpClumpDestroy_t)0xDEAD)
 RWFUNC(RpClumpGetNumAtomics_t RpClumpGetNumAtomics, (RpClumpGetNumAtomics_t)0xDEAD)
 RWFUNC(RwFrameTranslate_t RwFrameTranslate, (RwFrameTranslate_t)0xDEAD)
+RWFUNC(RwFrameTransform_t RwFrameTransform, (RwFrameTransform_t)0xDEAD)
 RWFUNC(RpClumpForAllAtomics_t RpClumpForAllAtomics, (RpClumpForAllAtomics_t)0xDEAD)
 RWFUNC(RwFrameAddChild_t RwFrameAddChild, (RwFrameAddChild_t)0xDEAD)
 RWFUNC(RpClumpAddAtomic_t RpClumpAddAtomic, (RpClumpAddAtomic_t)0xDEAD)
@@ -138,6 +141,7 @@ RWFUNC(RwTexDictionaryAddTexture_t RwTexDictionaryAddTexture, (RwTexDictionaryAd
 RWFUNC(RwTexDictionaryStreamWrite_t RwTexDictionaryStreamWrite, (RwTexDictionaryStreamWrite_t)0xDEAD)
 RWFUNC(rwD3D9NativeTextureRead_t rwD3D9NativeTextureRead, (rwD3D9NativeTextureRead_t)0xDEAD)
 RWFUNC(RpPrtStdGlobalDataSetStreamEmbedded_t RpPrtStdGlobalDataSetStreamEmbedded, (RpPrtStdGlobalDataSetStreamEmbedded_t)0xDEAD)
+RWFUNC(RpClumpRender_t RpClumpRender, (RpClumpRender_t)0xDEAD)
 RWFUNC(RpClumpRemoveAtomic_t RpClumpRemoveAtomic, (RpClumpRemoveAtomic_t)0xDEAD)
 RWFUNC(RpAtomicClone_t RpAtomicClone, (RpAtomicClone_t)0xDEAD)
 RWFUNC(RwTexDictionaryFindNamedTexture_t RwTexDictionaryFindNamedTexture, (RwTexDictionaryFindNamedTexture_t)0xDEAD)
@@ -197,12 +201,12 @@ RWFUNC(RtQuatRotate_t RtQuatRotate, (RtQuatRotate_t)0xDEAD)
 /*****************************************************************************/
 
 typedef bool(__cdecl* SetTextureDict_t)(unsigned short id);
-typedef bool(__cdecl* LoadClumpFile_t)(RwStream* stream, unsigned int id);            // (stream, model id)
-typedef bool(__cdecl* LoadModel_t)(RwBuffer* filename, unsigned int id);              // (memory chunk, model id)
+typedef bool(__cdecl* LoadClumpFile_t)(RwStream* stream, unsigned int id);  // (stream, model id)
+typedef bool(__cdecl* LoadModel_t)(RwBuffer* filename, unsigned int id);    // (memory chunk, model id)
 typedef void(__cdecl* LoadCollisionModel_t)(unsigned char*, CColModelSAInterface*, const char*);
 typedef void(__cdecl* LoadCollisionModelVer2_t)(unsigned char*, unsigned int, CColModelSAInterface*, const char*);
 typedef void(__cdecl* LoadCollisionModelVer3_t)(unsigned char*, unsigned int, CColModelSAInterface*,
-                                                const char*);            // buf, bufsize, ccolmodel&, keyname
+                                                const char*);  // buf, bufsize, ccolmodel&, keyname
 typedef bool(__cdecl* CTxdStore_LoadTxd_t)(unsigned int id, RwStream* filename);
 typedef void(__cdecl* CTxdStore_RemoveTxd_t)(unsigned int id);
 typedef void(__cdecl* CTxdStore_RemoveRef_t)(unsigned int id);

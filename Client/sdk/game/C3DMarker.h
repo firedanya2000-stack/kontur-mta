@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/C3DMarker.h
  *  PURPOSE:     3D marker entity interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,13 +23,13 @@ struct RpClump;
 class C3DMarker
 {
 public:
-    virtual ~C3DMarker(){};
+    virtual ~C3DMarker() {};
 
     virtual void               GetMatrix(CMatrix* pMatrix) = 0;
     virtual void               SetMatrix(CMatrix* pMatrix) = 0;
     virtual void               SetPosition(CVector* vecPosition) = 0;
     virtual CVector*           GetPosition() = 0;
-    virtual DWORD              GetType() = 0;            // need enum?
+    virtual DWORD              GetType() = 0;  // need enum?
     virtual bool               IsActive() = 0;
     virtual DWORD              GetIdentifier() = 0;
     virtual SharedUtil::SColor GetColor() = 0;

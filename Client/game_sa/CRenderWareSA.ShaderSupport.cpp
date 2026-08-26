@@ -5,7 +5,7 @@
  *  FILE:
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *  RenderWare is © Criterion Software
  *
  *****************************************************************************/
@@ -19,13 +19,13 @@
 extern CCoreInterface* g_pCore;
 extern CGameSA*        pGame;
 
-#define ADDR_CCustomCarPlateMgr_CreatePlateTexture_TextureSetName        0x06FDF40
-#define ADDR_CCustomRoadsignMgr_CreateRoadsignTexture_TextureSetName     0x06FED49
-#define ADDR_CClothesBuilder_ConstructTextures_Start                     0x05A6040
-#define ADDR_CClothesBuilder_ConstructTextures_End                       0x05A6520
-#define ADDR_CVehicle_DoHeadLightBeam_RenderPrimitive                    0x06E13CD
-#define ADDR_CHeli_SearchLightCone_RenderPrimitive                       0x06C62AD
-#define ADDR_CWaterCannon_Render_RenderPrimitive                         0x072956B
+#define ADDR_CCustomCarPlateMgr_CreatePlateTexture_TextureSetName    0x06FDF40
+#define ADDR_CCustomRoadsignMgr_CreateRoadsignTexture_TextureSetName 0x06FED49
+#define ADDR_CClothesBuilder_ConstructTextures_Start                 0x05A6040
+#define ADDR_CClothesBuilder_ConstructTextures_End                   0x05A6520
+#define ADDR_CVehicle_DoHeadLightBeam_RenderPrimitive                0x06E13CD
+#define ADDR_CHeli_SearchLightCone_RenderPrimitive                   0x06C62AD
+#define ADDR_CWaterCannon_Render_RenderPrimitive                     0x072956B
 
 enum
 {
@@ -47,9 +47,9 @@ int CRenderWareSA::ms_iRenderingType = 0;
 ////////////////////////////////////////////////////////////////
 
 // Hooks for creating txd create and destroy events
-#define HOOKPOS_CTxdStore_SetupTxdParent       0x731D55
+#define HOOKPOS_CTxdStore_SetupTxdParent 0x731D55
 DWORD RETURN_CTxdStore_SetupTxdParent = 0x731D5B;
-#define HOOKPOS_CTxdStore_RemoveTxd         0x731E90
+#define HOOKPOS_CTxdStore_RemoveTxd 0x731E90
 DWORD RETURN_CTxdStore_RemoveTxd = 0x731E96;
 
 //
@@ -85,23 +85,27 @@ __declspec(noinline) void _cdecl OnStreamingAddedTxd(DWORD dwTxdId)
 }
 
 // called from streaming on TXD create
-void _declspec(naked) HOOK_CTxdStore_SetupTxdParent()
+static void __declspec(naked) HOOK_CTxdStore_SetupTxdParent()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         // Hooked from 731D55  6 bytes
 
         // eax - txd id
         pushad
-        push eax
-        call OnStreamingAddedTxd
-        add esp, 4
+        push    eax
+        call    OnStreamingAddedTxd
+        add     esp, 4
         popad
 
         // orig
         mov     esi, ds:00C8800Ch
         jmp     RETURN_CTxdStore_SetupTxdParent  // 731D5B
     }
+    // clang-format on
 }
 
 ////////////////////////////////////////////////////////////////
@@ -118,23 +122,27 @@ __declspec(noinline) void _cdecl OnStreamingRemoveTxd(DWORD dwTxdId)
 }
 
 // called from streaming on TXD destroy
-void _declspec(naked) HOOK_CTxdStore_RemoveTxd()
+static void __declspec(naked) HOOK_CTxdStore_RemoveTxd()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         // Hooked from 731E90  6 bytes
 
         // esi - txd id + 20000
         pushad
-        push esi
-        call OnStreamingRemoveTxd
-        add esp, 4
+        push    esi
+        call    OnStreamingRemoveTxd
+        add     esp, 4
         popad
 
         // orig
         mov     ecx, ds:00C8800Ch
         jmp     RETURN_CTxdStore_RemoveTxd      // 731E96
     }
+    // clang-format on
 }
 
 ////////////////////////////////////////////////////////////////
@@ -643,25 +651,23 @@ void CRenderWareSA::SetGTAVertexShadersEnabled(bool bEnable)
     m_bGTAVertexShadersEnabled = bEnable;
 
     DWORD pSkinAtomic = 0x07C7CD0;
-    if (pGame->GetGameVersion() != VERSION_US_10)
-        pSkinAtomic = 0x07C7D10;
 
     if (bEnable)
     {
         // Allow GTA vertex shaders (default)
-        MemPut<BYTE>(pSkinAtomic + 0, 0x8B);            // mov  eax, [edi+20h]
+        MemPut<BYTE>(pSkinAtomic + 0, 0x8B);  // mov  eax, [edi+20h]
         MemPut<BYTE>(pSkinAtomic + 1, 0x47);
         MemPut<BYTE>(pSkinAtomic + 2, 0x20);
-        MemPut<BYTE>(pSkinAtomic + 3, 0x85);            // test eax, eax
+        MemPut<BYTE>(pSkinAtomic + 3, 0x85);  // test eax, eax
         MemPut<BYTE>(pSkinAtomic + 4, 0xC0);
     }
     else
     {
         // Disallow GTA vertex shaders
         // This forces the current skin buffer to use software blending from now on
-        MemPut<BYTE>(pSkinAtomic + 0, 0x33);            // xor  eax, eax
+        MemPut<BYTE>(pSkinAtomic + 0, 0x33);  // xor  eax, eax
         MemPut<BYTE>(pSkinAtomic + 1, 0xC0);
-        MemPut<BYTE>(pSkinAtomic + 2, 0x89);            // mov  dword ptr [edi+20h], eax
+        MemPut<BYTE>(pSkinAtomic + 2, 0x89);  // mov  dword ptr [edi+20h], eax
         MemPut<BYTE>(pSkinAtomic + 3, 0x47);
         MemPut<BYTE>(pSkinAtomic + 4, 0x20);
     }
@@ -689,16 +695,15 @@ __declspec(noinline) void OnMY_RwTextureSetName(DWORD dwAddrCalledFrom, RwTextur
 }
 
 // Hook info
-#define HOOKPOS_RwTextureSetName_US     0x7F38A0
-#define HOOKSIZE_RwTextureSetName_US    9
-#define HOOKPOS_RwTextureSetName_EU     0x7F38E0
-#define HOOKSIZE_RwTextureSetName_EU    9
-DWORD RETURN_RwTextureSetName_US = 0x7F38A9;
-DWORD RETURN_RwTextureSetName_EU = 0x7F38E9;
-DWORD RETURN_RwTextureSetName_BOTH = 0;
-void _declspec(naked) HOOK_RwTextureSetName()
+#define HOOKPOS_RwTextureSetName  0x7F38A0
+#define HOOKSIZE_RwTextureSetName 9
+DWORD                         RETURN_RwTextureSetName = 0x7F38A9;
+static void __declspec(naked) HOOK_RwTextureSetName()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*2]
@@ -710,8 +715,9 @@ void _declspec(naked) HOOK_RwTextureSetName()
 
         sub     esp, 8
         mov     ecx, ds:0x0C97B24
-        jmp     RETURN_RwTextureSetName_BOTH
+        jmp     RETURN_RwTextureSetName
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -727,16 +733,15 @@ __declspec(noinline) void OnMY_RwTextureDestroy_Mid(RwTexture* pTexture)
 }
 
 // Hook info
-#define HOOKPOS_RwTextureDestroy_Mid_US     0x07F3834
-#define HOOKSIZE_RwTextureDestroy_Mid_US    5
-#define HOOKPOS_RwTextureDestroy_Mid_EU     0x07F3874
-#define HOOKSIZE_RwTextureDestroy_Mid_EU    5
-DWORD RETURN_RwTextureDestroy_Mid_US = 0x07F3839;
-DWORD RETURN_RwTextureDestroy_Mid_EU = 0x07F3879;
-DWORD RETURN_RwTextureDestroy_Mid_BOTH = 0;
-void _declspec(naked) HOOK_RwTextureDestroy_Mid()
+#define HOOKPOS_RwTextureDestroy_Mid  0x07F3834
+#define HOOKSIZE_RwTextureDestroy_Mid 5
+DWORD                         RETURN_RwTextureDestroy_Mid = 0x07F3839;
+static void __declspec(naked) HOOK_RwTextureDestroy_Mid()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    esi
@@ -745,8 +750,9 @@ void _declspec(naked) HOOK_RwTextureDestroy_Mid()
         popad
 
         push    0x08E23CC
-        jmp     RETURN_RwTextureDestroy_Mid_BOTH
+        jmp     RETURN_RwTextureDestroy_Mid
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -761,7 +767,7 @@ __declspec(noinline) void OnMY_RwIm3DRenderIndexedPrimitive_Pre(DWORD dwAddrCall
     if (dwAddrCalledFrom == ADDR_CVehicle_DoHeadLightBeam_RenderPrimitive || dwAddrCalledFrom == ADDR_CHeli_SearchLightCone_RenderPrimitive ||
         dwAddrCalledFrom == ADDR_CWaterCannon_Render_RenderPrimitive)
     {
-        CRenderWareSA::ms_iRenderingType = RT_NONE;            // Treat these items like world models
+        CRenderWareSA::ms_iRenderingType = RT_NONE;  // Treat these items like world models
     }
     else
     {
@@ -775,16 +781,15 @@ __declspec(noinline) void OnMY_RwIm3DRenderIndexedPrimitive_Post(DWORD dwAddrCal
 }
 
 // Hook info
-#define HOOKPOS_RwIm3DRenderIndexedPrimitive_US     0x07EF550
-#define HOOKSIZE_RwIm3DRenderIndexedPrimitive_US    5
-#define HOOKPOS_RwIm3DRenderIndexedPrimitive_EU     0x07EF590
-#define HOOKSIZE_RwIm3DRenderIndexedPrimitive_EU    5
-DWORD RETURN_RwIm3DRenderIndexedPrimitive_US = 0x07EF555;
-DWORD RETURN_RwIm3DRenderIndexedPrimitive_EU = 0x07EF595;
-DWORD RETURN_RwIm3DRenderIndexedPrimitive_BOTH = 0;
-void _declspec(naked) HOOK_RwIm3DRenderIndexedPrimitive()
+#define HOOKPOS_RwIm3DRenderIndexedPrimitive  0x07EF550
+#define HOOKSIZE_RwIm3DRenderIndexedPrimitive 5
+DWORD                         RETURN_RwIm3DRenderIndexedPrimitive = 0x07EF555;
+static void __declspec(naked) HOOK_RwIm3DRenderIndexedPrimitive()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*0]
@@ -795,7 +800,7 @@ void _declspec(naked) HOOK_RwIm3DRenderIndexedPrimitive()
         push    [esp+4*3]
         push    [esp+4*3]
         push    [esp+4*3]
-        call inner
+        call    inner
         add     esp, 4*3
 
         pushad
@@ -804,10 +809,12 @@ void _declspec(naked) HOOK_RwIm3DRenderIndexedPrimitive()
         add     esp, 4*1
         popad
         retn
-inner:
+
+        inner:
         mov     eax, ds:0x0C9C078
-        jmp     RETURN_RwIm3DRenderIndexedPrimitive_BOTH
+        jmp     RETURN_RwIm3DRenderIndexedPrimitive
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -828,16 +835,15 @@ __declspec(noinline) void OnMY_RwIm3DRenderPrimitive_Post(DWORD dwAddrCalledFrom
 }
 
 // Hook info
-#define HOOKPOS_RwIm3DRenderPrimitive_US    0x07EF6B0
-#define HOOKSIZE_RwIm3DRenderPrimitive_US   6
-#define HOOKPOS_RwIm3DRenderPrimitive_EU    0x07EF6F0
-#define HOOKSIZE_RwIm3DRenderPrimitive_EU   6
-DWORD RETURN_RwIm3DRenderPrimitive_US = 0x07EF6B6;
-DWORD RETURN_RwIm3DRenderPrimitive_EU = 0x07EF6F6;
-DWORD RETURN_RwIm3DRenderPrimitive_BOTH = 0;
-void _declspec(naked) HOOK_RwIm3DRenderPrimitive()
+#define HOOKPOS_RwIm3DRenderPrimitive  0x07EF6B0
+#define HOOKSIZE_RwIm3DRenderPrimitive 6
+DWORD                         RETURN_RwIm3DRenderPrimitive = 0x07EF6B6;
+static void __declspec(naked) HOOK_RwIm3DRenderPrimitive()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*0]
@@ -848,7 +854,7 @@ void _declspec(naked) HOOK_RwIm3DRenderPrimitive()
         push    [esp+4*3]
         push    [esp+4*3]
         push    [esp+4*3]
-        call inner
+        call    inner
         add     esp, 4*3
 
         pushad
@@ -857,10 +863,12 @@ void _declspec(naked) HOOK_RwIm3DRenderPrimitive()
         add     esp, 4*1
         popad
         retn
-inner:
+
+        inner:
         mov     ecx, ds:0x0C97B24
-        jmp     RETURN_RwIm3DRenderPrimitive_BOTH
+        jmp     RETURN_RwIm3DRenderPrimitive
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -881,16 +889,15 @@ __declspec(noinline) void OnMY_RwIm2DRenderIndexedPrimitive_Post(DWORD dwAddrCal
 }
 
 // Hook info
-#define HOOKPOS_RwIm2DRenderIndexedPrimitive_US     0x0734EA1
-#define HOOKSIZE_RwIm2DRenderIndexedPrimitive_US    5
-#define HOOKPOS_RwIm2DRenderIndexedPrimitive_EU     0x0734EA1
-#define HOOKSIZE_RwIm2DRenderIndexedPrimitive_EU    5
-DWORD RETURN_RwIm2DRenderIndexedPrimitive_US = 0x0403927;
-DWORD RETURN_RwIm2DRenderIndexedPrimitive_EU = 0x0403937;
-DWORD RETURN_RwIm2DRenderIndexedPrimitive_BOTH = 0;
-void _declspec(naked) HOOK_RwIm2DRenderIndexedPrimitive()
+#define HOOKPOS_RwIm2DRenderIndexedPrimitive  0x0734EA1
+#define HOOKSIZE_RwIm2DRenderIndexedPrimitive 5
+DWORD                         RETURN_RwIm2DRenderIndexedPrimitive = 0x0403927;
+static void __declspec(naked) HOOK_RwIm2DRenderIndexedPrimitive()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*0]
@@ -903,7 +910,7 @@ void _declspec(naked) HOOK_RwIm2DRenderIndexedPrimitive()
         push    [esp+4*5]
         push    [esp+4*5]
         push    [esp+4*5]
-        call inner
+        call    inner
         add     esp, 4*5
 
         pushad
@@ -913,9 +920,10 @@ void _declspec(naked) HOOK_RwIm2DRenderIndexedPrimitive()
         popad
         retn
 
-inner:
-        jmp     RETURN_RwIm2DRenderIndexedPrimitive_BOTH
+        inner:
+        jmp     RETURN_RwIm2DRenderIndexedPrimitive
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -936,12 +944,15 @@ __declspec(noinline) void OnMY_RwIm2DRenderPrimitive_Post(DWORD dwAddrCalledFrom
 }
 
 // Hook info
-#define HOOKPOS_RwIm2DRenderPrimitive                0x0734E90
-#define HOOKSIZE_RwIm2DRenderPrimitive               5
-DWORD RETURN_RwIm2DRenderPrimitive = 0x0734E95;
-void _declspec(naked) HOOK_RwIm2DRenderPrimitive()
+#define HOOKPOS_RwIm2DRenderPrimitive  0x0734E90
+#define HOOKSIZE_RwIm2DRenderPrimitive 5
+DWORD                         RETURN_RwIm2DRenderPrimitive = 0x0734E95;
+static void __declspec(naked) HOOK_RwIm2DRenderPrimitive()
 {
-    _asm
+    MTA_VERIFY_HOOK_LOCAL_SIZE;
+
+    // clang-format off
+    __asm
     {
         pushad
         push    [esp+32+4*0]
@@ -952,7 +963,7 @@ void _declspec(naked) HOOK_RwIm2DRenderPrimitive()
         push    [esp+4*3]
         push    [esp+4*3]
         push    [esp+4*3]
-        call inner
+        call    inner
         add     esp, 4*3
 
         pushad
@@ -962,10 +973,11 @@ void _declspec(naked) HOOK_RwIm2DRenderPrimitive()
         popad
         retn
 
-inner:
+        inner:
         mov     eax, ds:0x0C97B24
         jmp     RETURN_RwIm2DRenderPrimitive
     }
+    // clang-format on
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

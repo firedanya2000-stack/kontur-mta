@@ -1,11 +1,11 @@
 /*****************************************************************************
  *
- *  PROJECT:     Multi Theft Auto v1.0
+ *  PROJECT:     Multi Theft Auto
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        game_sa/CBikeSA.h
  *  PURPOSE:     Header file for bike vehicle entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,6 +13,22 @@
 
 #include <game/CBike.h>
 #include "CVehicleSA.h"
+
+enum class eBikeNodes
+{
+    NONE = 0,
+    CHASSIS,
+    FORKS_FRONT,
+    FORKS_REAR,
+    WHEEL_FRONT,
+    WHEEL_REAR,
+    MUDGUARD,
+    HANDLEBARS,
+    MISC_A,
+    MISC_B,
+
+    NUM_NODES
+};
 
 struct sRideAnimData
 {
@@ -29,9 +45,9 @@ static_assert(sizeof(sRideAnimData) == 0x1C, "Invalid size for sRideAnimData");
 class CBikeSAInterface : public CVehicleSAInterface
 {
 public:
-    int32                m_apModelNodes[10];
+    RwFrame*             m_apModelNodes[static_cast<std::size_t>(eBikeNodes::NUM_NODES)];
     int8                 m_bLeanMatrixCalculated;
-    int8                 pad0[3];            // Maybe prev value is int32
+    int8                 pad0[3];  // Maybe prev value is int32
     int8                 m_mLeanMatrix[72];
     int8                 m_cDamageFlags;
     int8                 pad1[27];
@@ -42,8 +58,8 @@ public:
     int8                 field_65E;
     int8                 field_65F;
     int8                 m_anWheelColPoint[176];
-    float                m_afWheelDistanceToGround[4];
-    int32                field_720[4];
+    float                m_wheelRatios[4];
+    float                m_prevWheelRatios[4];
     int32                field_730[4];
     int32                field_740;
     int32                m_aiWheelSurfaceType[2];
@@ -94,9 +110,11 @@ public:
     CBikeSA(CBikeSAInterface* pInterface);
 
     CBikeSAInterface* GetBikeInterface() { return reinterpret_cast<CBikeSAInterface*>(GetInterface()); }
+    CBikeSAInterface* GetBikeInterface() const { return reinterpret_cast<CBikeSAInterface*>(GetInterface()); }
 
     CBikeHandlingEntry* GetBikeHandlingData();
     void                SetBikeHandlingData(CBikeHandlingEntry* pHandling);
 
     void RecalculateBikeHandling();
+    bool IsAnyWheelTouchingGround() const override;
 };

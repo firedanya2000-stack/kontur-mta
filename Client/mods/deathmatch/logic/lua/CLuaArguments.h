@@ -12,7 +12,7 @@
 
 extern "C"
 {
-    #include "lua.h"
+#include "lua.h"
 }
 
 #include <net/bitstream.h>
@@ -32,6 +32,8 @@ class CLuaArguments;
 class CLuaArguments
 {
 public:
+    static constexpr unsigned int MaxBitStreamTableReadDepth = 64;
+
     CLuaArguments() {}
     CLuaArguments(const CLuaArguments& Arguments, CFastHashMap<CLuaArguments*, CLuaArguments*>* pKnownTables = NULL);
     CLuaArguments(NetBitStreamInterface& bitStream, std::vector<CLuaArguments*>* pKnownTables = NULL);
@@ -55,7 +57,10 @@ public:
     CLuaArgument* PushNil();
     CLuaArgument* PushBoolean(bool bBool);
     CLuaArgument* PushNumber(double dNumber);
-    CLuaArgument* PushString(const std::string& strString);
+    CLuaArgument* PushString(const std::string& string);
+    CLuaArgument* PushString(const std::string_view& string);
+    CLuaArgument* PushString(const CStringName& string);
+    CLuaArgument* PushString(const char* string);
     CLuaArgument* PushElement(CClientEntity* pElement);
     CLuaArgument* PushArgument(const CLuaArgument& argument);
     CLuaArgument* PushResource(CResource* pResource);
@@ -64,7 +69,7 @@ public:
     void DeleteArguments();
     void Pop();
 
-    bool         ReadFromBitStream(NetBitStreamInterface& bitStream, std::vector<CLuaArguments*>* pKnownTables = NULL);
+    bool         ReadFromBitStream(NetBitStreamInterface& bitStream, std::vector<CLuaArguments*>* pKnownTables = NULL, unsigned int uiDepth = 0);
     bool         WriteToBitStream(NetBitStreamInterface& bitStream, CFastHashMap<CLuaArguments*, unsigned long>* pKnownTables = NULL) const;
     void         ValidateTableKeys();
     bool         ReadFromJSONString(const char* szJSON);
@@ -74,9 +79,13 @@ public:
     bool         ReadFromJSONObject(json_object* object, std::vector<CLuaArguments*>* pKnownTables = NULL);
     bool         ReadFromJSONArray(json_object* object, std::vector<CLuaArguments*>* pKnownTables = NULL);
 
-    unsigned int                               Count() const { return static_cast<unsigned int>(m_Arguments.size()); };
-    std::vector<CLuaArgument*>::const_iterator IterBegin() const { return m_Arguments.begin(); };
-    std::vector<CLuaArgument*>::const_iterator IterEnd() const { return m_Arguments.end(); };
+    [[nodiscard]] bool IsNotEmpty() const noexcept { return !m_Arguments.empty(); }
+    [[nodiscard]] bool IsEmpty() const noexcept { return m_Arguments.empty(); }
+
+    [[nodiscard]] std::vector<CLuaArgument*>::size_type Count() const noexcept { return m_Arguments.size(); }
+
+    [[nodiscard]] std::vector<CLuaArgument*>::const_iterator begin() const noexcept { return m_Arguments.begin(); }
+    [[nodiscard]] std::vector<CLuaArgument*>::const_iterator end() const noexcept { return m_Arguments.end(); }
 
 private:
     std::vector<CLuaArgument*> m_Arguments;

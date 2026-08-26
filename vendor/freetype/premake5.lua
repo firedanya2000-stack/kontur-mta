@@ -3,10 +3,15 @@ project "freetype"
 	language "C"
 	kind "StaticLib"
 	targetname "freetype"
+	warnings "Off"
 
 	includedirs { "include", "src",  }
 	defines { "FT2_BUILD_LIBRARY=1", "_UNICODE", "UNICODE", "_LIB" }
 	removedefines { "DEBUG" }
+
+	if MTA_MAETRO then
+		defines { "WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP" }
+	end
 
 	files {
 		"premake5.lua",
@@ -38,7 +43,6 @@ project "freetype"
 		"src/cache/ftcache.c",
 		"src/cff/cff.c",
 		"src/cid/type1cid.c",
-		"src/dlg/dlg.c",
 		"src/gxvalid/gxvalid.c",
 		"src/gzip/ftgzip.c",
 		"src/lzw/ftlzw.c",

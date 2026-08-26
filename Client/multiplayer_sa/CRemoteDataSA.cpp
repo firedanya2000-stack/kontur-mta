@@ -5,7 +5,7 @@
  *  FILE:        multiplayer_sa/CRemoteDataSA.cpp
  *  PURPOSE:     Remote data storage class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,7 +13,6 @@
 
 // These includes have to be fixed!
 #include "../game_sa/CPedSA.h"
-#include "../game_sa/CVehicleSA.h"
 
 CPools*                                      CRemoteDataSA::m_pPools;
 std::map<CPlayerPed*, CRemoteDataStorageSA*> CRemoteDataSA::m_RemoteData;

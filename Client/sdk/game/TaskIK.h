@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/TaskIK.h
  *  PURPOSE:     Inverse kinematics task interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -13,24 +13,24 @@
 
 #include "Task.h"
 
-#define NUM_IK_CHAIN_SLOTS 5 //(28 - sizeof(CTaskSimple)) / 4
+#define NUM_IK_CHAIN_SLOTS 5  //(28 - sizeof(CTaskSimple)) / 4
 
 class CTaskSimpleIKChain : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleIKChain(){};
+    virtual ~CTaskSimpleIKChain() {};
 };
 
 class CTaskSimpleIKLookAt : public virtual CTaskSimpleIKChain
 {
 public:
-    virtual ~CTaskSimpleIKLookAt(){};
+    virtual ~CTaskSimpleIKLookAt() {};
 };
 
 class CTaskSimpleIKManager : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleIKManager(){};
+    virtual ~CTaskSimpleIKManager() {};
 
     virtual int                 AddIKChainTask(CTaskSimpleIKChain* pIKChainTask, int slotID = -1) = 0;
     virtual void                RemoveIKChainTask(int slotID) = 0;
@@ -42,5 +42,5 @@ public:
 class CTaskSimpleTriggerLookAt : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleTriggerLookAt(){};
+    virtual ~CTaskSimpleTriggerLookAt() {};
 };

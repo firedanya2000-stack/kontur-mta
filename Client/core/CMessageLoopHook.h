@@ -5,7 +5,7 @@
  *  FILE:        core/CMessageLoopHook.h
  *  PURPOSE:     Header file for message loop hook class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,8 +15,8 @@
 #include "CSingleton.h"
 
 #define URI_CONNECT 1
-#define VK_1    0x30
-#define VK_9    0x39
+#define VK_1        0x30
+#define VK_9        0x39
 
 class CMessageLoopHook : public CSingleton<CMessageLoopHook>
 {
@@ -41,6 +41,7 @@ private:
     bool         m_bRefreshMsgQueueEnabled;
     POINT        m_MoveOffset;
     HWND         m_MovementDummyWindow;
+    HDEVNOTIFY   m_hDeviceNotify;
 
     static WPARAM m_LastVirtualKeyCode;
     static UCHAR  m_LastScanCode;

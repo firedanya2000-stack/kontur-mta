@@ -4,7 +4,7 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        mods/deathmatch/logic/CResource.AclRequest.cpp
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -123,10 +123,6 @@ bool CResource::HasAutoPermissions(CXMLNode* pNodeAclRequest)
 ///////////////////////////////////////////////////////////////
 void CResource::RefreshAutoPermissions(CXMLNode* pNodeAclRequest)
 {
-    // Check if permissions already active
-    if (HasAutoPermissions(pNodeAclRequest))
-        return;
-
     // Ensure group and acl exist
     CAccessControlListGroup* pAutoGroup = g_pGame->GetACLManager()->AddGroup(GetAutoGroupName());
     pAutoGroup->AddACL(GetAutoAcl());
@@ -179,8 +175,8 @@ void CResource::RefreshAutoPermissions(CXMLNode* pNodeAclRequest)
     for (std::vector<CAclRightName>::iterator iter = unusedRightNameMap.begin(); iter != unusedRightNameMap.end(); ++iter)
         GetAutoAcl()->RemoveRight(iter->GetName(), iter->GetType());
 
-    // If any rights are pending, print message
-    if (bHasPending)
+    // If any rights are pending and not already granted through other acl groups, print message
+    if (bHasPending && !HasAutoPermissions(pNodeAclRequest))
     {
         CLogger::LogPrintf("Resource '%s' requests some acl rights. Use the command 'aclrequest list %s'\n", GetName().c_str(), GetName().c_str());
     }

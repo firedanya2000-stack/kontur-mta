@@ -3,7 +3,7 @@
  *  PROJECT:     Multi Theft Auto v1.0
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -69,7 +69,7 @@ private:
         CVector vecCamPosition;
         CVector vecCamFwd;
 
-        CVector VehPosition;            // Same as PlrPosition ?
+        CVector VehPosition;  // Same as PlrPosition ?
         CVector VehRotationDeg;
         CVector BothVelocity;
         CVector VehTurnSpeed;
@@ -103,5 +103,7 @@ private:
         float fRailSpeed;
 
         SFixedArray<float, 4> fDoorOpenRatio;
+
+        bool isOnFire{false};
     } m_Cache;
 };

@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CColPoint.h
  *  PURPOSE:     Collision point interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -214,15 +214,15 @@ C_ASSERT(sizeof(EColSurface) == 1);
 // Collision stored lighting
 struct CColLighting
 {
-    uchar day : 4;              // 0-15
-    uchar night : 4;            // 0-15
+    uchar day : 4;    // 0-15
+    uchar night : 4;  // 0-15
 };
 C_ASSERT(sizeof(CColLighting) == 1);
 
 class CColPoint
 {
 public:
-    virtual ~CColPoint(){};
+    virtual ~CColPoint() {};
 
     virtual CColPointSAInterface* GetInterface() = 0;
     virtual const CVector&        GetPosition() = 0;

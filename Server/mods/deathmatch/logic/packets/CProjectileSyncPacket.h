@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CProjectileSyncPacket.h
  *  PURPOSE:     Projectile synchronization packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -29,7 +29,7 @@ public:
     ElementID      m_OriginID;
     CVector        m_vecOrigin;
     float          m_fForce;
-    unsigned char  m_ucHasTarget;
+    bool           m_bHasTarget;
     ElementID      m_TargetID;
     CVector        m_vecTarget;
     CVector        m_vecRotation;

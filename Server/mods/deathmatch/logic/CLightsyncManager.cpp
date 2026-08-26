@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CLightsyncManager.h
  *  PURPOSE:     Lightweight synchronization manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -33,7 +33,7 @@ void CLightsyncManager::RegisterPlayer(CPlayer* pPlayer)
     entry.ullTime = GetTickCount64_();
     entry.pPlayer = pPlayer;
     entry.eType = SYNC_PLAYER;
-    entry.uiContext = 0;            // Unused
+    entry.uiContext = 0;  // Unused
     m_Queue.push_back(entry);
 }
 

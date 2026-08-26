@@ -4,7 +4,7 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        Client/mods/deathmatch/logic/CIFPEngine.cpp
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -50,8 +50,15 @@ bool CIFPEngine::EngineReplaceAnimation(CClientEntity* pEntity, const SString& s
         std::shared_ptr<CClientIFP> pCustomIFP = g_pClientGame->GetIFPPointerFromMap(u32BlockNameHash);
         if (pInternalBlock && pCustomIFP)
         {
-            // Try to load the block, if it's not loaded already
-            pInternalBlock->Request(BLOCKING, true);
+            if (!pInternalBlock->IsLoaded())
+            {
+                // Request non-blocking load to avoid freezes from synchronous I/O (e.g. during resource cleanup).
+                // Only request if no existing refs, to avoid inflating ref count on repeated calls.
+                if (pInternalBlock->GetRefs() == 0)
+                    pInternalBlock->Request(NON_BLOCKING);
+
+                return false;
+            }
 
             auto                            pInternalAnimHierarchy = g_pGame->GetAnimManager()->GetAnimation(strInternalAnimName, pInternalBlock);
             CAnimBlendHierarchySAInterface* pCustomAnimHierarchyInterface = pCustomIFP->GetAnimationHierarchy(strCustomAnimName);
@@ -113,8 +120,8 @@ bool CIFPEngine::EngineApplyAnimation(CClientPed& Ped, CAnimBlendHierarchySAInte
         if (pCurrentAnimAssociation)
         {
             auto pCurrentAnimHierarchy = pCurrentAnimAssociation->GetAnimHierarchy();
-            auto pAssocHierachyInterface = pCurrentAnimHierarchy->GetInterface();
-            if (pAssocHierachyInterface == pAnimHierarchyInterface)
+            auto pAssocHierarchyInterface = pCurrentAnimHierarchy->GetInterface();
+            if (pAssocHierarchyInterface == pAnimHierarchyInterface)
             {
                 return true;
             }
@@ -125,10 +132,22 @@ bool CIFPEngine::EngineApplyAnimation(CClientPed& Ped, CAnimBlendHierarchySAInte
             {
                 return true;
             }
+            // Remember if this was a partial anim before swapping its hierarchy, so the replacement can be
+            // trimmed back to the bones the original animated instead of the full skeleton the IFP padded it to.
+            const bool wasPartial = pCurrentAnimAssociation->IsPartial();
+
             auto pAnimHierarchy = pAnimationManager->GetAnimBlendHierarchy(pAnimHierarchyInterface);
             pAnimationManager->UncompressAnimation(pAnimHierarchy.get());
             pCurrentAnimAssociation->FreeAnimBlendNodeArray();
             pCurrentAnimAssociation->Init(pClump, pAnimHierarchyInterface);
+
+            if (wasPartial)
+            {
+                auto pOriginalStaticAssoc = pAnimationManager->GetAnimStaticAssociation(iGroupID, iAnimID);
+                if (pOriginalStaticAssoc)
+                    pCurrentAnimAssociation->RestrictToBonesOf(pOriginalStaticAssoc->GetInterface());
+            }
+
             pCurrentAnimAssociation->SetCurrentProgress(0.0);
             return true;
         }

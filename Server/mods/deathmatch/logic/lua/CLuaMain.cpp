@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/lua/CLuaMain.cpp
  *  PURPOSE:     Lua virtual machine container class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -20,6 +20,7 @@
 #include "luadefs/CLuaACLDefs.h"
 #include "luadefs/CLuaBanDefs.h"
 #include "luadefs/CLuaBlipDefs.h"
+#include "luadefs/CLuaBuildingDefs.h"
 #include "luadefs/CLuaColShapeDefs.h"
 #include "luadefs/CLuaDatabaseDefs.h"
 #include "luadefs/CLuaMarkerDefs.h"
@@ -52,7 +53,7 @@ static CLuaManager* m_pLuaManager;
 SString             CLuaMain::ms_strExpectedUndumpHash;
 
 #define HOOK_INSTRUCTION_COUNT 1000000
-#define HOOK_MAXIMUM_TIME 5000
+#define HOOK_MAXIMUM_TIME      5000
 
 extern CGame*      g_pGame;
 extern CNetServer* g_pRealNetServer;
@@ -171,11 +172,12 @@ void CLuaMain::InitClasses(lua_State* luaVM)
     if (!m_bEnableOOP)
         return;
 
-    CLuaElementDefs ::AddClass(luaVM);            // keep this at the top because inheritance
+    CLuaElementDefs ::AddClass(luaVM);  // keep this at the top because inheritance
     CLuaAccountDefs ::AddClass(luaVM);
     CLuaACLDefs ::AddClass(luaVM);
     CLuaBanDefs ::AddClass(luaVM);
     CLuaBlipDefs ::AddClass(luaVM);
+    CLuaBuildingDefs ::AddClass(luaVM);
     CLuaColShapeDefs ::AddClass(luaVM);
     CLuaDatabaseDefs ::AddClass(luaVM);
     CLuaMarkerDefs ::AddClass(luaVM);
@@ -234,6 +236,9 @@ void CLuaMain::Initialize()
 
     lua_pushelement(m_luaVM, m_pResource->GetResourceRootElement());
     lua_setglobal(m_luaVM, "resourceRoot");
+
+    lua_pushstring(m_luaVM, m_pResource->GetName());
+    lua_setglobal(m_luaVM, "resourceName");
 }
 
 void CLuaMain::LoadEmbeddedScripts()
@@ -284,7 +289,7 @@ bool CLuaMain::LoadScriptFromBuffer(const char* cpInBuffer, unsigned int uiInSiz
     uint        uiSize;
     if (!g_pRealNetServer->DeobfuscateScript(cpInBuffer, uiInSize, &cpBuffer, &uiSize, strNiceFilename))
     {
-        SString strMessage("%s is invalid. Please re-compile at http://luac.mtasa.com/", *strNiceFilename);
+        SString strMessage("%s is invalid. Please re-compile at https://luac.multitheftauto.com/", *strNiceFilename);
         g_pGame->GetScriptDebugging()->LogError(m_luaVM, "Loading script failed: %s", *strMessage);
         return false;
     }
@@ -302,7 +307,7 @@ bool CLuaMain::LoadScriptFromBuffer(const char* cpInBuffer, unsigned int uiInSiz
         {
             std::string strBuffer = std::string(cpBuffer, uiSize);
 #ifdef WIN32
-            std::setlocale(LC_CTYPE, "");            // Temporarilly use locales to read the script
+            std::setlocale(LC_CTYPE, "");  // Temporarilly use locales to read the script
             strUTFScript = UTF16ToMbUTF8(ANSIToUTF16(strBuffer));
             std::setlocale(LC_CTYPE, "C");
 #else
@@ -599,14 +604,14 @@ const SString& CLuaMain::GetFunctionTag(int iLuaFunction)
             strText = SString("@func_%d NULL", iLuaFunction);
         }
 
-    #ifdef CHECK_FUNCTION_TAG
+#ifdef CHECK_FUNCTION_TAG
         if (pTag)
         {
             // Check tag remains unchanged
             assert(strText == *pTag);
             return *pTag;
         }
-    #endif
+#endif
 
         MapSet(m_FunctionTagMap, iLuaFunction, strText);
         pTag = MapFind(m_FunctionTagMap, iLuaFunction);
@@ -624,7 +629,7 @@ const SString& CLuaMain::GetFunctionTag(int iLuaFunction)
 int CLuaMain::PCall(lua_State* L, int nargs, int nresults, int errfunc)
 {
     if (m_uiPCallDepth++ == 0)
-        m_WarningTimer.Reset();            // Only restart timer if initial call
+        m_WarningTimer.Reset();  // Only restart timer if initial call
 
     g_pGame->GetScriptDebugging()->PushLuaMain(this);
     int iret = lua_pcall(L, nargs, nresults, errfunc);

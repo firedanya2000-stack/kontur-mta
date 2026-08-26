@@ -1,25 +1,26 @@
 project "lunasvg"
 	language "C++"
-	cppdialect "C++17"
 	kind "StaticLib"
 	targetname "lunasvg"
 	targetdir(buildpath("mta"))
 	floatingpoint "Fast"
 	rtti "Off"
+	warnings "Off"
 
 	defines {
-		"LUNASVG_EXPORT",
-		"LUNASVG_SHARED",
+		"PLUTOVG_BUILD",
+		"LUNASVG_BUILD",
 		"_CRT_SECURE_NO_WARNINGS"
 	}
 
 	vpaths {
 		["Headers"] = "source/**.h",
 		["Headers/*"] = "include/**.h",
-		["Headers/3rdparty/*"] = "3rdparty/**.h",
+		["Headers/plutovg/*"] = "plutovg/**.h",
 		["Sources"] = "source/**.cpp",
-		["Sources/*"] = "3rdparty/**.cpp",
-		["Sources/*"] = "**.c",
+        ["Sources/*"] = "source/**.c",
+		["Sources/plutovg"] = "plutovg/**.cpp",
+		["Sources/plutovg/*"] = "plutovg/**.c",
 		["*"] = "premake5.lua"
 	}
 
@@ -31,7 +32,19 @@ project "lunasvg"
 	}
 
 	includedirs {
-		"3rdparty/plutovg",
-		"source",
-		"include"
+		"plutovg/include",
+		"include",
+		"source"
 	}
+
+	filter "system:windows"
+		disablewarnings {
+			"4244", -- warning C4244: '=': conversion from '?' to '?', possible loss of data
+			"4018", -- warning C4018: '<': signed/unsigned mismatch
+		}
+
+	filter "architecture:not x86"
+		flags { "ExcludeFromBuild" }
+
+	filter "system:not windows"
+		flags { "ExcludeFromBuild" }

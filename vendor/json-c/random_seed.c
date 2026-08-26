@@ -46,7 +46,7 @@ static void do_cpuid(int regs[], int h)
 	/* clang-format on */
 }
 
-#elif defined _MSC_VER
+#elif defined _MSC_VER && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
 
 #define HAS_X86_CPUID 1
 #define do_cpuid __cpuid
@@ -129,7 +129,7 @@ static int get_rdrand_seed(void)
 
 #endif
 
-#if defined _MSC_VER
+#if defined _MSC_VER && (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
 
 #if _MSC_VER >= 1700
 #define HAVE_RDRAND 1
@@ -229,6 +229,7 @@ static int get_dev_random_seed(int *seed)
 	if ((buf.st_mode & S_IFCHR) == 0)
 		return -1;
 
+	/* coverity[toctou] */
 	int fd = open(dev_random_file, O_RDONLY);
 	if (fd < 0)
 	{
@@ -253,7 +254,7 @@ static int get_dev_random_seed(int *seed)
 
 /* get_cryptgenrandom_seed */
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #define HAVE_CRYPTGENRANDOM 1
 
@@ -310,6 +311,7 @@ static int get_time_seed(void)
 {
 	DEBUG_SEED("get_time_seed");
 
+	/* coverity[store_truncates_time_t] */
 	return (unsigned)time(NULL) * 433494437;
 }
 #endif

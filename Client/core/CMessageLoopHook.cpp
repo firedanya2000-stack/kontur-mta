@@ -5,14 +5,18 @@
  *  FILE:        core/CMessageLoopHook.cpp
  *  PURPOSE:     Windows message loop hooking
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include <game/CGame.h>
+#include <dbt.h>
 
 extern CCore* g_pCore;
+
+// GUID_DEVINTERFACE_HID, used to get notified when a HID device (e.g. a joystick) is plugged in or removed
+DEFINE_GUID(GUID_DevInterfaceHID, 0x4D1E55B2, 0xF16F, 0x11CF, 0x88, 0xCB, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30);
 
 template <>
 CMessageLoopHook* CSingleton<CMessageLoopHook>::m_pSingleton = NULL;
@@ -22,6 +26,8 @@ UCHAR  CMessageLoopHook::m_LastScanCode = NULL;
 BYTE*  CMessageLoopHook::m_LastKeyboardState = new BYTE[256];
 bool   ms_bIgnoreNextEscapeCharacter = false;
 
+#define WM_CUSTOMFOCUS_FIX WM_APP + 1
+
 CMessageLoopHook::CMessageLoopHook()
 {
     WriteDebugEvent("CMessageLoopHook::CMessageLoopHook");
@@ -29,6 +35,7 @@ CMessageLoopHook::CMessageLoopHook()
     m_HookedWindowHandle = NULL;
     m_bRefreshMsgQueueEnabled = true;
     m_MovementDummyWindow = NULL;
+    m_hDeviceNotify = nullptr;
 }
 
 CMessageLoopHook::~CMessageLoopHook()
@@ -66,6 +73,14 @@ void CMessageLoopHook::ApplyHook(HWND hFocusWindow)
         wcDummy.lpszClassName = "MovementDummy";
         wcDummy.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
         RegisterClassEx(&wcDummy);
+
+        // Get notified of HID devices (e.g. joysticks) being plugged in or removed, so we can
+        // check for one straight away instead of waiting for the next scheduled retry
+        DEV_BROADCAST_DEVICEINTERFACE notificationFilter = {};
+        notificationFilter.dbcc_size = sizeof(notificationFilter);
+        notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+        notificationFilter.dbcc_classguid = GUID_DevInterfaceHID;
+        m_hDeviceNotify = RegisterDeviceNotification(hFocusWindow, &notificationFilter, DEVICE_NOTIFY_WINDOW_HANDLE);
     }
 }
 
@@ -79,6 +94,12 @@ void CMessageLoopHook::RemoveHook()
         // Reset the window handle and procedure variables.
         m_HookedWindowProc = NULL;
         m_HookedWindowHandle = NULL;
+
+        if (m_hDeviceNotify)
+        {
+            UnregisterDeviceNotification(m_hDeviceNotify);
+            m_hDeviceNotify = nullptr;
+        }
     }
 }
 
@@ -131,13 +152,19 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
 
             if (pModManager && pModManager->IsLoaded())
             {
-                CClientBase* pBase = pModManager->GetCurrentMod();
+                bool bFocus = (wState == WA_CLICKACTIVE) || (wState == WA_ACTIVE);
 
-                if (pBase)
+                // Fix for the Windows behavior that removes focus from a window if it was minimized during startup
+                // (you have to double-click the icon or alt+tab to regain focus despite the window being visible).
+                // GitHub issue #4233
+                static bool fixFirstTimeFocus = false;
+                if (!fixFirstTimeFocus && !bFocus && GetForegroundWindow() != hwnd && GetFocus() == hwnd && !IsIconic(hwnd))
                 {
-                    bool bFocus = (wState == WA_CLICKACTIVE) || (wState == WA_ACTIVE);
-                    pBase->OnWindowFocusChange(bFocus);
+                    fixFirstTimeFocus = true;
+                    PostMessage(hwnd, WM_CUSTOMFOCUS_FIX, 0, 0);
                 }
+
+                pModManager->GetClient()->OnWindowFocusChange(bFocus);
             }
 
             switch (wState)
@@ -153,6 +180,30 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
                     break;
                 }
             }
+        }
+
+        // When updating m_bFocused in CClientGame from CPacketHandler (to fix another bug — see the note there),
+        // the window might not actually have focus at that moment (even though Windows reports it as focused).
+        // In this case, isMTAWindowFocused returns false even though the window has focus.
+        // Therefore, we need to intercept the window return operation and manually set the focus in CClientGame.
+        if (uMsg == WM_WINDOWPOSCHANGING)
+        {
+            WINDOWPOS* wp = reinterpret_cast<WINDOWPOS*>(lParam);
+            if (wp->flags & SWP_NOMOVE && wp->flags & SWP_NOSIZE && !(wp->flags & SWP_NOZORDER))
+            {
+                if (GetForegroundWindow() == hwnd && !IsIconic(hwnd))
+                {
+                    CModManager* pModManager = CModManager::GetSingletonPtr();
+                    if (pModManager && pModManager->IsLoaded())
+                        pModManager->GetClient()->OnWindowFocusChange(true);
+                }
+            }
+        }
+
+        if (uMsg == WM_CUSTOMFOCUS_FIX)
+        {
+            AllowSetForegroundWindow(ASFW_ANY);
+            SetForegroundWindow(hwnd);
         }
 
         if (uMsg == WM_PAINT)
@@ -205,8 +256,7 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
         if (pCDS->dwData == URI_CONNECT)
         {
             // We can receive this message before we are ready to process it (e.g. trying to show a CEGUI message window before CEGUI is initialized).
-            // Ignore these messages until we are in the main menu (when CCore sets m_bFirstFrame to false)
-            if (!g_pCore->IsFirstFrame())
+            if (g_pCore->IsNetworkReady())
             {
                 LPSTR szConnectInfo = (LPSTR)pCDS->lpData;
                 CCommandFuncs::Connect(szConnectInfo);
@@ -214,13 +264,17 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
         }
     }
 
+    // A HID device (e.g. joystick) was plugged in or removed
+    if (uMsg == WM_DEVICECHANGE && (wParam == DBT_DEVICEARRIVAL || wParam == DBT_DEVICEREMOVECOMPLETE))
+        GetJoystickManager()->OnPossibleDeviceChange();
+
     // Make sure our pointers are valid.
     if (pThis != NULL && hwnd == pThis->GetHookedWindowHandle() && g_pCore->AreModulesLoaded())
     {
-        g_pCore->UpdateIsWindowMinimized();            // Force update of stuff
+        g_pCore->UpdateIsWindowMinimized();  // Force update of stuff
 
         if (uMsg == WM_TIMER && wParam == IDT_TIMER1)
-            g_pCore->WindowsTimerHandler();            // Used for 'minimized before first game' pulses
+            g_pCore->WindowsTimerHandler();  // Used for 'minimized before first game' pulses
 
         // Handle IME if input is not for the GUI
         if (!g_pCore->GetLocalGUI()->InputGoesToGUI())
@@ -327,8 +381,9 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
                     // If CTRL and Tab are pressed, Trigger a skip
                     if ((uMsg == WM_KEYDOWN && wParam == VK_TAB))
                     {
-                        eSystemState systemState = g_pCore->GetGame()->GetSystemState();
-                        if (systemState == 7 || systemState == 8 || systemState == 9)
+                        SystemState systemState = g_pCore->GetGame()->GetSystemState();
+                        if (systemState == SystemState::GS_FRONTEND || systemState == SystemState::GS_INIT_PLAYING_GAME ||
+                            systemState == SystemState::GS_PLAYING_GAME)
                         {
                             short sCtrlState = GetKeyState(VK_CONTROL);
                             short sShiftState = GetKeyState(VK_SHIFT);
@@ -350,8 +405,9 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
                     }
                     if ((uMsg == WM_KEYDOWN && (wParam >= VK_1 && wParam <= VK_9)))
                     {
-                        eSystemState systemState = g_pCore->GetGame()->GetSystemState();
-                        if (systemState == 7 || systemState == 8 || systemState == 9)
+                        SystemState systemState = g_pCore->GetGame()->GetSystemState();
+                        if (systemState == SystemState::GS_FRONTEND || systemState == SystemState::GS_INIT_PLAYING_GAME ||
+                            systemState == SystemState::GS_PLAYING_GAME)
                         {
                             short sCtrlState = GetKeyState(VK_CONTROL);
                             if (sCtrlState & 0x8000)
@@ -374,9 +430,9 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
                     // If F8 is pressed, we show/hide the console
                     if ((uMsg == WM_KEYDOWN && wParam == VK_F8) || (uMsg == WM_CHAR && wParam == '`'))
                     {
-                        eSystemState systemState = g_pCore->GetGame()->GetSystemState();
-                        if (CLocalGUI::GetSingleton().IsConsoleVisible() || systemState == 7 || systemState == 8 ||
-                            systemState == 9) /* GS_FRONTEND, GS_INIT_PLAYING_GAME, GS_PLAYING_GAME */
+                        SystemState systemState = g_pCore->GetGame()->GetSystemState();
+                        if (CLocalGUI::GetSingleton().IsConsoleVisible() || systemState == SystemState::GS_FRONTEND ||
+                            systemState == SystemState::GS_INIT_PLAYING_GAME || systemState == SystemState::GS_PLAYING_GAME)
                         {
                             CLocalGUI::GetSingleton().SetConsoleVisible(!CLocalGUI::GetSingleton().IsConsoleVisible());
                         }
@@ -461,7 +517,7 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
             }
 
             // Lead the message through the keybinds message processor
-            if (!g_pCore->IsFirstFrame())
+            if (g_pCore->CanHandleKeyMessages())
             {
                 g_pCore->GetKeyBinds()->ProcessMessage(hwnd, uMsg, wParam, lParam);
             }
@@ -500,10 +556,10 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
                     if (!GetVideoModeManager()->IsWindowed())
                     {
                         if (!CLocalGUI::GetSingleton().GetMainMenu() || !CLocalGUI::GetSingleton().GetMainMenu()->HasStarted())
-                            return true;            // No auto-minimize
+                            return true;  // No auto-minimize
 
                         if (GetVideoModeManager()->IsMultiMonitor() && !GetVideoModeManager()->IsMinimizeEnabled())
-                            return true;            // No auto-minimize
+                            return true;  // No auto-minimize
                     }
                 }
                 /*
@@ -518,10 +574,17 @@ LRESULT CALLBACK CMessageLoopHook::ProcessMessage(HWND hwnd, UINT uMsg, WPARAM w
                 }
                 */
 
-                if (uMsg == WM_SYSCOMMAND && wParam == 0xF012)            // SC_DRAGMOVE
+                if (uMsg == WM_SYSCOMMAND && wParam == 0xF012)  // SC_DRAGMOVE
                 {
                     CMessageLoopHook::GetSingleton().StartWindowMovement();
                     return true;
+                }
+
+                // Process ALT + F4
+                if (uMsg == WM_SYSKEYDOWN && wParam == VK_F4)
+                {
+                    // Tell windows to handle this message.
+                    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
                 }
 
                 // If we handled mouse steering, don't let GTA.

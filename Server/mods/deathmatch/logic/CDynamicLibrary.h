@@ -5,16 +5,16 @@
  *  FILE:        mods/deathmatch/logic/CDynamicLibrary.h
  *  PURPOSE:     Header for dynamic library class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 
 #ifdef WIN32
-#include <windows.h>
+    #include <windows.h>
 #else
-#include <dlfcn.h>
+    #include <dlfcn.h>
 #endif
 
 class CDynamicLibrary
@@ -30,9 +30,9 @@ public:
     void* GetProcedureAddress(const char* szProcName);
 
 private:
-    #ifdef WIN32
+#ifdef WIN32
     HMODULE m_hModule;
-    #else
+#else
     void* m_hModule;
-    #endif
+#endif
 };

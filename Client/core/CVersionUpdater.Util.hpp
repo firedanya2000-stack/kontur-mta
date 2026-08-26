@@ -5,15 +5,15 @@
  *  FILE:        core/CVersionUpdater
  *  PURPOSE:     Version update check and message dialog class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 class CVersionUpdater;
 
 // Update master info
-#define UPDATER_MASTER_URL1 "http://updatesa.mtasa.com/sa/master/?v=%VERSION%&id=%ID%"
-#define UPDATER_MASTER_URL2 "http://updatesa.multitheftauto.com/sa/master/?v=%VERSION%&id=%ID%"
+#define UPDATER_MASTER_URL1 "https://updatesa.multitheftauto.com/sa/master/?v=%VERSION%&id=%ID%"
+#define UPDATER_MASTER_URL2 "https://updatesa.mtasa.com/sa/master/?v=%VERSION%&id=%ID%"
 
 /*
 
@@ -24,30 +24,30 @@ class CVersionUpdater;
     <master>
         <revision>2010-09-05-b</revision>
         <serverlist>
-            <server>http://updatesa.mtasa.com/sa/master/?v=%VERSION%&amp;id=%ID%</server>
-            <server>http://updatesa.multitheftauto.com/sa/master/?v=%VERSION%&amp;id=%ID%</server>
+            <server>https://updatesa.mtasa.com/sa/master/?v=%VERSION%&amp;id=%ID%</server>
+            <server>https://updatesa.multitheftauto.com/sa/master/?v=%VERSION%&amp;id=%ID%</server>
         </serverlist>
         <interval>7d</interval>
     </master>
     <version>
         <serverlist>
-            <server priority="3">http://updatesa.mtasa.com/sa/version/?v=%VERSION%&amp;id=%ID%&amp;ty=%TYPE%&amp;da=%DATA%&amp;be=%BETA%&amp;re=%REFER%</server>
             <server
-priority="3">http://updatesa.multitheftauto.com/sa/version/?v=%VERSION%&amp;id=%ID%&amp;ty=%TYPE%&amp;da=%DATA%&amp;be=%BETA%&amp;re=%REFER%</server>
+priority="3">https://updatesa.mtasa.com/sa/version/?v=%VERSION%&amp;id=%ID%&amp;ty=%TYPE%&amp;da=%DATA%&amp;be=%BETA%&amp;re=%REFER%</server> <server
+priority="3">https://updatesa.multitheftauto.com/sa/version/?v=%VERSION%&amp;id=%ID%&amp;ty=%TYPE%&amp;da=%DATA%&amp;be=%BETA%&amp;re=%REFER%</server>
         </serverlist>
         <interval>12h</interval>
     </version>
     <report>
         <serverlist>
-            <server>http://updatesa.mtasa.com/sa/report/?v=%VERSION%&amp;id=%ID%</server>
-            <server>http://updatesa.multitheftauto.com/sa/report/?v=%VERSION%&amp;id=%ID%</server>
+            <server>https://updatesa.mtasa.com/sa/report/?v=%VERSION%&amp;id=%ID%</server>
+            <server>https://updatesa.multitheftauto.com/sa/report/?v=%VERSION%&amp;id=%ID%</server>
         </serverlist>
         <interval>12h</interval>
     </report>
     <crashdump>
         <serverlist>
-            <server priority="3">http://updatesa.mtasa.com/sa/crashdump/?v=%VERSION%&amp;id=%ID%&amp;file=%FILE%</server>
-            <server priority="4">http://updatesa.multitheftauto.com/sa/crashdump/?v=%VERSION%&amp;id=%ID%&amp;file=%FILE%</server>
+            <server priority="3">https://updatesa.mtasa.com/sa/crashdump/?v=%VERSION%&amp;id=%ID%&amp;file=%FILE%</server>
+            <server priority="4">https://updatesa.multitheftauto.com/sa/crashdump/?v=%VERSION%&amp;id=%ID%&amp;file=%FILE%</server>
         </serverlist>
         <interval>12h</interval>
         <duplicates>0</duplicates>
@@ -55,13 +55,13 @@ priority="3">http://updatesa.multitheftauto.com/sa/version/?v=%VERSION%&amp;id=%
     </crashdump>
     <gtadatafiles>
         <serverlist>
-            <server priority="4">http://updatesa.mtasa.com/sa/gtadatafiles/?v=%VERSION%&amp;id=%ID%</server>
-            <server priority="3">http://updatesa.multitheftauto.com/sa/gtadatafiles/?v=%VERSION%&amp;id=%ID%</server>
+            <server priority="4">https://updatesa.mtasa.com/sa/gtadatafiles/?v=%VERSION%&amp;id=%ID%</server>
+            <server priority="3">https://updatesa.multitheftauto.com/sa/gtadatafiles/?v=%VERSION%&amp;id=%ID%</server>
         </serverlist>
     </gtadatafiles>
     <trouble>
         <serverlist>
-            <server>http://updatesa.mtasa.com/sa/trouble/?v=%VERSION%&amp;id=%ID%&amp;tr=%TROUBLE%</server>
+            <server>https://updatesa.mtasa.com/sa/trouble/?v=%VERSION%&amp;id=%ID%&amp;tr=%TROUBLE%</server>
         </serverlist>
     </trouble>
 </masterroot>
@@ -92,9 +92,9 @@ DO YOU WANT TO DOWNLOAD AND INSTALL THE LATEST VERSION ?
         <md5>1585F5C5FDF77AD3565A75608E0263DD</md5>
     </file>
     <serverlist>
-        <server priority="3">http://updatesa1.mtasa.com/mirror/mtasa-1.0.4-rc-2021-6-files-net.exe</server>
-        <server priority="3">http://updatesa2.mtasa.com/mirror/mtasa-1.0.4-rc-2021-6-files-net.exe</server>
-        <server priority="2">http://updatesa3.mtasa.com/mirror/mtasa-1.0.4-rc-2021-6-files-net.exe</server>
+        <server priority="3">https://updatesa1.mtasa.com/mirror/mtasa-1.0.4-rc-2021-6-files-net.exe</server>
+        <server priority="3">https://updatesa2.mtasa.com/mirror/mtasa-1.0.4-rc-2021-6-files-net.exe</server>
+        <server priority="2">https://updatesa3.mtasa.com/mirror/mtasa-1.0.4-rc-2021-6-files-net.exe</server>
     </serverlist>
     <reportsettings>
         <filter>1000-9999</filter>
@@ -133,9 +133,12 @@ namespace
         BUTTON_3,
     };
 
-    CQuestionBox& GetQuestionBox() { return *CCore::GetSingleton().GetLocalGUI()->GetMainMenu()->GetQuestionWindow(); }
+    CQuestionBox& GetQuestionBox()
+    {
+        return *CCore::GetSingleton().GetLocalGUI()->GetMainMenu()->GetQuestionWindow();
+    }
 
-}            // namespace
+}  // namespace
 
 namespace
 {
@@ -391,7 +394,7 @@ namespace
         SString                    GetAttribute(const SString& strName) const
         {
             const SString* pValue = MapFind(attributeMap, strName);
-            return pValue ? *pValue : "";
+            return pValue ? *pValue : SStringX("");
         }
         void SetAttribute(const SString& strName, const SString& strValue) { MapSet(attributeMap, strName, strValue); }
     };
@@ -606,7 +609,7 @@ namespace
             SaveReportSettings();
         }
 
-        SString GetFilter() const { return strFilter != "" ? strFilter : "+all"; }
+        SString GetFilter() const { return strFilter != "" ? strFilter : SStringX("+all"); }
 
         int GetMinSize() const { return iMinSize; }
 
@@ -656,7 +659,7 @@ namespace
         }
     };
 
-}            // namespace
+}  // namespace
 
 namespace
 {
@@ -755,7 +758,7 @@ namespace
         }
     };
 
-}            // namespace
+}  // namespace
 
 namespace
 {
@@ -858,7 +861,7 @@ namespace
         } slim;
     };
 
-}            // namespace
+}  // namespace
 
 namespace
 {
@@ -883,11 +886,11 @@ namespace
             CStringPair pair;
             pair.strValue1 = strValue1.ToLower();
             pair.strValue2 = strValue2.ToLower();
-    #if MTA_DEBUG
+#if MTA_DEBUG
             CStringPair* pPair = MapFind(*this, strType.ToLower());
             if (!pPair || pPair->strValue1 != pair.strValue1 || pPair->strValue2 != pair.strValue2)
                 OutputDebugLine(SString("[Updater] SetCondition %s %s %s", strType.c_str(), strValue1.c_str(), strValue2.c_str()));
-    #endif
+#endif
             MapSet(*this, strType.ToLower(), pair);
         }
 
@@ -939,4 +942,4 @@ namespace
     class ExceptionQuitProgram : public std::exception
     {
     };
-}            // namespace
+}  // namespace

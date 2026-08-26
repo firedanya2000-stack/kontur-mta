@@ -15,7 +15,7 @@ for /f "usebackq tokens=1* delims=: " %%i in (`%VSWHERE% -latest -requires Micro
 rem Output an error if not exists
 set MSBUILDPATH="%InstallDir%\MSBuild\Current\Bin\MSBuild.exe"
 if not exist %MSBUILDPATH% (
-	echo Could not find MSBuild. Make sure you have Visual Studio 2022 installed
+	echo Could not find MSBuild. Make sure you have Visual Studio 2026 installed
 	goto end
 )
 echo Found MSBuild at: %MSBUILDPATH%
@@ -45,22 +45,7 @@ IF /i [%2] == [Win32] (
     set BUILD_PLATFORM=ARM64
 ) ELSE (
     IF not [%2] == [] (
-        echo Invalid first argument %2. Using default platform %BUILD_PLATFORM%.
-    )
-)
-
-rem Override MTASA_VERSION_TYPE for CI builds
-for /f %%A in ("Shared\build_overrides.h") do set FILE_SIZE=%%~zA
-
-if /i [%CI%] == [true] (
-    if %FILE_SIZE% equ 0 (
-        echo Overridden MTASA_VERSION_TYPE for CI builds
-        (
-            echo #undef MTASA_VERSION_TYPE
-            echo #define MTASA_VERSION_TYPE VERSION_TYPE_CUSTOM
-        ) > "Shared\build_overrides.h"
-    ) else (
-        echo CI build detected but no changes made to build_overrides.h
+        echo Invalid second argument %2. Using default platform %BUILD_PLATFORM%.
     )
 )
 

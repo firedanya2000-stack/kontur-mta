@@ -5,7 +5,7 @@
  *  FILE:        core/CCrashHandler.h
  *  PURPOSE:     Crash handler class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -27,16 +27,16 @@ public:
     static void Init(const SString& strServerPath);
 
 private:
-    #ifdef WIN32
+#ifdef WIN32
 
     static long WINAPI HandleExceptionGlobal(_EXCEPTION_POINTERS* pException);
     static void        DumpMiniDump(_EXCEPTION_POINTERS* pException, CExceptionInformation* pExceptionInformation);
 
     static void RunErrorTool();
 
-    #else
+#else
 
     static void HandleExceptionGlobal(int iSig);
 
-    #endif
+#endif
 };

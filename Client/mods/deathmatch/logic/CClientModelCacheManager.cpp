@@ -3,25 +3,25 @@
  *  PROJECT:     Multi Theft Auto v1.0
  *  LICENSE:     See LICENSE in the top level directory
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include "../../../core/CModelCacheManager.h"
 
-#define PED_STREAM_IN_DISTANCE              (250)
-#define VEHICLE_STREAM_IN_DISTANCE          (250)
-#define STREAMER_STREAM_OUT_EXTRA_DISTANCE  (50)
+#define PED_STREAM_IN_DISTANCE             (250)
+#define VEHICLE_STREAM_IN_DISTANCE         (250)
+#define STREAMER_STREAM_OUT_EXTRA_DISTANCE (50)
 
-#define PED_MAX_STREAM_DISTANCE             ( PED_STREAM_IN_DISTANCE + STREAMER_STREAM_OUT_EXTRA_DISTANCE )
-#define PED_MAX_STREAM_DISTANCE_SQ          ( PED_MAX_STREAM_DISTANCE * PED_MAX_STREAM_DISTANCE )
+#define PED_MAX_STREAM_DISTANCE    (PED_STREAM_IN_DISTANCE + STREAMER_STREAM_OUT_EXTRA_DISTANCE)
+#define PED_MAX_STREAM_DISTANCE_SQ (PED_MAX_STREAM_DISTANCE * PED_MAX_STREAM_DISTANCE)
 
-#define VEHICLE_MAX_STREAM_DISTANCE         ( VEHICLE_STREAM_IN_DISTANCE + STREAMER_STREAM_OUT_EXTRA_DISTANCE )
-#define VEHICLE_MAX_STREAM_DISTANCE_SQ      ( VEHICLE_MAX_STREAM_DISTANCE * VEHICLE_MAX_STREAM_DISTANCE )
+#define VEHICLE_MAX_STREAM_DISTANCE    (VEHICLE_STREAM_IN_DISTANCE + STREAMER_STREAM_OUT_EXTRA_DISTANCE)
+#define VEHICLE_MAX_STREAM_DISTANCE_SQ (VEHICLE_MAX_STREAM_DISTANCE * VEHICLE_MAX_STREAM_DISTANCE)
 
-#define PED_MAX_VELOCITY                    (10)
-#define VEHICLE_MAX_VELOCITY                (10)
+#define PED_MAX_VELOCITY     (10)
+#define VEHICLE_MAX_VELOCITY (10)
 
 ///////////////////////////////////////////////////////////////
 //
@@ -38,6 +38,7 @@ public:
     // CClientModelCacheManager interface
     virtual void DoPulse();
     virtual void OnRestreamModel(ushort usModelId);
+    virtual void SetCustomLimits(std::optional<size_t> numVehicles, std::optional<size_t> numPeds);
 
     // CClientModelCacheManagerImpl methods
     CClientModelCacheManagerImpl();
@@ -138,7 +139,7 @@ void CClientModelCacheManagerImpl::DoPulse()
         DoPulseVehicleModels();
 
     // Handle regeneration of possibly replaced clothes textures
-    if (g_pGame->GetRenderWare()->HasClothesReplacementChanged())
+    if (g_pGame->GetRenderWare()->HasClothesReplacementChanged() || CClientPlayerClothes::HasClothesChanged())
     {
         g_pMultiplayer->FlushClothesCache();
 
@@ -517,4 +518,9 @@ void CClientModelCacheManagerImpl::AddProcessStat(const char* szTag, bool bCache
 void CClientModelCacheManagerImpl::OnRestreamModel(ushort usModelId)
 {
     m_pCoreModelCacheManager->OnRestreamModel(usModelId);
+}
+
+void CClientModelCacheManagerImpl::SetCustomLimits(std::optional<size_t> numVehicles, std::optional<size_t> numPeds)
+{
+    m_pCoreModelCacheManager->SetCustomLimits(numVehicles, numPeds);
 }

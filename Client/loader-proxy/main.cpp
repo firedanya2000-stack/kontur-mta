@@ -15,6 +15,7 @@
 #include <string>
 #include <filesystem>
 #include <cassert>
+#include <cstring>
 #include <windows.h>
 #include <tlhelp32.h>
 #include <ShlObj.h>
@@ -47,7 +48,6 @@ BOOL OnLibraryAttach();
 auto SetImportProcAddress(const char* moduleName, const char* procedureName, FARPROC replacement) -> FARPROC;
 void DisplayErrorMessageBox(const std::wstring& message, const std::wstring& errorCode);
 bool DisplayWarningMessageBox(const std::wstring& message, const std::wstring& errorCode);
-auto PatchWinmmImports() -> int;
 auto GetSystemErrorMessage(DWORD errorCode) -> std::wstring;
 auto GetCurrentProcessPath() -> fs::path;
 auto GetParentProcessPath() -> fs::path;
@@ -64,6 +64,31 @@ HMODULE g_core = nullptr;
 HMODULE g_netc = nullptr;
 
 BOOL(WINAPI* Win32GetVersionExA)(LPOSVERSIONINFOA) = nullptr;
+
+template <typename T>
+static T FarProcToFunctionPtr(FARPROC proc)
+{
+    T fn = nullptr;
+    static_assert(sizeof(fn) == sizeof(proc), "Unexpected function pointer size");
+    if (proc)
+        std::memcpy(&fn, &proc, sizeof(fn));
+    return fn;
+}
+
+template <typename T>
+static FARPROC FunctionPtrToFarProc(T fn)
+{
+    FARPROC proc = nullptr;
+    static_assert(sizeof(proc) == sizeof(fn), "Unexpected function pointer size");
+    std::memcpy(&proc, &fn, sizeof(proc));
+    return proc;
+}
+
+template <typename T>
+static T GetProcAddressAs(HMODULE module, const char* procName)
+{
+    return FarProcToFunctionPtr<T>(module ? GetProcAddress(module, procName) : nullptr);
+}
 
 BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID)
 {
@@ -104,25 +129,168 @@ BOOL OnLibraryAttach()
     ApplyDpiAwareness();
 
     // Replace the first called imported procedure from the executable.
-    FARPROC procedure = SetImportProcAddress("kernel32.dll", "GetVersionExA", reinterpret_cast<FARPROC>(MyGetVersionExA));
-
+    FARPROC procedure = SetImportProcAddress("kernel32.dll", "GetVersionExA", FunctionPtrToFarProc(&MyGetVersionExA));
     if (!procedure)
     {
         DisplayErrorMessageBox(MakeLauncherError(L"Failed to redirect start procedure."), L"CL50");
         return FALSE;
     }
 
-    Win32GetVersionExA = reinterpret_cast<decltype(Win32GetVersionExA)>(procedure);
+    Win32GetVersionExA = FarProcToFunctionPtr<decltype(Win32GetVersionExA)>(procedure);
     return TRUE;
 }
 
 VOID OnGameLaunch()
 {
+    SetMemoryAllocationFailureHandler();
+
     std::error_code ec{};
+
+    // Log current working directory
+    wchar_t inheritedCwd[32768]{};
+    DWORD   inheritedCwdLen = GetCurrentDirectoryW(32768, inheritedCwd);
+
+    // CEF subprocess may have different working directory than parent process
+    // Try multiple methods to find the GTA directory:
+    // - Parse CEF command-line switch --mta-gta-path=<path>
+    // - Read from gta_path.txt file written by parent process
+    // - Check MTA_GTA_PATH environment variable
+    // - Use current_path() as fallback
+
+    // Parse CEF command-line switch
+    std::array<wchar_t, 4096> gtaPathFromCmdLine{};
+    DWORD                     cmdLinePathLen = 0;
+    std::array<wchar_t, 4096> mtaBasePathFromCmdLine{};
+    DWORD                     mtaBasePathLen = 0;
+    {
+        const LPWSTR cmdLine = GetCommandLineW();
+        if (cmdLine)
+        {
+            // Parse for --mta-gta-path=<path>
+            // CEF command-line format: --switch=value or --switch=\"value with spaces\"
+            constexpr std::wstring_view switchPrefix = L"--mta-gta-path=";
+            if (const wchar_t* switchPos = wcsstr(cmdLine, switchPrefix.data()))
+            {
+                const wchar_t* const pathStartBase = switchPos + switchPrefix.length();
+                const wchar_t*       pathStart = pathStartBase;
+
+                // Skip opening quote if present
+                if (*pathStart == L'"')
+                    pathStart++;
+
+                // Find end of path (closing quote or space)
+                const wchar_t* pathEnd = pathStart;
+                const bool     isQuoted = (pathStartBase[0] == L'"');
+
+                while (*pathEnd != L'\0')
+                {
+                    if (isQuoted && *pathEnd == L'"')
+                    {
+                        break;  // End of quoted path
+                    }
+                    else if (!isQuoted && *pathEnd == L' ')
+                    {
+                        break;  // End of unquoted path
+                    }
+                    pathEnd++;
+                }
+
+                const size_t pathLen = pathEnd - pathStart;
+                if (pathLen > 0 && pathLen < gtaPathFromCmdLine.size())
+                {
+                    wcsncpy_s(gtaPathFromCmdLine.data(), gtaPathFromCmdLine.size(), pathStart, pathLen);
+                    cmdLinePathLen = static_cast<DWORD>(pathLen);
+                }
+            }
+
+            // Parse for --mta-base-path=<path>
+            constexpr std::wstring_view mtaSwitchPrefix = L"--mta-base-path=";
+            if (const wchar_t* mtaSwitchPos = wcsstr(cmdLine, mtaSwitchPrefix.data()))
+            {
+                const wchar_t* const mtaPathStartBase = mtaSwitchPos + mtaSwitchPrefix.length();
+                const wchar_t*       mtaPathStart = mtaPathStartBase;
+
+                // Skip opening quote if present
+                if (*mtaPathStart == L'"')
+                    mtaPathStart++;
+
+                // Find end of path (closing quote or space)
+                const wchar_t* mtaPathEnd = mtaPathStart;
+                const bool     mtaIsQuoted = (mtaPathStartBase[0] == L'"');
+
+                while (*mtaPathEnd != L'\0')
+                {
+                    if (mtaIsQuoted && *mtaPathEnd == L'"')
+                    {
+                        break;
+                    }
+                    else if (!mtaIsQuoted && *mtaPathEnd == L' ')
+                    {
+                        break;
+                    }
+                    mtaPathEnd++;
+                }
+
+                const size_t mtaPathLength = mtaPathEnd - mtaPathStart;
+                if (mtaPathLength > 0 && mtaPathLength < mtaBasePathFromCmdLine.size())
+                {
+                    wcsncpy_s(mtaBasePathFromCmdLine.data(), mtaBasePathFromCmdLine.size(), mtaPathStart, mtaPathLength);
+                    mtaBasePathLen = static_cast<DWORD>(mtaPathLength);
+                }
+            }
+        }
+    }
+
+    // Read from file
+    std::array<wchar_t, 4096> gtaPathFromFile{};
+    DWORD                     filePathLen = 0;
+    const fs::path            gtaPathFile = fs::current_path(ec) / L".." / L".." / L"MTA" / L"CEF" / L"gta_path.txt";
+    if (FILE* pFile = nullptr; _wfopen_s(&pFile, gtaPathFile.c_str(), L"r") == 0 && pFile)
+    {
+        std::array<char, 8192> buffer{};
+        const size_t           bytesRead = fread(buffer.data(), 1, buffer.size() - 1, pFile);
+        fclose(pFile);
+        if (bytesRead > 0)
+        {
+            buffer[bytesRead] = '\0';  // Null-terminate
+            // Convert UTF-8 to wide char
+            if (MultiByteToWideChar(CP_UTF8, 0, buffer.data(), -1, gtaPathFromFile.data(), static_cast<int>(gtaPathFromFile.size())) > 0)
+            {
+                filePathLen = static_cast<DWORD>(wcslen(gtaPathFromFile.data()));
+            }
+        }
+    }
+
+    // Check environment variable
+    std::array<wchar_t, 4096> gtaPathFromEnv{};
+    const DWORD               envLen = GetEnvironmentVariableW(L"MTA_GTA_PATH", gtaPathFromEnv.data(), static_cast<DWORD>(gtaPathFromEnv.size()));
+
+    const fs::path gtaDirectory = [&]() -> fs::path
+    {
+        // CEF command-line switch
+        if (cmdLinePathLen > 0 && cmdLinePathLen < gtaPathFromCmdLine.size())
+        {
+            return fs::path{gtaPathFromCmdLine.data()};
+        }
+        // File-based communication
+        else if (filePathLen > 0 && filePathLen < gtaPathFromFile.size())
+        {
+            return fs::path{gtaPathFromFile.data()};
+        }
+        // Environment variable
+        else if (envLen > 0 && envLen < gtaPathFromEnv.size())
+        {
+            return fs::path{gtaPathFromEnv.data()};
+        }
+        // Current working directory
+        else
+        {
+            return fs::current_path(ec);
+        }
+    }();
 
     // MTA:SA launches GTA:SA process with the GTA:SA installation directory as the current directory.
     // We can't use the path to the current executable, because it's not in the game directory anymore.
-    const fs::path gtaDirectory = fs::current_path(ec);
 
     if (ec)
     {
@@ -147,43 +315,59 @@ VOID OnGameLaunch()
         }
     }
 
-    // Abort if the current process is not the game executable.
-    const std::wstring processName = GetCurrentProcessPath().filename().wstring();
+    // Detect if running as CEF subprocess by checking for --mta-base-path switch
+    // CEF subprocesses have this switch and skip validation checks
+    const bool bIsCefSubprocess = (mtaBasePathLen > 0);
 
-    if (!IEqual(GTA_EXE_NAME, processName))
+    if (bIsCefSubprocess)
     {
-        std::wstring message = L"Executable has an incorrect name (" + processName + L").";
-        DisplayErrorMessageBox(MakeLauncherError(message), L"CL52");
-        return;
+        AddLaunchLog("Detected CEF subprocess mode - skipping process name validation");
     }
 
-    // MTA:SA must be the parent launcher process in every case.
-    const fs::path launcherPath = GetParentProcessPath();
+    // Abort if the current process is not the game executable
+    if (!bIsCefSubprocess)
+    {
+        const std::wstring processName = GetCurrentProcessPath().filename().wstring();
 
-    if (launcherPath.empty())
+        if (!IEqual(GTA_EXE_NAME, processName))
+        {
+            std::wstring message = L"Executable has an incorrect name (" + processName + L").";
+            DisplayErrorMessageBox(MakeLauncherError(message), L"CL52");
+            return;
+        }
+    }
+
+    // MTA must be the parent launcher process in every case
+    // For CEF subprocesses, skip parent process check
+    const fs::path launcherPath = bIsCefSubprocess ? fs::path{} : GetParentProcessPath();
+
+    if (!bIsCefSubprocess && launcherPath.empty())
     {
         AddLaunchLog("Unable to determine launcher executable");
         DisplayErrorMessageBox(MakeLauncherError(L"Unable to determine launcher executable."), L"CL53");
         return;
     }
 
-    // Check if the name of the launcher process matches Multi Theft Auto.
-    const std::wstring launcherName = launcherPath.filename().wstring();
-
-    if (!IEqual(MTA_EXE_NAME, launcherName))
+    // Check if the name of the launcher process matches Multi Theft Auto
+    if (!bIsCefSubprocess)
     {
-        if (IEqual(EXPLORER_EXE_NAME, launcherName))
-        {
-            DisplayErrorMessageBox(MakeLauncherError(L"Do not run this game from Windows Explorer."), L"CL54");
-            return;
-        }
+        const std::wstring launcherName = launcherPath.filename().wstring();
 
-        std::wstring message = L"Launcher executable has an incorrect name (" + launcherName + L").";
-
-        if (!DisplayWarningMessageBox(MakeLauncherError(message), L"CL54"))
+        if (!IEqual(MTA_EXE_NAME, launcherName))
         {
-            ExitProcess(1);
-            return;
+            if (IEqual(EXPLORER_EXE_NAME, launcherName))
+            {
+                DisplayErrorMessageBox(MakeLauncherError(L"Do not run this game from Windows Explorer."), L"CL54");
+                return;
+            }
+
+            std::wstring message = L"Launcher executable has an incorrect name (" + launcherName + L").";
+
+            if (!DisplayWarningMessageBox(MakeLauncherError(message), L"CL54"))
+            {
+                ExitProcess(1);
+                return;
+            }
         }
     }
 
@@ -199,7 +383,33 @@ VOID OnGameLaunch()
     }
 
     // Check if the MTA subdirectory exists.
-    const fs::path mtaRootDirectory = launcherPath.parent_path();
+    // Use --mta-base-path from command-line if available,
+    // otherwise fall back to parent process path
+    const fs::path mtaRootDirectory = [&]() -> fs::path
+    {
+        if (bIsCefSubprocess && mtaBasePathLen > 0 && mtaBasePathLen < mtaBasePathFromCmdLine.size())
+        {
+            AddLaunchLog("Using MTA base path from CEF command-line switch: %S", mtaBasePathFromCmdLine.data());
+            return fs::path{mtaBasePathFromCmdLine.data()};
+        }
+        else if (!bIsCefSubprocess && !launcherPath.empty())
+        {
+            return launcherPath.parent_path();
+        }
+        else
+        {
+            AddLaunchLog("ERROR: Unable to determine MTA base path");
+            return fs::path{};
+        }
+    }();
+
+    if (mtaRootDirectory.empty())
+    {
+        AddLaunchLog("MTA root directory is empty - cannot continue");
+        DisplayErrorMessageBox(MakeLauncherError(L"Unable to determine MTA installation directory."), L"CL55");
+        return;
+    }
+
     const fs::path mtaDirectory = mtaRootDirectory / "MTA";
 
     if (!fs::is_directory(mtaDirectory, ec))
@@ -232,32 +442,9 @@ VOID OnGameLaunch()
         return;
     }
 
-    // Patch the winmm.dll imports we've taken over with our mtasa.dll library back to the functions from the winmm.dll library.
-    if (int error = PatchWinmmImports())
-    {
-        std::wstring message;
-
-        switch (error)
-        {
-            case 1:
-                message = L"Loading system-provided winmm.dll failed.";
-                break;
-            case 4:
-                message = L"Unable to find winmm.dll import entry.";
-                break;
-            default:
-                message = L"Patching winmm.dll imports failed.";
-                break;
-        }
-
-        AddLaunchLog("Patching imports has failed (%d)", error);
-        DisplayErrorMessageBox(MakeMissingFilesError(message), L"CL58");
-        return;
-    }
-
     // For dll searches, this call replaces the current directory entry and turns off 'SafeDllSearchMode'.
     // Meaning it will search the supplied path before the system and windows directory.
-    // http://msdn.microsoft.com/en-us/library/ms682586%28VS.85%29.aspx
+    // https://msdn.microsoft.com/en-us/library/ms682586%28VS.85%29.aspx
     SetDllDirectoryW(mtaDirectory.wstring().c_str());
 
     // Load and set up netc.dll library.
@@ -274,14 +461,14 @@ VOID OnGameLaunch()
 
     ApplyDirectoryInformation(g_netc, mtaRootDirectory.wstring(), gtaDirectory.wstring());
 
-    void (*InitNetRev)(const char*, const char*, const char*) = reinterpret_cast<decltype(InitNetRev)>(GetProcAddress(g_netc, "InitNetRev"));
+    void (*InitNetRev)(const char*, const char*, const char*) = GetProcAddressAs<decltype(InitNetRev)>(g_netc, "InitNetRev");
 
     if (InitNetRev)
     {
         InitNetRev(GetProductRegistryPath(), GetProductCommonDataDir(), GetProductVersion());
     }
 
-    bool (*CheckService)(unsigned int) = reinterpret_cast<decltype(CheckService)>(GetProcAddress(g_netc, "CheckService"));
+    bool (*CheckService)(unsigned int) = GetProcAddressAs<decltype(CheckService)>(g_netc, "CheckService");
 
     if (!CheckService)
     {
@@ -322,7 +509,7 @@ VOID OnGameLaunch()
     ApplyDirectoryInformation(g_core, mtaRootDirectory.wstring(), gtaDirectory.wstring());
 
     // Initialize and run the core.
-    int (*InitializeCore)() = reinterpret_cast<decltype(InitializeCore)>(GetProcAddress(g_core, "InitializeCore"));
+    int (*InitializeCore)() = GetProcAddressAs<decltype(InitializeCore)>(g_core, "InitializeCore");
 
     if (!InitializeCore)
     {
@@ -348,22 +535,13 @@ BOOL WINAPI MyGetVersionExA(LPOSVERSIONINFOA versionInfo)
     // Execute the original function with the given parameter.
     BOOL result = Win32GetVersionExA(versionInfo);
 
-    // Restore the function pointer we've overriden to get here.
-    SetImportProcAddress("kernel32.dll", "GetVersionExA", reinterpret_cast<FARPROC>(Win32GetVersionExA));
+    // Restore the function pointer we've overridden to get here.
+    SetImportProcAddress("kernel32.dll", "GetVersionExA", FunctionPtrToFarProc(Win32GetVersionExA));
 
     // Run our startup code.
     OnGameLaunch();
 
     return result;
-}
-
-/**
- * @brief A placeholder function for fake winmm.dll exports.
- */
-EXTERN_C void noreturn()
-{
-    // We should never enter this function.
-    assert(false);
 }
 
 /**
@@ -597,81 +775,6 @@ auto GetParentProcessPath() -> fs::path
 }
 
 /**
- * @brief Loads the winmm.dll library.
- * @return A handle to the library
- */
-auto LoadWinmmLibrary() -> HMODULE
-{
-    if (HMODULE winmm = LoadLibraryExW(L"winmm.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
-        return winmm;
-
-    return LoadLibraryW(L"winmm.dll");
-}
-
-/**
- * @brief Replaces fake mtasa.dll imports with functions retrieved from the winmm.dll library.
- */
-auto PatchWinmmImports() -> int
-{
-    auto base = reinterpret_cast<std::byte*>(g_exe);
-    auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
-    auto nt = reinterpret_cast<IMAGE_NT_HEADERS32*>(base + dos->e_lfanew);
-    auto descriptor = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(base + nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-
-    // Iterate through the import descriptors and find the winmm.dll entry, which we renamed to mtasa.dll.
-    for (; descriptor->Name; ++descriptor)
-    {
-        auto name = reinterpret_cast<const char*>(base + descriptor->Name);
-
-        if (stricmp("mtasa.dll", name))
-            continue;
-
-        HMODULE winmm = LoadWinmmLibrary();
-
-        if (!winmm)
-            return 1;
-
-        auto nameTableEntry = reinterpret_cast<DWORD*>(base + descriptor->FirstThunk);
-        auto addressTableEntry = reinterpret_cast<FARPROC*>(nameTableEntry);
-
-        if (descriptor->OriginalFirstThunk)
-            nameTableEntry = reinterpret_cast<DWORD*>(base + descriptor->OriginalFirstThunk);
-
-        // Replace every import with the correct function from the winmm.dll library.
-        for (; *nameTableEntry; ++nameTableEntry, ++addressTableEntry)
-        {
-            const char* functionName;
-
-            if (IMAGE_SNAP_BY_ORDINAL(*nameTableEntry))
-            {
-                functionName = reinterpret_cast<char const*>(IMAGE_ORDINAL(*nameTableEntry));
-            }
-            else
-            {
-                functionName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(base + *nameTableEntry)->Name;
-            }
-
-            if (!functionName)
-                return 2;
-
-            FARPROC function = GetProcAddress(winmm, functionName);
-
-            if (!function)
-                return 3;
-
-            DWORD protection;
-            VirtualProtect(addressTableEntry, sizeof(FARPROC), PAGE_READWRITE, &protection);
-            *addressTableEntry = function;
-            VirtualProtect(addressTableEntry, sizeof(FARPROC), protection, &protection);
-        }
-
-        return 0;
-    }
-
-    return 4;
-}
-
-/**
  * @brief Transforms the numeric error code into a system-generated error string.
  */
 auto GetSystemErrorMessage(DWORD errorCode) -> std::wstring
@@ -704,9 +807,9 @@ auto GetSystemErrorMessage(DWORD errorCode) -> std::wstring
 void ApplyDpiAwareness()
 {
     // Minimum version: Windows 10, version 1607
-    static BOOL(WINAPI * Win32SetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT value) = ([] {
+    static BOOL(WINAPI * Win32SetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT value) = ([]() -> decltype(Win32SetProcessDpiAwarenessContext) {
         HMODULE user32 = LoadLibraryW(L"user32");
-        return user32 ? reinterpret_cast<decltype(Win32SetProcessDpiAwarenessContext)>(GetProcAddress(user32, "SetProcessDpiAwarenessContext")) : nullptr;
+        return user32 ? GetProcAddressAs<decltype(Win32SetProcessDpiAwarenessContext)>(user32, "SetProcessDpiAwarenessContext") : nullptr;
     })();
 
     if (Win32SetProcessDpiAwarenessContext)
@@ -716,9 +819,9 @@ void ApplyDpiAwareness()
     }
 
     // Minimum version: Windows 8.1
-    static HRESULT(WINAPI * Win32SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS value) = ([] {
+    static HRESULT(WINAPI * Win32SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS value) = ([]() -> decltype(Win32SetProcessDpiAwareness) {
         HMODULE shcore = LoadLibraryW(L"shcore");
-        return shcore ? reinterpret_cast<decltype(Win32SetProcessDpiAwareness)>(GetProcAddress(shcore, "SetProcessDpiAwareness")) : nullptr;
+        return shcore ? GetProcAddressAs<decltype(Win32SetProcessDpiAwareness)>(shcore, "SetProcessDpiAwareness") : nullptr;
     })();
 
     if (Win32SetProcessDpiAwareness)
@@ -740,7 +843,7 @@ void ApplyDpiAwareness()
 void ApplyDirectoryInformation(HMODULE library, const std::wstring& mtaDirectory, const std::wstring& gtaDirectory)
 {
     // Set the path to the Multi Theft Auto directory.
-    void (*SetMTADirectory)(const wchar_t*, size_t) = reinterpret_cast<decltype(SetMTADirectory)>(GetProcAddress(library, "SetMTADirectory"));
+    void (*SetMTADirectory)(const wchar_t*, size_t) = GetProcAddressAs<decltype(SetMTADirectory)>(library, "SetMTADirectory");
 
     if (SetMTADirectory)
     {
@@ -748,7 +851,7 @@ void ApplyDirectoryInformation(HMODULE library, const std::wstring& mtaDirectory
     }
 
     // Set the path to the GTA: San Andreas directory.
-    void (*SetGTADirectory)(const wchar_t*, size_t) = reinterpret_cast<decltype(SetGTADirectory)>(GetProcAddress(library, "SetGTADirectory"));
+    void (*SetGTADirectory)(const wchar_t*, size_t) = GetProcAddressAs<decltype(SetGTADirectory)>(library, "SetGTADirectory");
 
     if (SetGTADirectory)
     {

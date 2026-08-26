@@ -27,12 +27,9 @@ NAMESPACE_BEGIN(CryptoPP)
 
 void CallNewHandler()
 {
-	using std::new_handler;
-	using std::set_new_handler;
-
-	new_handler newHandler = set_new_handler(NULLPTR);
+	std::new_handler newHandler = std::set_new_handler(NULLPTR);
 	if (newHandler)
-		set_new_handler(newHandler);
+		std::set_new_handler(newHandler);
 
 	if (newHandler)
 		newHandler();
@@ -42,6 +39,7 @@ void CallNewHandler()
 
 void * AlignedAllocate(size_t size)
 {
+        unsigned int cnt = 0;
 	byte *p;
 #if defined(CRYPTOPP_MM_MALLOC_AVAILABLE)
 	while ((p = (byte *)_mm_malloc(size, 16)) == NULLPTR)
@@ -54,8 +52,12 @@ void * AlignedAllocate(size_t size)
 #else
 	while ((p = (byte *)malloc(size + 16)) == NULLPTR)
 #endif
-		CallNewHandler();
-
+	  {
+	    if (cnt >= 10)
+	      throw std::bad_alloc();
+	     CallNewHandler();
+	     cnt++;
+	  }
 #ifdef CRYPTOPP_NO_ALIGNED_ALLOC
 	size_t adjustment = 16-((size_t)p%16);
 	CRYPTOPP_ASSERT(adjustment > 0);

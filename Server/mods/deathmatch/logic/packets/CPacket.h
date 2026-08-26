@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPacket.h
  *  PURPOSE:     Packet base class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -35,7 +35,7 @@ class CPacket
 {
 public:
     CPacket();
-    virtual ~CPacket(){};
+    virtual ~CPacket() {};
 
     virtual bool            RequiresSourcePlayer() const { return true; }
     virtual bool            HasSimHandler() const { return false; }

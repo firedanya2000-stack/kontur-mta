@@ -254,13 +254,12 @@ void CClientWeapon::Fire(bool bServerFire)
                     {
                         if (m_pTarget->GetType() == CCLIENTVEHICLE)
                         {
-                            if (m_itargetWheel <= MAX_WHEELS)
-                            {
-                                CClientVehicle* pTarget = (CClientVehicle*)(CClientEntity*)m_pTarget;
-                                vecTarget = pTarget->GetGameVehicle()->GetWheelPosition((eWheelPosition)m_itargetWheel);
-                            }
+                            CClientVehicle* pTarget = (CClientVehicle*)(CClientEntity*)m_pTarget;
+                            CVehicle*       pGameVehicle = pTarget->GetGameVehicle();
+                            if (m_itargetWheel >= 0 && m_itargetWheel < MAX_WHEELS && pGameVehicle)
+                                vecTarget = pGameVehicle->GetWheelPosition((eWheelPosition)m_itargetWheel);
                             else
-                                m_pTarget->GetPosition(vecTarget);
+                                pTarget->GetPosition(vecTarget);
                         }
                         else
                             m_pTarget->GetPosition(vecTarget);
@@ -309,10 +308,10 @@ void CClientWeapon::Fire(bool bServerFire)
 #ifdef SHOTGUN_TEST
             CVector vecFireOffset = *m_pWeaponInfo->GetFireOffset();
             CMatrix matTemp = CMatrix(vecFireOffset) * matOrigin;
-#ifdef MARKER_DEBUG
+    #ifdef MARKER_DEBUG
             // Process
             m_pMarker->SetPosition(matOrigin.GetPosition());
-#endif
+    #endif
             CVector vecTemp2;
             GetRotationDegrees(vecTemp2);
             vecTemp2.fZ -= 84.6f;
@@ -393,7 +392,7 @@ void CClientWeapon::FireInstantHit(CVector vecOrigin, CVector vecTarget, bool bS
             }
         }
         // if ( pAttachedTo ) pAttachedTo->WorldIgnore ( true );
-        if (m_pWeapon->ProcessLineOfSight(&vecOrigin, &vecTarget, &pColPoint, &pColEntity, m_weaponConfig.flags, &pBuildingResult, m_Type, &pEntity))
+        if (m_pWeapon->ProcessLineOfSight(vecOrigin, vecTarget, &pColPoint, pColEntity, m_weaponConfig.flags, &pBuildingResult, m_Type, &pEntity))
         {
             vecTarget = pColPoint->GetPosition();
         }
@@ -419,18 +418,18 @@ void CClientWeapon::FireInstantHit(CVector vecOrigin, CVector vecTarget, bool bS
         CClientEntity* pClientEntity = pColEntity ? pPools->GetClientEntity((DWORD*)pColEntity->GetInterface()) : nullptr;
         CLuaArguments  Arguments;
         if (pClientEntity)
-            Arguments.PushElement(pClientEntity);            // entity that got hit
+            Arguments.PushElement(pClientEntity);  // entity that got hit
         else
-            Arguments.PushNil();                                               // Probably a building.
-        Arguments.PushNumber(pColPoint->GetPosition().fX);                     // pos x
-        Arguments.PushNumber(pColPoint->GetPosition().fY);                     // pos y
-        Arguments.PushNumber(pColPoint->GetPosition().fZ);                     // pos z
-        Arguments.PushNumber(pColPoint->GetNormal().fX);                       // Normal x
-        Arguments.PushNumber(pColPoint->GetNormal().fY);                       // Normal y
-        Arguments.PushNumber(pColPoint->GetNormal().fZ);                       // Normal z
-        Arguments.PushNumber(pColPoint->GetSurfaceTypeB());                    // Surface type "B"
-        Arguments.PushNumber(pColPoint->GetLightingForTimeOfDay());            // Lighting
-        Arguments.PushNumber(pColPoint->GetPieceTypeB());                      // Piece
+            Arguments.PushNil();                                     // Probably a building.
+        Arguments.PushNumber(pColPoint->GetPosition().fX);           // pos x
+        Arguments.PushNumber(pColPoint->GetPosition().fY);           // pos y
+        Arguments.PushNumber(pColPoint->GetPosition().fZ);           // pos z
+        Arguments.PushNumber(pColPoint->GetNormal().fX);             // Normal x
+        Arguments.PushNumber(pColPoint->GetNormal().fY);             // Normal y
+        Arguments.PushNumber(pColPoint->GetNormal().fZ);             // Normal z
+        Arguments.PushNumber(pColPoint->GetSurfaceTypeB());          // Surface type "B"
+        Arguments.PushNumber(pColPoint->GetLightingForTimeOfDay());  // Lighting
+        Arguments.PushNumber(pColPoint->GetPieceTypeB());            // Piece
         if (!CallEvent("onClientWeaponFire", Arguments, true))
         {
             if (pColPoint)
@@ -449,7 +448,7 @@ void CClientWeapon::FireInstantHit(CVector vecOrigin, CVector vecTarget, bool bS
 #ifdef MARKER_DEBUG
         m_pMarker2->SetPosition(vecTarget);
 #endif
-        m_pWeapon->DoBulletImpact(m_pObject, pEntity, &vecOrigin, &vecTarget, pColPoint, 0);
+        m_pWeapon->DoBulletImpact(m_pObject, pEntity, vecOrigin, vecTarget, *pColPoint->GetInterface(), 0);
 
         if (!IsLocalEntity() && m_pOwner)
         {
@@ -680,7 +679,7 @@ void CClientWeapon::DoGunShells(CVector vecOrigin, CVector vecDirection)
             // Note: Nozzle flare lags behind attached object if it is moving, but we can't set attached entity here as it will crash if not a ped
             g_pGame->GetFx()->TriggerGunshot(NULL, vecOrigin, vecDirection, true);
 
-            m_pWeapon->AddGunshell(m_pObject, &vecOrigin, &CVector2D(0, -1), fShellSize);
+            m_pWeapon->AddGunshell(m_pObject, vecOrigin, CVector2D(0, -1), fShellSize);
         }
         if (m_Type != WEAPONTYPE_MINIGUN)
         {

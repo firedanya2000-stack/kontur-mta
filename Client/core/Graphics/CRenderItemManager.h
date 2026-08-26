@@ -5,7 +5,7 @@
  *  FILE:        CRenderItemManager.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -30,7 +30,8 @@ public:
                                               ETextureType textureType = TTYPE_TEXTURE, uint uiVolumeDepth = 1);
     virtual CShaderItem*        CreateShader(const SString& strFile, const SString& strRootPath, bool bIsRawData, SString& strOutStatus, float fPriority,
                                              float fMaxDistance, bool bLayered, bool bDebug, int iTypeMask, const EffectMacroList& macros);
-    virtual CRenderTargetItem*  CreateRenderTarget(uint uiSizeX, uint uiSizeY, bool bWithAlphaChannel, bool bForce = false);
+    virtual CRenderTargetItem*  CreateRenderTarget(uint uiSizeX, uint uiSizeY, bool bHasSurfaceFormat, bool bWithAlphaChannel, int surfaceFormat,
+                                                   bool bForce = false);
     virtual CScreenSourceItem*  CreateScreenSource(uint uiSizeX, uint uiSizeY);
     virtual CVectorGraphicItem* CreateVectorGraphic(uint width, uint height);
     virtual CWebBrowserItem*    CreateWebBrowser(uint uiSizeX, uint uiSizeY);
@@ -55,7 +56,7 @@ public:
     virtual ERenderFormat  GetDepthBufferFormat() { return m_depthBufferFormat; }
     virtual void           SaveReadableDepthBuffer();
     virtual void           FlushNonAARenderTarget();
-    virtual void           HandleStretchRect(IDirect3DSurface9* pSourceSurface, CONST RECT* pSourceRect, IDirect3DSurface9* pDestSurface, CONST RECT* pDestRect,
+    virtual HRESULT        HandleStretchRect(IDirect3DSurface9* pSourceSurface, CONST RECT* pSourceRect, IDirect3DSurface9* pDestSurface, CONST RECT* pDestRect,
                                              int Filter);
 
     // CRenderItemManager
@@ -64,15 +65,20 @@ public:
     void OnDeviceCreate(IDirect3DDevice9* pDevice, float fViewportSizeX, float fViewportSizeY);
     void OnLostDevice();
     void OnResetDevice();
+    void OnViewportSizeChanged(uint uiNewViewportSizeX, uint uiNewViewportSizeY);
     void UpdateBackBufferCopySize();
     bool SaveDefaultRenderTarget();
     bool IsUsingDefaultRenderTarget();
-    void ChangeRenderTarget(uint uiSizeX, uint uiSizeY, IDirect3DSurface9* pD3DRenderTarget, IDirect3DSurface9* pD3DZStencilSurface);
+    bool ChangeRenderTarget(uint uiSizeX, uint uiSizeY, IDirect3DSurface9* pD3DRenderTarget, IDirect3DSurface9* pD3DZStencilSurface);
     void RemoveShaderItemFromWatchLists(CShaderItem* pShaderItem);
     void UpdateMemoryUsage();
     bool CanCreateRenderItem(ClassId classId);
     void NotifyShaderItemUsesDepthBuffer(CShaderItem* pShaderItem, bool bUsesDepthBuffer);
     void NotifyShaderItemUsesMultipleRenderTargets(CShaderItem* pShaderItem, bool bUsesMultipleRenderTargets);
+
+    HRESULT GetDeviceCooperativeLevel(const char* szContext, bool bLogLost = true) const;
+
+    void RetryInvalidRenderTargets();
 
     static int GetBitsPerPixel(D3DFORMAT Format);
     static int GetPitchDivisor(D3DFORMAT Format);
@@ -85,6 +91,8 @@ public:
     IDirect3DDevice9* m_pDevice;
 
 protected:
+    void TryRecreateInvalidRenderTargets();
+
     std::set<CRenderItem*>   m_CreatedItemList;
     IDirect3DSurface9*       m_pDefaultD3DRenderTarget;
     IDirect3DSurface9*       m_pDefaultD3DZStencilSurface;
@@ -117,4 +125,8 @@ protected:
     IDirect3DSurface9*       m_pNonAARenderTarget;
     IDirect3DTexture9*       m_pNonAARenderTargetTexture;
     bool                     m_bIsSwiftShader;
+    uint                     m_uiLastRenderTargetRetryTime;
+    uint                     m_uiRenderTargetRetryDelayMs;
+    uint                     m_uiRenderTargetRetryAttempts;
+    uint                     m_uiRenderTargetRetryCooldownUntil;
 };

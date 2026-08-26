@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPlayerPuresyncPacket.h
  *  PURPOSE:     Player pure synchronization packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 class CPlayerPuresyncPacket final : public CPacket
 {
 public:
-    CPlayerPuresyncPacket(){};
+    CPlayerPuresyncPacket() {};
     explicit CPlayerPuresyncPacket(CPlayer* pPlayer);
 
     bool          HasSimHandler() const { return true; }

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CResourceFile.cpp
  *  PURPOSE:     Resource server-side file item class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -56,7 +56,7 @@ CResourceFile::~CResourceFile()
 {
 }
 
-ResponseCode CResourceFile::Request(HttpRequest* ipoHttpRequest, HttpResponse* ipoHttpResponse)
+HttpStatusCode CResourceFile::Request(HttpRequest* ipoHttpRequest, HttpResponse* ipoHttpResponse)
 {
     // HACK - Use http-client-files if possible as the resources directory may have been changed since the resource was loaded.
     SString strDstFilePath = GetCachedPathFilename();
@@ -74,22 +74,42 @@ ResponseCode CResourceFile::Request(HttpRequest* ipoHttpRequest, HttpResponse* i
         long lBufferLength = ftell(file);
         rewind(file);
 
+        if (lBufferLength < 0)
+        {
+            fclose(file);
+            ipoHttpResponse->SetBody("Failed to determine file size", strlen("Failed to determine file size"));
+            return HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR;
+        }
+
         // Allocate and read the entire file
         // TODO: This is inefficient.
-        char* szBuffer = new char[lBufferLength + 1];
-        fread(szBuffer, 1, lBufferLength, file);
-        fclose(file);
+        char* szBuffer = nullptr;
+        try
+        {
+            szBuffer = new char[lBufferLength + 1];
+            size_t bytesRead = fread(szBuffer, 1, lBufferLength, file);
+            fclose(file);
+            file = nullptr;
 
-        //
-        ipoHttpResponse->oResponseHeaders["content-type"] = "application/octet-stream";            // not really the right mime-type
-        ipoHttpResponse->SetBody(szBuffer, lBufferLength);
-        delete[] szBuffer;
-        return HTTPRESPONSECODE_200_OK;
+            ipoHttpResponse->oResponseHeaders["content-type"] = "application/octet-stream";
+            ipoHttpResponse->SetBody(szBuffer, static_cast<int>(bytesRead));
+            delete[] szBuffer;
+            return HTTP_STATUS_CODE_200_OK;
+        }
+        catch (const std::bad_alloc&)
+        {
+            delete[] szBuffer;
+            if (file)
+                fclose(file);
+
+            ipoHttpResponse->SetBody("Server out of memory", strlen("Server out of memory"));
+            return HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR;
+        }
     }
     else
     {
         ipoHttpResponse->SetBody("Can't read file!", strlen("Can't read file!"));
-        return HTTPRESPONSECODE_500_INTERNALSERVERERROR;
+        return HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR;
     }
 }
 

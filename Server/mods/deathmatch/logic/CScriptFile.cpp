@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CScriptFile.cpp
  *  PURPOSE:     Script file element class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -200,6 +200,14 @@ long CScriptFile::Read(unsigned long ulSize, SString& outBuffer)
     return fread(outBuffer.data(), 1, ulSize, m_pFile);
 }
 
+long CScriptFile::ReadToBuffer(unsigned char* buffer, unsigned long bufferSize)
+{
+    if (!m_pFile)
+        return -1;
+
+    return fread(buffer, 1, bufferSize, m_pFile);
+}
+
 long CScriptFile::Write(unsigned long ulSize, const char* pData)
 {
     if (!m_pFile)
@@ -209,7 +217,42 @@ long CScriptFile::Write(unsigned long ulSize, const char* pData)
     return fwrite(pData, 1, ulSize, m_pFile);
 }
 
+long CScriptFile::GetContents(std::string& buffer)
+{
+    if (!m_pFile)
+        return -1;
+
+    // Store the current position to restore it later.
+    const long currentPos = ftell(m_pFile);
+
+    // Move to the end of the file to determine the size.
+    fseek(m_pFile, 0, SEEK_END);
+    const long fileSize = ftell(m_pFile);
+
+    try
+    {
+        buffer.resize(fileSize);
+    }
+    catch (const std::bad_alloc&)
+    {
+        fseek(m_pFile, currentPos, SEEK_SET);
+        return -2;
+    }
+
+    // Move to the start of the file to read the entire file.
+    fseek(m_pFile, 0, SEEK_SET);
+    const long bytesRead = fread(buffer.data(), 1, fileSize, m_pFile);
+    fseek(m_pFile, currentPos, SEEK_SET);
+    buffer.resize(bytesRead);
+    return bytesRead;
+}
+
 CResource* CScriptFile::GetResource()
 {
     return m_pResource;
+}
+
+CResourceFile* CScriptFile::GetResourceFile() const
+{
+    return m_pResource->GetResourceFile(m_strFilename);
 }

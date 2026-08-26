@@ -5,7 +5,7 @@
  *  FILE:        core/CServerImpl.h
  *  PURPOSE:     Server class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -28,20 +28,20 @@ class CServerImpl;
 
 typedef CXML* (*InitXMLInterface)(const char* szSaveFlagDirectory);
 typedef CNetServer* (*InitNetServerInterface)();
+typedef void (*ReleaseNetServerInterface)();
 
 #ifdef WIN32
-typedef void(FClientFeedback)(const char* szText);
 constexpr SHORT SCREEN_BUFFER_SIZE = 256;
 #endif
 
 class CServerImpl : public CServerInterface
 {
 public:
-    #ifdef WIN32
+#ifdef WIN32
     CServerImpl(CThreadCommandQueue* pThreadCommandQueue);
-    #else
+#else
     CServerImpl();
-    #endif
+#endif
 
     ~CServerImpl();
 
@@ -88,10 +88,6 @@ private:
     CNetServer*      m_pNetwork;
     CModManagerImpl* m_pModManager;
     CXML*            m_pXML;
-
-#ifdef WIN32
-    FClientFeedback* m_fClientFeedback;
-#endif
 
     SString m_strServerPath;
     SString m_strServerModPath;

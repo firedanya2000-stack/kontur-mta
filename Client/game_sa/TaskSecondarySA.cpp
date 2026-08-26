@@ -5,7 +5,7 @@
  *  FILE:        game_sa/TaskSecondarySA.cpp
  *  PURPOSE:     Secondary game tasks
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -24,7 +24,8 @@ CTaskSimpleDuckSA::CTaskSimpleDuckSA(eDuckControlTypes nDuckControl, unsigned sh
     if (!IsValid())
         return;
     DWORD dwThisInterface = (DWORD)GetInterface();
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThisInterface
         push    ebx
@@ -36,4 +37,5 @@ CTaskSimpleDuckSA::CTaskSimpleDuckSA(eDuckControlTypes nDuckControl, unsigned sh
         call    dwFunc
         pop     ebx
     }
+    // clang-format on
 }

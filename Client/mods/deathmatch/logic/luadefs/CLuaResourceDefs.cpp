@@ -5,11 +5,13 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaResourceDefs.cpp
  *  PURPOSE:     Lua resource definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
+#include <lua/CLuaFunctionParser.h>
+
 using std::list;
 
 void CLuaResourceDefs::LoadFunctions()
@@ -18,12 +20,13 @@ void CLuaResourceDefs::LoadFunctions()
         {"call", Call},
         {"getThisResource", GetThisResource},
         {"getResourceConfig", GetResourceConfig},
-        {"getResourceName", GetResourceName},
+        {"getResourceName", ArgumentParserWarn<false, GetResourceName>},
         {"getResourceFromName", GetResourceFromName},
         {"getResourceRootElement", GetResourceRootElement},
         {"getResourceGUIElement", GetResourceGUIElement},
         {"getResourceDynamicElementRoot", GetResourceDynamicElementRoot},
         {"getResourceExportedFunctions", GetResourceExportedFunctions},
+        {"getResources", ArgumentParser<GetResources>},
         {"getResourceState", GetResourceState},
         {"loadstring", LoadString},
         {"load", Load},
@@ -87,7 +90,7 @@ int CLuaResourceDefs::Call(lua_State* luaVM)
                 args.ReadArguments(luaVM, 3);
                 CLuaArguments returns;
 
-                LUA_CHECKSTACK(targetLuaVM, 1);            // Ensure some room
+                LUA_CHECKSTACK(targetLuaVM, 1);  // Ensure some room
 
                 // Lets grab the original hidden variables so we can restore them later
                 lua_getglobal(targetLuaVM, "sourceResource");
@@ -220,34 +223,12 @@ int CLuaResourceDefs::GetResourceConfig(lua_State* luaVM)
     return 1;
 }
 
-int CLuaResourceDefs::GetResourceName(lua_State* luaVM)
+std::string CLuaResourceDefs::GetResourceName(lua_State* luaVM, std::optional<CResource*> resourceElement)
 {
-    // Verify arguments
-    CResource*       pResource = NULL;
-    CScriptArgReader argStream(luaVM);
-    argStream.ReadUserData(pResource);
+    if (resourceElement.has_value())
+        return (*resourceElement)->GetName();
 
-    if (!argStream.HasErrors())
-    {
-        if (pResource)
-        {
-            // Grab its name and return it
-            const char* szName = pResource->GetName();
-            if (szName)
-            {
-                lua_pushstring(luaVM, szName);
-                return 1;
-            }
-        }
-        else
-            m_pScriptDebugging->LogBadPointer(luaVM, "resource", 1);
-    }
-    else
-        m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
-
-    // Failed
-    lua_pushboolean(luaVM, false);
-    return 1;
+    return lua_getownerresource(luaVM).GetName();
 }
 
 int CLuaResourceDefs::GetResourceFromName(lua_State* luaVM)
@@ -431,6 +412,11 @@ int CLuaResourceDefs::GetResourceState(lua_State* luaVM)
     return 1;
 }
 
+std::vector<CResource*> CLuaResourceDefs::GetResources()
+{
+    return {m_pResourceManager->IterBegin(), m_pResourceManager->IterEnd()};
+}
+
 int CLuaResourceDefs::LoadString(lua_State* luaVM)
 {
     //  func,err loadstring( string text[, string name] )
@@ -452,7 +438,7 @@ int CLuaResourceDefs::LoadString(lua_State* luaVM)
         uint        uiSize;
         if (!g_pNet->DeobfuscateScript(cpInBuffer, uiInSize, &cpBuffer, &uiSize, m_pResourceManager->GetResourceName(luaVM) + "/loadstring"))
         {
-            SString strMessage("argument 1 is invalid. Please re-compile at http://luac.mtasa.com/", 0);
+            SString strMessage("argument 1 is invalid. Please re-compile at https://luac.multitheftauto.com/", 0);
             argStream.SetCustomError(strMessage);
             cpBuffer = NULL;
             g_pClientGame->TellServerSomethingImportant(1004, argStream.GetFullErrorMessage(), 3);
@@ -503,9 +489,9 @@ int CLuaResourceDefs::Load(lua_State* luaVM)
         {
             CLuaArguments returnValues;
             callbackArguments.Call(pLuaMain, iLuaFunction, &returnValues);
-            if (returnValues.Count())
+            if (returnValues.IsNotEmpty())
             {
-                CLuaArgument* returnedValue = *returnValues.IterBegin();
+                CLuaArgument* returnedValue = *returnValues.begin();
                 int           iType = returnedValue->GetType();
                 if (iType == LUA_TNIL)
                     break;
@@ -532,7 +518,7 @@ int CLuaResourceDefs::Load(lua_State* luaVM)
         uint        uiSize;
         if (!g_pNet->DeobfuscateScript(cpInBuffer, uiInSize, &cpBuffer, &uiSize, m_pResourceManager->GetResourceName(luaVM) + "/load"))
         {
-            SString strMessage("argument 2 is invalid. Please re-compile at http://luac.mtasa.com/", 0);
+            SString strMessage("argument 2 is invalid. Please re-compile at https://luac.multitheftauto.com/", 0);
             argStream.SetCustomError(strMessage);
             cpBuffer = NULL;
             g_pClientGame->TellServerSomethingImportant(1005, argStream.GetFullErrorMessage(), 3);

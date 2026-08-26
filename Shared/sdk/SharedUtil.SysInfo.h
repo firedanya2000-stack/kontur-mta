@@ -5,16 +5,16 @@
  *  FILE:        SharedUtil.SysInfo.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
 
 #ifdef WIN32
-#include <vector>
-#include "SString.h"
-#include <windows.h>
-#include "WinVer.h"
+    #include <vector>
+    #include "SString.h"
+    #include <windows.h>
+    #include "WinVer.h"
 
 namespace SharedUtil
 {
@@ -45,6 +45,6 @@ namespace SharedUtil
     bool         IsHotFixInstalled(const SString& strHotFixId);
     bool         GetLibVersionInfo(const SString& strLibName, SLibVersionInfo* pOutLibVersionInfo);
     bool         Is64BitOS();
-}            // namespace SharedUtil
+}  // namespace SharedUtil
 
 #endif

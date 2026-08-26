@@ -4,7 +4,7 @@
  *  LICENSE:     See LICENSE in the top level directory
  *  FILE:        Shared/mods/deathmatch/logic/CIdArray.h
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 #pragma once
@@ -33,7 +33,7 @@
 */
 
 typedef unsigned long SArrayId;
-#define INVALID_ARRAY_ID    0xFFFFFFFF
+#define INVALID_ARRAY_ID 0xFFFFFFFF
 
 namespace EIdClass
 {

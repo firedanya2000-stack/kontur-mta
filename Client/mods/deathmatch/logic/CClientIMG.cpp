@@ -11,8 +11,6 @@
 #include <StdInc.h>
 #include "game/CStreaming.h"
 
-#define INVALID_ARCHIVE_ID 0xFF
-
 struct tImgHeader
 {
     char         szMagic[4];
@@ -20,7 +18,7 @@ struct tImgHeader
 };
 
 CClientIMG::CClientIMG(class CClientManager* pManager, ElementID ID)
-    : ClassInit(this), CClientEntity(ID), m_pImgManager(pManager->GetIMGManager()), m_ucArchiveID(INVALID_ARCHIVE_ID), m_usRequiredBufferSize(0)
+    : ClassInit(this), CClientEntity(ID), m_pImgManager(pManager->GetIMGManager()), m_ucArchiveID(INVALID_ARCHIVE_ID), m_LargestFileSizeBlocks(0)
 {
     m_pManager = pManager;
     SetTypeName("img");
@@ -30,6 +28,11 @@ CClientIMG::CClientIMG(class CClientManager* pManager, ElementID ID)
 CClientIMG::~CClientIMG()
 {
     m_pImgManager->RemoveFromList(this);
+    Unlink();
+}
+
+void CClientIMG::Unlink()
+{
     if (IsStreamed())
         StreamDisable();
 
@@ -51,7 +54,7 @@ bool CClientIMG::Load(fs::path filePath)
     if (!fs::exists(filePath))
         return false;
 
-    m_filePath = filePath.string();
+    m_filePath = filePath;
     m_ifs = std::ifstream(filePath, std::ios::binary);
 
     // Open the file
@@ -106,11 +109,11 @@ bool CClientIMG::GetFile(size_t fileID, std::string& buffer)
     if (!pFileInfo)
         throw std::invalid_argument("Invalid file id");
 
-    const auto ulToReadSize = pFileInfo->usSize * 2048;
+    const auto toReadBytes = (size_t)pFileInfo->usSize * 2048u;
 
     try
     {
-        buffer.resize(ulToReadSize);
+        buffer.resize(toReadBytes);
     }
     catch (const std::bad_alloc&)
     {
@@ -118,7 +121,7 @@ bool CClientIMG::GetFile(size_t fileID, std::string& buffer)
     }
 
     m_ifs.seekg((std::streampos)pFileInfo->uiOffset * 2048);
-    m_ifs.read(buffer.data(), ulToReadSize);
+    m_ifs.read(buffer.data(), toReadBytes);
 
     return !m_ifs.fail() && !m_ifs.eof();
 }
@@ -153,13 +156,13 @@ bool CClientIMG::StreamEnable()
     if (IsStreamed())
         return false;
 
-    if (m_usRequiredBufferSize == 0)
+    if (m_LargestFileSizeBlocks == 0)
     {
         for (const auto& fileInfo : m_fileInfos)
-            m_usRequiredBufferSize = Max(m_usRequiredBufferSize, fileInfo.usSize);
+            m_LargestFileSizeBlocks = std::max(m_LargestFileSizeBlocks, (size_t)fileInfo.usSize);
     }
 
-    m_ucArchiveID = g_pGame->GetStreaming()->AddArchive(m_filePath.c_str());
+    m_ucArchiveID = g_pGame->GetStreaming()->AddArchive(m_filePath.wstring().c_str());
 
     if (IsStreamed())
     {
@@ -188,7 +191,13 @@ bool CClientIMG::StreamDisable()
 
     m_pImgManager->UpdateStreamerBufferSize();
 
-    g_pClientGame->RestreamWorld(true);
+    // During session shutdown (CClientManager being destroyed), element destruction
+    // order is arbitrary. Skip restreaming because earlier element cleanup may have
+    // already freed TXD pool slots, and ReinitStreaming would flush pending
+    // streaming channels that reference those freed parent slots.
+    if (!m_pManager || !m_pManager->IsBeingDeleted())
+        g_pClientGame->RestreamWorld();
+
     return true;
 }
 
@@ -202,11 +211,23 @@ bool CClientIMG::LinkModel(unsigned int uiModelID, size_t uiFileID)
         return false;
 
     CStreamingInfo* pCurrInfo = g_pGame->GetStreaming()->GetStreamingInfo(uiModelID);
+    if (!pCurrInfo)
+        return false;
 
     if (pCurrInfo->archiveId == m_ucArchiveID)
-        return true;            // Already linked
+        return true;  // Already linked
 
     m_restoreInfo.emplace_back(uiModelID, pCurrInfo->offsetInBlocks, pCurrInfo->sizeInBlocks, pCurrInfo->archiveId);
+
+    // Internally stream out the vehicle before calling CStreamingSA::RemoveModel
+    // otherwise a crash will occur if the player is inside a vehicle that gets unloaded by the streamer
+    if (CClientVehicleManager::IsValidModel(uiModelID))
+        g_pClientGame->GetVehicleManager()->RestreamVehicles(static_cast<unsigned short>(uiModelID));
+
+    // Weapon models already in a ped's hand keep their old RW clump until the weapon slot is
+    // re-requested, same as vehicles above (see CClientDFF::ReplaceWeaponModel for the equivalent case)
+    if (CClientPedManager::IsValidWeaponModel(uiModelID))
+        g_pClientGame->GetPedManager()->RestreamWeapon(static_cast<unsigned short>(uiModelID));
 
     g_pGame->GetStreaming()->SetStreamingInfo(uiModelID, m_ucArchiveID, pFileInfo->uiOffset, pFileInfo->usSize);
 

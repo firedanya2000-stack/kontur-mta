@@ -5,11 +5,13 @@
  *  FILE:        core/CCore.h
  *  PURPOSE:     Header file for base core class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 class CCore;
+class CDiscordRichPresence;
+class CDiscordInterface;
 
 #pragma once
 
@@ -39,34 +41,37 @@ class CCore;
 #include <ijsify.h>
 #include <core/CWebCoreInterface.h>
 #include "CTrayIcon.h"
+#include "FPSLimiter.h"
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
-#define BLUE_VERSION_STRING     "Multi Theft Auto v" MTA_DM_BUILDTAG_LONG
-#define BLUE_COPYRIGHT_STRING   "Copyright (C) 2003 - %BUILD_YEAR% Multi Theft Auto"
+#define BLUE_VERSION_STRING   "Multi Theft Auto v" MTA_DM_BUILDTAG_LONG
+#define BLUE_COPYRIGHT_STRING "Copyright (C) 2003 - %BUILD_YEAR% Multi Theft Auto"
 
 // Configuration file path (relative to MTA install directory)
-#define MTA_CONFIG_PATH             "mta/config/coreconfig.xml"
-#define MTA_SERVER_CACHE_PATH       "mta/config/servercache.xml"
-#define MTA_CONSOLE_LOG_PATH        "mta/logs/console.log"
-#define MTA_CONSOLE_INPUT_LOG_PATH  "mta/logs/console-input.log"
-#define CONFIG_ROOT                 "mainconfig"
-#define CONFIG_NODE_CVARS           "settings"                  // cvars node
-#define CONFIG_NODE_KEYBINDS        "binds"                     // keybinds node
-#define CONFIG_NODE_JOYPAD          "joypad"
-#define CONFIG_NODE_UPDATER         "updater"
-#define CONFIG_NODE_SERVER_INT      "internet_servers"          // backup of last successful master server list query
-#define CONFIG_NODE_SERVER_FAV      "favourite_servers"         // favourite servers list node
-#define CONFIG_NODE_SERVER_REC      "recently_played_servers"   // recently played servers list node
-#define CONFIG_NODE_SERVER_OPTIONS  "serverbrowser_options"     // saved options for the server browser
-#define CONFIG_NODE_SERVER_SAVED    "server_passwords"    // This contains saved passwords (as appose to save_server_passwords which is a setting)
-#define CONFIG_NODE_SERVER_HISTORY  "connect_history"
-#define CONFIG_INTERNET_LIST_TAG    "internet_server"
-#define CONFIG_FAVOURITE_LIST_TAG   "favourite_server"
-#define CONFIG_RECENT_LIST_TAG      "recently_played_server"
-#define CONFIG_HISTORY_LIST_TAG     "connected_server"
-#define IDT_TIMER1 1234
+#define MTA_CONFIG_PATH            "mta/config/coreconfig.xml"
+#define MTA_SERVER_CACHE_PATH      "mta/config/servercache.xml"
+#define MTA_CONSOLE_LOG_PATH       "mta/logs/console.log"
+#define MTA_CONSOLE_INPUT_LOG_PATH "mta/logs/console-input.log"
+#define CONFIG_ROOT                "mainconfig"
+#define CONFIG_NODE_CVARS          "settings"  // cvars node
+#define CONFIG_NODE_KEYBINDS       "binds"     // keybinds node
+#define CONFIG_NODE_JOYPAD         "joypad"
+#define CONFIG_NODE_UPDATER        "updater"
+#define CONFIG_NODE_SERVER_INT     "internet_servers"         // backup of last successful master server list query
+#define CONFIG_NODE_SERVER_FAV     "favourite_servers"        // favourite servers list node
+#define CONFIG_NODE_SERVER_REC     "recently_played_servers"  // recently played servers list node
+#define CONFIG_NODE_SERVER_OPTIONS "serverbrowser_options"    // saved options for the server browser
+#define CONFIG_NODE_SERVER_SAVED   "server_passwords"         // This contains saved passwords (as appose to save_server_passwords which is a setting)
+#define CONFIG_NODE_SERVER_HISTORY "connect_history"
+#define CONFIG_INTERNET_LIST_TAG   "internet_server"
+#define CONFIG_FAVOURITE_LIST_TAG  "favourite_server"
+#define CONFIG_RECENT_LIST_TAG     "recently_played_server"
+#define CONFIG_HISTORY_LIST_TAG    "connected_server"
+#define IDT_TIMER1                 1234
+
+class CSteamClient;
 
 extern class CCore*         g_pCore;
 extern class CGraphics*     g_pGraphics;
@@ -82,25 +87,29 @@ public:
     ~CCore();
 
     // Subsystems (query)
-    eCoreVersion            GetVersion();
-    CConsoleInterface*      GetConsole();
-    CCommandsInterface*     GetCommands();
-    CConnectManager*        GetConnectManager() { return m_pConnectManager; };
-    CGame*                  GetGame();
-    CGUI*                   GetGUI();
-    CGraphicsInterface*     GetGraphics();
-    CModManagerInterface*   GetModManager();
-    CMultiplayer*           GetMultiplayer();
-    CNet*                   GetNetwork();
-    CXML*                   GetXML() { return m_pXML; };
-    CXMLNode*               GetConfig();
-    CClientVariables*       GetCVars() { return &m_ClientVariables; };
-    CKeyBindsInterface*     GetKeyBinds();
-    CMouseControl*          GetMouseControl() { return m_pMouseControl; };
-    CLocalGUI*              GetLocalGUI();
-    CLocalizationInterface* GetLocalization() { return g_pLocalization; };
-    CWebCoreInterface*      GetWebCore();
-    CTrayIconInterface*     GetTrayIcon() { return m_pTrayIcon; };
+    eCoreVersion                       GetVersion();
+    CConsoleInterface*                 GetConsole();
+    CCommandsInterface*                GetCommands();
+    CConnectManager*                   GetConnectManager() { return m_pConnectManager; };
+    CGame*                             GetGame();
+    CGUI*                              GetGUI();
+    CGraphicsInterface*                GetGraphics();
+    CModManagerInterface*              GetModManager();
+    CMultiplayer*                      GetMultiplayer();
+    CNet*                              GetNetwork();
+    CXML*                              GetXML() { return m_pXML; };
+    CXMLNode*                          GetConfig();
+    CClientVariables*                  GetCVars() { return &m_ClientVariables; };
+    CKeyBindsInterface*                GetKeyBinds();
+    CMouseControl*                     GetMouseControl() { return m_pMouseControl; };
+    CLocalGUI*                         GetLocalGUI();
+    CLocalizationInterface*            GetLocalization() { return g_pLocalization; };
+    CWebCoreInterface*                 GetWebCore();
+    CWebCoreInterface*                 GetWebCoreUnchecked() { return m_pWebCore; }  // For cleanup in destructors only - bypasses initialization check
+    CTrayIconInterface*                GetTrayIcon() { return m_pTrayIcon; };
+    std::shared_ptr<CDiscordInterface> GetDiscord();
+    CSteamClient*                      GetSteamClient() { return m_steamClient.get(); }
+    FPSLimiter::FPSLimiterInterface*   GetFPSLimiter() const noexcept { return m_pFPSLimiter.get(); }
 
     void SaveConfig(bool bWaitUntilFinished = false);
 
@@ -181,7 +190,7 @@ public:
     void DestroyGUI();
 
     // Web
-    bool IsWebCoreLoaded() { return m_pWebCore != nullptr; }
+    bool IsWebCoreLoaded() { return m_pWebCore != nullptr && m_pWebCore->IsInitialised(); }
     void DestroyWeb();
 
     // Hooks
@@ -208,18 +217,15 @@ public:
 
     // Misc
     void RegisterCommands();
-    bool IsValidNick(const char* szNick);            // Move somewhere else
+    bool IsValidNick(const char* szNick);  // Move somewhere else
     void Quit(bool bInstantly = true);
     void InitiateUpdate(const char* szType, const char* szData, const char* szHost) { m_pLocalGUI->InitiateUpdate(szType, szData, szHost); }
     bool IsOptionalUpdateInfoRequired(const char* szHost) { return m_pLocalGUI->IsOptionalUpdateInfoRequired(szHost); }
     void InitiateDataFilesFix() { m_pLocalGUI->InitiateDataFilesFix(); }
 
-    uint GetFrameRateLimit() { return m_uiFrameRateLimit; }
-    void RecalculateFrameRateLimit(uint uiServerFrameRateLimit = -1, bool bLogToConsole = true);
-    void ApplyFrameRateLimit(uint uiOverrideRate = -1);
-    void ApplyQueuedFrameRateLimit();
-    void EnsureFrameRateLimitApplied();
-    void SetClientScriptFrameRateLimit(uint uiClientScriptFrameRateLimit);
+    // FPS Limiter
+    void OnFPSLimitChange(std::uint16_t fps);
+
     void DoReliablePulse();
 
     bool IsTimingCheckpoints();
@@ -235,8 +241,8 @@ public:
     std::map<std::string, std::string>& GetCommandLineOptions() { return m_CommandLineOptions; }
     const char*                         GetCommandLineOption(const char* szOption);
     const char*                         GetCommandLineArgs() { return m_szCommandLineArgs; }
-    void                                RequestNewNickOnStart() { m_bWaitToSetNick = true; };
-    bool                                WillRequestNewNickOnStart() { return m_bWaitToSetNick; };
+    void                                RequestNewNickOnStart() { m_requestNewNickname = true; }
+    bool                                WillRequestNewNickOnStart() { return m_requestNewNickname; }
     bool                                WasLaunchedWithConnectURI();
     void                                HandleCrashDumpEncryption();
 
@@ -245,12 +251,12 @@ public:
     void                 OnDeviceRestore();
     void                 OnCrashAverted(uint uiId);
     void                 OnEnterCrashZone(uint uiId);
+    void                 UpdateWerCrashModuleBases();
     void                 LogEvent(uint uiDebugId, const char* szType, const char* szContext, const char* szBody, uint uiAddReportLogId = 0);
     bool                 GetDebugIdEnabled(uint uiDebugId);
     EDiagnosticDebugType GetDiagnosticDebug();
     void                 SetDiagnosticDebug(EDiagnosticDebugType value);
     CModelCacheManager*  GetModelCacheManager();
-    void                 AddModelToPersistentCache(ushort usModelId);
 
     static void StaticIdleHandler();
     void        IdleHandler();
@@ -277,7 +283,21 @@ public:
     void        SetFakeLagCommandEnabled(bool bEnabled) { m_bFakeLagCommandEnabled = bEnabled; }
     bool        IsFakeLagCommandEnabled() { return m_bFakeLagCommandEnabled; }
     SString     GetBlueCopyrightString();
-    bool        IsFirstFrame() const noexcept { return m_bFirstFrame; }
+
+    bool IsNetworkReady() const noexcept { return m_isNetworkReady; }
+    bool CanHandleKeyMessages() const noexcept { return m_menuFrame > 1; }
+
+    void   SetCustomStreamingMemory(size_t szMB);
+    bool   IsUsingCustomStreamingMemorySize();
+    size_t GetStreamingMemory();
+
+    const SString& GetLastConnectedServerName() const { return m_strLastConnectedServerName; }
+    void           SetLastConnectedServerName(const SString& strServerName) { m_strLastConnectedServerName = strServerName; }
+
+    void SetCurrentRefreshRate(uint uiRefreshRate) { m_uiCurrentRefreshRate = uiRefreshRate; }
+    uint GetCurrentRefreshRate() const { return m_uiCurrentRefreshRate; }
+
+    void OnPostColorFilterRender() override;
 
 private:
     void ApplyCoreInitSettings();
@@ -293,22 +313,25 @@ private:
     CModelCacheManager* m_pModelCacheManager;
 
     // Instances (put new classes here!)
-    CXMLFile*          m_pConfigFile;
-    CClientVariables   m_ClientVariables;
-    CWebCoreInterface* m_pWebCore = nullptr;
-    CTrayIcon*         m_pTrayIcon;
+    CXMLFile*                               m_pConfigFile;
+    CClientVariables                        m_ClientVariables;
+    CWebCoreInterface*                      m_pWebCore = nullptr;
+    CTrayIcon*                              m_pTrayIcon;
+    std::unique_ptr<CSteamClient>           m_steamClient;
+    std::shared_ptr<CDiscordRichPresence>   m_pDiscordRichPresence;
+    std::unique_ptr<FPSLimiter::FPSLimiter> m_pFPSLimiter;
 
     // Hook interfaces.
     CMessageLoopHook*        m_pMessageLoopHook;
     CDirectInputHookManager* m_pDirectInputHookManager;
     CDirect3DHookManager*    m_pDirect3DHookManager;
-    // CFileSystemHook *           m_pFileSystemHook;
-    CSetCursorPosHook* m_pSetCursorPosHook;
+    CSetCursorPosHook*       m_pSetCursorPosHook;
 
     bool m_bLastFocused;
     int  m_iUnminimizeFrameCounter;
     bool m_bDidRecreateRenderTargets;
     bool m_bIsWindowMinimized;
+    uint m_uiNextRenderTargetRetryTime;
 
     // Module loader objects.
     CModuleLoader m_GameModule;
@@ -335,7 +358,9 @@ private:
     CKeyBinds*     m_pKeyBinds;
     CMouseControl* m_pMouseControl;
 
-    bool              m_bFirstFrame;
+    unsigned short    m_menuFrame{};
+    bool              m_isNetworkReady{};
+    bool              m_bCrashDumpEncryptionDone{};
     bool              m_bIsOfflineMod;
     bool              m_bCursorToggleControls;
     pfnProcessMessage m_pfnMessageProcessor;
@@ -350,30 +375,34 @@ private:
     bool m_bQuitOnPulse;
     bool m_bDestroyMessageBox;
 
-    bool                 m_bDoneFrameRateLimit;
-    uint                 m_uiServerFrameRateLimit;
-    uint                 m_uiClientScriptFrameRateLimit;
-    uint                 m_uiFrameRateLimit;
-    CElapsedTimeHD       m_FrameRateTimer;
-    uint                 m_uiQueuedFrameRate;
-    bool                 m_bQueuedFrameRateValid;
-    bool                 m_bWaitToSetNick;
-    uint                 m_uiNewNickWaitFrames;
+    bool                 m_requestNewNickname{false};
     EDiagnosticDebugType m_DiagnosticDebug;
-    float                m_fMinStreamingMemory;
-    float                m_fMaxStreamingMemory;
-    bool                 m_bGettingIdleCallsFromMultiplayer;
-    bool                 m_bWindowsTimerEnabled;
-    bool                 m_bModulesLoaded;
-    int                  m_iDummyProgressValue;
-    HANDLE               m_DummyProgressTimerHandle;
-    SString              m_strDummyProgressType;
-    bool                 m_bDummyProgressUpdateAlways;
-    bool                 m_bIsRenderingGrass;
-    bool                 m_bFakeLagCommandEnabled;
+
+    // Below 2 are used for the UI only
+    float m_fMinStreamingMemory{};
+    float m_fMaxStreamingMemory{};
+
+    // Custom streaming memory limit set by `engineStreamingSetMemorySize` - Reset on server connects (= set to 0), or by the scripter
+    // `0` means "not set" [so the value should be ignored]
+    size_t m_CustomStreamingMemoryLimitBytes{};
+
+    bool    m_bGettingIdleCallsFromMultiplayer;
+    bool    m_bWindowsTimerEnabled;
+    bool    m_bModulesLoaded;
+    int     m_iDummyProgressValue;
+    HANDLE  m_DummyProgressTimerHandle;
+    SString m_strDummyProgressType;
+    bool    m_bDummyProgressUpdateAlways;
+    bool    m_bIsRenderingGrass;
+    bool    m_bFakeLagCommandEnabled;
+
+    SString m_strLastConnectedServerName{};
+    uint    m_uiCurrentRefreshRate{};
 
     // Command line
     static void                        ParseCommandLine(std::map<std::string, std::string>& options, const char*& szArgs, const char** pszNoValOptions = NULL);
-    std::map<std::string, std::string> m_CommandLineOptions;            // e.g. "-o option" -> {"o" = "option"}
-    const char*                        m_szCommandLineArgs;             // Everything that comes after the options
+    std::map<std::string, std::string> m_CommandLineOptions;  // e.g. "-o option" -> {"o" = "option"}
+    const char*                        m_szCommandLineArgs;   // Everything that comes after the options
+
+    long long m_timeDiscordAppLastUpdate;
 };

@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/TaskBasic.h
  *  PURPOSE:     Basic task interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,49 +16,50 @@
 class CTaskComplexUseMobilePhone : public virtual CTaskComplex
 {
 public:
-    virtual ~CTaskComplexUseMobilePhone(){};
+    virtual ~CTaskComplexUseMobilePhone() {};
 };
 
 class CTaskSimpleAnim : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleAnim(){};
+    virtual ~CTaskSimpleAnim() {};
 };
 
 class CTaskSimpleRunAnim : public virtual CTaskSimpleAnim
 {
 public:
-    virtual ~CTaskSimpleRunAnim(){};
+    virtual ~CTaskSimpleRunAnim() {};
 };
 
 class CTaskSimpleRunNamedAnim : public virtual CTaskSimpleAnim
 {
 public:
-    virtual ~CTaskSimpleRunNamedAnim(){};
+    virtual const char* GetAnimName() const noexcept = 0;
+    virtual const char* GetGroupName() const noexcept = 0;
 };
 
 class CTaskComplexDie : public virtual CTaskComplex
 {
 public:
-    virtual ~CTaskComplexDie(){};
+    virtual ~CTaskComplexDie() {};
 };
 
 class CTaskSimpleStealthKill : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleStealthKill(){};
+    virtual ~CTaskSimpleStealthKill() {};
 };
 
 class CTaskSimpleDead : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleDead(){};
+    virtual ~CTaskSimpleDead() {};
 };
 
 class CTaskSimpleBeHit : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimpleBeHit(){};
+    virtual ~CTaskSimpleBeHit() {};
 };
 
 enum eSunbatherType
@@ -73,7 +74,7 @@ enum eSunbatherType
 class CTaskComplexSunbathe : public virtual CTaskComplex
 {
 public:
-    virtual ~CTaskComplexSunbathe(){};
+    virtual ~CTaskComplexSunbathe() {};
     virtual void SetEndTime(DWORD dwTime) = 0;
 };
 
@@ -83,7 +84,7 @@ public:
 class CTaskSimplePlayerOnFoot : public virtual CTaskSimple
 {
 public:
-    virtual ~CTaskSimplePlayerOnFoot(){};
+    virtual ~CTaskSimplePlayerOnFoot() {};
 };
 
 ////////////////////
@@ -92,5 +93,11 @@ public:
 class CTaskComplexFacial : public virtual CTaskComplex
 {
 public:
-    virtual ~CTaskComplexFacial(){};
+    virtual ~CTaskComplexFacial() {};
+};
+
+class CTaskComplexInWater : public virtual CTaskComplex
+{
+public:
+    virtual ~CTaskComplexInWater() {};
 };

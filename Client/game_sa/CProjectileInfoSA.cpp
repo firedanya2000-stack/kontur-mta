@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CProjectileInfoSA.cpp
  *  PURPOSE:     Projectile type information
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -36,12 +36,12 @@ void CProjectileInfoSA::RemoveProjectile(CProjectileInfo* pProjectileInfo, CProj
     if (!pProjectileSA)
         return;
 
-    CEntitySAInterface* projectileInterface = pProjectileSA->GetInterface();
+    CProjectileSAInterface* projectileInterface = pProjectileSA->GetProjectileInterface();
 
     // Check that this infact is a CProjectile
     // This is perhaps the fix for a crash where it jumps to 0x42480000
     // The proper cause should be figured out instead though as this is a rather unsafe fix.
-    if ((DWORD)projectileInterface->vtbl == VTBL_CProjectile)
+    if (projectileInterface->IsProjectableVTBL())
     {
         // Has it not already been removed by GTA?
         if (pProjectileInfo->IsActive())
@@ -49,23 +49,27 @@ void CProjectileInfoSA::RemoveProjectile(CProjectileInfo* pProjectileInfo, CProj
             if (bBlow)
             {
                 DWORD dwFunc = FUNC_RemoveProjectile;
-                _asm
+                // clang-format off
+                __asm
                 {
                     push    projectileInterface
                     push    projectileInfoInterface
                     call    dwFunc
                     add     esp, 8
                 }
+                // clang-format on
             }
             else
             {
                 DWORD dwFunc = FUNC_RemoveIfThisIsAProjectile;
-                _asm
+                // clang-format off
+                __asm
                 {
                     push   projectileInterface
                     call   dwFunc
                     add    esp, 4
                 }
+                // clang-format on
             }
         }
     }
@@ -111,7 +115,8 @@ bool CProjectileInfoSA::AddProjectile(CEntity* creator, eWeaponType eWeapon, CVe
             targetVC = pTargetEntitySA->GetInterface();
     }
 
-    _asm
+    // clang-format off
+    __asm
     {
         push    eax
 
@@ -130,6 +135,7 @@ bool CProjectileInfoSA::AddProjectile(CEntity* creator, eWeaponType eWeapon, CVe
 
         pop     eax
     }
+    // clang-format on
     pGame->GetWorld()->IgnoreEntity(nullptr);
     return dwReturn != 0;
 }
@@ -179,4 +185,19 @@ void CProjectileInfoSA::SetCounter(DWORD dwCounter)
 DWORD CProjectileInfoSA::GetCounter()
 {
     return internalInterface->dwCounter - pGame->GetSystemTime();
+}
+
+void CProjectileInfoSA::RemoveEntityReferences(CEntity* entity)
+{
+    const CEntitySAInterface* entityInterface = entity->GetInterface();
+    for (int i = 0; i < PROJECTILE_INFO_COUNT; i++)
+    {
+        auto projectileInterface = projectileInfo[i]->internalInterface;
+
+        if (projectileInterface->pEntProjectileOwner == entityInterface)
+            projectileInterface->pEntProjectileOwner = nullptr;
+
+        if (projectileInterface->pEntProjectileTarget == entityInterface)
+            projectileInterface->pEntProjectileTarget = nullptr;
+    }
 }

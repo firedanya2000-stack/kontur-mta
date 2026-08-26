@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CPlayer.h
  *  PURPOSE:     Player ped entity class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,6 +23,7 @@ class CPlayer;
 #include "CObject.h"
 #include "packets/CPacket.h"
 #include "packets/CPlayerStatsPacket.h"
+#include "CStringName.h"
 class CKeyBinds;
 class CPlayerCamera;
 enum class eVehicleAimDirection : unsigned char;
@@ -34,7 +35,7 @@ enum eVoiceState
     VOICESTATE_TRANSMITTING_IGNORED,
 };
 
-#define MOVEMENT_UPDATE_THRESH (5)
+#define MOVEMENT_UPDATE_THRESH   (5)
 #define DISTANCE_FOR_NEAR_VIEWER (310)
 
 struct SViewerInfo
@@ -55,9 +56,11 @@ typedef CFastHashMap<CPlayer*, SViewerInfo> SViewerMapType;
 struct SScreenShotInfo
 {
     bool      bInProgress;
+    bool      bRequested;
     ushort    usNextPartNumber;
     ushort    usScreenShotId;
     long long llTimeStamp;
+    long long llStartTime;
     uint      uiTotalBytes;
     ushort    usTotalParts;
     ushort    usResourceNetId;
@@ -104,10 +107,10 @@ public:
     bool IsJoined() { return m_bIsJoined; }
     void SetJoined() { m_bIsJoined = true; }
 
-    bool SubscribeElementData(CElement* pElement, const std::string& strName);
-    bool UnsubscribeElementData(CElement* pElement, const std::string& strName);
+    bool SubscribeElementData(CElement* pElement, CStringName name);
+    bool UnsubscribeElementData(CElement* pElement, CStringName name);
     bool UnsubscribeElementData(CElement* pElement);
-    bool IsSubscribed(CElement* pElement, const std::string& strName) const;
+    bool IsSubscribed(CElement* pElement, CStringName name) const;
 
     float GetCameraRotation() { return m_fCameraRotation; };
     void  SetCameraRotation(float fRotation) { m_fCameraRotation = fRotation; };
@@ -167,7 +170,7 @@ public:
     std::list<CObject*>::const_iterator IterSyncingObjectEnd() { return m_SyncingObjects.end(); };
 
     unsigned int GetScriptDebugLevel() { return m_uiScriptDebugLevel; };
-    bool         SetScriptDebugLevel(unsigned int uiLevel);
+    bool         SetScriptDebugLevel(std::uint8_t level);
 
     void          SetDamageInfo(ElementID ElementID, unsigned char ucWeapon, unsigned char ucBodyPart);
     void          ValidateDamageInfo();
@@ -214,12 +217,6 @@ public:
     const std::string& GetSerial(uint uiIndex = 0) { return m_strSerials[uiIndex % NUMELMS(m_strSerials)]; }
     void               SetSerial(const std::string& strSerial, uint uiIndex) { m_strSerials[uiIndex % NUMELMS(m_strSerials)] = strSerial; }
 
-    const std::string& GetSerialUser() { return m_strSerialUser; };
-    void               SetSerialUser(const std::string& strUser) { m_strSerialUser = strUser; };
-
-    const std::string& GetCommunityID() { return m_strCommunityID; };
-    void               SetCommunityID(const std::string& strID) { m_strCommunityID = strID; };
-
     unsigned char GetBlurLevel() { return m_ucBlurLevel; }
     void          SetBlurLevel(unsigned char ucBlurLevel) { m_ucBlurLevel = ucBlurLevel; }
 
@@ -264,6 +261,21 @@ public:
 
     void SetRedirecting(bool bRedirecting) noexcept { m_bIsRedirecting = bRedirecting; }
     bool IsRedirecting() const noexcept { return m_bIsRedirecting; }
+
+    bool GetTeleported() const noexcept { return m_teleported; }
+    void SetTeleported(bool state) noexcept { m_teleported = state; }
+
+    long long     GetLastVoiceDataTime() const noexcept { return m_lastVoiceDataTime; }
+    void          SetLastVoiceDataTime(long long time) noexcept { m_lastVoiceDataTime = time; }
+    unsigned char GetVoiceDataPacketsInInterval() const noexcept { return m_voiceDataPacketsInInterval; }
+    void          SetVoiceDataPacketsInInterval(unsigned char count) noexcept { m_voiceDataPacketsInInterval = count; }
+    void          IncrementVoiceDataPacketsInInterval() noexcept { ++m_voiceDataPacketsInInterval; }
+
+    long long     GetLastVoiceEndTime() const noexcept { return m_lastVoiceEndTime; }
+    void          SetLastVoiceEndTime(long long time) noexcept { m_lastVoiceEndTime = time; }
+    unsigned char GetVoiceEndPacketsInInterval() const noexcept { return m_voiceEndPacketsInInterval; }
+    void          SetVoiceEndPacketsInInterval(unsigned char count) noexcept { m_voiceEndPacketsInInterval = count; }
+    void          IncrementVoiceEndPacketsInInterval() noexcept { ++m_voiceEndPacketsInInterval; }
 
 protected:
     bool ReadSpecialData(const int iLine) override { return true; }
@@ -343,6 +355,21 @@ public:
     SString                m_strD3d9Md5;
     SString                m_strD3d9Sha256;
 
+    // Per-player token bucket throttling for onPlayerResourceStart acks. Genuine duplicates
+    // consume a token; race-condition acks (resource stopped/restarted before the ack arrived)
+    // do not. A sustained flood that exhausts the bucket is counted in m_ResourceStartDrops
+    // and the player is disconnected once the drop count crosses the threshold in CGame.
+    CElapsedTime       m_ResourceStartPacketTimer;
+    unsigned int       m_ResourceStartTokens{50};
+    unsigned long long m_ResourceStartRefillRemainderMs{};
+    unsigned int       m_ResourceStartDrops{};
+    unsigned int       m_uiActiveSatchelCount{};
+    CElapsedTime       m_DetonateSatchelTimer;
+    CElapsedTime       m_DestroySatchelTimer;
+    CElapsedTime       m_BulletSyncRateTimer;
+    // Rate gate for custom weapon fire (PACKET_ID_WEAPON_BULLETSYNC)
+    CElapsedTime m_WeaponBulletSyncRateTimer;
+
 private:
     SLightweightSyncData m_lightweightSyncData;
 
@@ -417,8 +444,6 @@ private:
     bool          m_bNametagShowing;
 
     std::string m_strSerials[2];
-    std::string m_strSerialUser;
-    std::string m_strCommunityID;
 
     unsigned char m_ucBlurLevel;
 
@@ -437,7 +462,7 @@ private:
 
     std::map<std::string, std::string> m_AnnounceValues;
 
-    std::set<std::pair<CElement*, std::string>> m_DataSubscriptions;
+    std::set<std::pair<CElement*, CStringName>> m_DataSubscriptions;
 
     uint m_uiWeaponIncorrectCount;
 
@@ -465,4 +490,10 @@ private:
 
     ushort  m_usPrevDimension;
     SString m_strQuitReasonForLog;
+
+    bool          m_teleported = false;
+    long long     m_lastVoiceDataTime = 0;
+    unsigned char m_voiceDataPacketsInInterval = 0;
+    long long     m_lastVoiceEndTime = 0;
+    unsigned char m_voiceEndPacketsInInterval = 0;
 };

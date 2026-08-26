@@ -5,11 +5,12 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaEffectDefs.cpp
  *  PURPOSE:     Lua definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
+#include "lua/CLuaFunctionParser.h"
 
 void CLuaEffectDefs::LoadFunctions()
 {
@@ -33,6 +34,7 @@ void CLuaEffectDefs::LoadFunctions()
         {"getEffectSpeed", GetEffectSpeed},
         {"setEffectDensity", SetEffectDensity},
         {"getEffectDensity", GetEffectDensity},
+        {"fxCreateParticle", ArgumentParser<FxCreateParticle>},
     };
 
     // Add functions
@@ -59,6 +61,7 @@ void CLuaEffectDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "addWaterHydrant", "fxAddWaterHydrant");
     lua_classfunction(luaVM, "addWaterSplash", "fxAddWaterSplash");
     lua_classfunction(luaVM, "addWood", "fxAddWood");
+    lua_classfunction(luaVM, "createParticle", "fxCreateParticle");
 
     lua_classfunction(luaVM, "setDensity", "setEffectDensity");
     lua_classfunction(luaVM, "setSpeed", "setEffectSpeed");
@@ -638,4 +641,13 @@ int CLuaEffectDefs::SetEffectDensity(lua_State* luaVM)
     // Failed
     lua_pushboolean(luaVM, false);
     return 1;
+}
+
+bool CLuaEffectDefs::FxCreateParticle(FxParticleSystems eParticleSystem, CVector vecPosition, CVector vecDirection, float fR, float fG, float fB, float fA,
+                                      std::optional<bool> bRandomizeColors, std::optional<std::uint32_t> iCount, std::optional<float> fBrightness,
+                                      std::optional<float> fSize, std::optional<bool> bRandomizeSizes, std::optional<float> fLife)
+{
+    return CStaticFunctionDefinitions::FxCreateParticle(eParticleSystem, vecPosition, vecDirection, fR / 255, fG / 255, fB / 255, fA / 255,
+                                                        bRandomizeColors.value_or(false), iCount.value_or(1), fBrightness.value_or(1.0f), fSize.value_or(0.3f),
+                                                        bRandomizeSizes.value_or(false), fLife.value_or(1.0f));
 }

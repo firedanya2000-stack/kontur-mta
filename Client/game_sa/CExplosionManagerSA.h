@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CExplosionManagerSA.h
  *  PURPOSE:     Header file for explosion manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,10 +16,10 @@
 class CExplosion;
 class CExplosionSA;
 
-#define FUNC_CExplosion_AddExplosion    0x736A50
+#define FUNC_CExplosion_AddExplosion 0x736A50
 
-#define ARRAY_Explosions                0xC88950
-#define MAX_EXPLOSIONS                  48
+#define ARRAY_Explosions 0xC88950
+#define MAX_EXPLOSIONS   48
 
 class CExplosionManagerSA : public CExplosionManager
 {

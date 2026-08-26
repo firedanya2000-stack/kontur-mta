@@ -119,6 +119,9 @@ public:
     bool IsBeingRespawned() { return m_bBeingRespawned; };
     void SetBeingRespawned(bool bBeingRespawned) { m_bBeingRespawned = bBeingRespawned; };
 
+    bool IsOnFire() override { return m_pObject ? m_pObject->IsOnFire() : false; }
+    bool SetOnFire(bool onFire) override { return m_pObject ? m_pObject->SetOnFire(onFire) : false; };
+
 protected:
     void StreamIn(bool bInstantly);
     void StreamOut();
@@ -158,10 +161,10 @@ protected:
     CVector m_vecMoveSpeed;
     CVector m_vecTurnSpeed;
 
-    const bool                    m_bIsLowLod;                    // true if this object is low LOD
-    CClientObject*                m_pLowLodObject;                // Pointer to low LOD version of this object
-    std::vector<CClientObject*>   m_HighLodObjectList;            // List of objects that use this object as a low LOD version
-    bool                          m_IsHiddenLowLod;               // true if this object is low LOD and should not be drawn
+    const bool                    m_bIsLowLod;          // true if this object is low LOD
+    CClientObject*                m_pLowLodObject;      // Pointer to low LOD version of this object
+    std::vector<CClientObject*>   m_HighLodObjectList;  // List of objects that use this object as a low LOD version
+    bool                          m_IsHiddenLowLod;     // true if this object is low LOD and should not be drawn
     std::shared_ptr<CClientModel> m_clientModel;
 
 public:

@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CResourceManager.h
  *  PURPOSE:     Resource manager class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,10 +16,10 @@
 
 #include "SResourceStartOptions.h"
 #include "CElement.h"
-#include "ehs/ehs.h"
+#include "httpd/Types.h"
 #include <list>
 
-#define INVALID_RESOURCE_NET_ID     0xFFFF
+#define INVALID_RESOURCE_NET_ID 0xFFFF
 
 class CResource;
 
@@ -67,6 +67,7 @@ public:
     unsigned int GetResourceLoadedCount() { return m_uiResourceLoadedCount; }
     unsigned int GetResourceFailedCount() { return m_uiResourceFailedCount; }
     void         OnPlayerJoin(CPlayer& Player);
+    void         OnPlayerQuit(CPlayer& Player);
 
     const char* GetResourceDirectory();
 

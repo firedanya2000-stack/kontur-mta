@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CLuaEventPacket.h
  *  PURPOSE:     Lua event packet class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,6 +17,11 @@
 class CLuaEventPacket final : public CPacket
 {
 public:
+    // Limit for the size of the arguments in a single triggerEvent. (1MB)
+    static constexpr int MAX_LUA_EVENT_ARGUMENTS_SIZE = 1024 * 1024;
+    // Limit for the size of the arguments in a single triggerLatentEvent. (10MB)
+    static constexpr int MAX_LUA_LATENT_EVENT_ARGUMENTS_SIZE = 10 * 1024 * 1024;
+
     CLuaEventPacket();
     CLuaEventPacket(const char* szName, ElementID ID, CLuaArguments* pArguments);
 

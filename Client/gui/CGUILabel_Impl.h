@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUILabel_Impl.h
  *  PURPOSE:     Label widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -43,7 +43,7 @@ public:
 
     eCGUIType GetType() { return CGUI_LABEL; };
 
-    #define EXCLUDE_SET_TEXT
-    #include "CGUIElement_Inc.h"
-    #undef EXCLUDE_SET_TEXT
+#define EXCLUDE_SET_TEXT
+#include "CGUIElement_Inc.h"
+#undef EXCLUDE_SET_TEXT
 };

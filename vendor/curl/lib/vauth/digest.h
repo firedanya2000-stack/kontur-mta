@@ -23,10 +23,9 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+#include "curl_setup.h"
 
-#include <curl/curl.h>
-
-#if !defined(CURL_DISABLE_CRYPTO_AUTH)
+#ifndef CURL_DISABLE_DIGEST_AUTH
 
 #define DIGEST_MAX_VALUE_LENGTH           256
 #define DIGEST_MAX_CONTENT_LENGTH         1024

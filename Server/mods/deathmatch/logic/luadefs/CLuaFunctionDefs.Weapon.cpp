@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/lua/CLuaFunctionDefs.Weapon.cpp
  *  PURPOSE:     Lua special server function definitions
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -15,7 +15,7 @@
 #include "CStaticFunctionDefinitions.h"
 #include "CWeaponNames.h"
 
-#define MIN_SERVER_REQ_WEAPON_PROPERTY_FLAG                 "1.3.5-9.06139"
+#define MIN_SERVER_REQ_WEAPON_PROPERTY_FLAG "1.3.5-9.06139"
 
 int CLuaFunctionDefs::SetWeaponAmmo(lua_State* luaVM)
 {

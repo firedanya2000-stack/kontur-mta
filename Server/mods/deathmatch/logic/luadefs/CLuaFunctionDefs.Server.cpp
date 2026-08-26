@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/lua/CLuaFunctionDefs.Server.cpp
  *  PURPOSE:     Lua special server function definitions
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,12 +16,13 @@
 #include "ASE.h"
 #include "CStaticFunctionDefinitions.h"
 #include "CPerfStatManager.h"
+#include "CMapManager.h"
 
-#define MIN_SERVER_REQ_CALLREMOTE_QUEUE_NAME                "1.5.3-9.11270"
-#define MIN_SERVER_REQ_CALLREMOTE_CONNECTION_ATTEMPTS       "1.3.0-9.04563"
-#define MIN_SERVER_REQ_CALLREMOTE_CONNECT_TIMEOUT           "1.3.5"
-#define MIN_SERVER_REQ_CALLREMOTE_OPTIONS_TABLE             "1.5.4-9.11342"
-#define MIN_SERVER_REQ_CALLREMOTE_OPTIONS_FORMFIELDS        "1.5.4-9.11413"
+#define MIN_SERVER_REQ_CALLREMOTE_QUEUE_NAME          "1.5.3-9.11270"
+#define MIN_SERVER_REQ_CALLREMOTE_CONNECTION_ATTEMPTS "1.3.0-9.04563"
+#define MIN_SERVER_REQ_CALLREMOTE_CONNECT_TIMEOUT     "1.3.5"
+#define MIN_SERVER_REQ_CALLREMOTE_OPTIONS_TABLE       "1.5.4-9.11342"
+#define MIN_SERVER_REQ_CALLREMOTE_OPTIONS_FORMFIELDS  "1.5.4-9.11413"
 
 int CLuaFunctionDefs::AddCommandHandler(lua_State* luaVM)
 {
@@ -267,7 +268,7 @@ int CLuaFunctionDefs::Get(lua_State* luaVM)
                     }
 
                     Args.PushArguments(luaVM);
-                    uiArgCount = Args.Count();
+                    uiArgCount = static_cast<unsigned int>(Args.Count());
 
                     /* Don't output a table because although it is more consistent with the multiple values output below,
                     ** due to lua's implementation of associative arrays (assuming we use the "setting-name", "value" key-value pairs)
@@ -349,6 +350,12 @@ bool CLuaFunctionDefs::Shutdown(lua_State* luaVM, std::optional<std::string_view
     if (maybeExitCode.has_value())
         g_pServerInterface->GetModManager()->SetExitCode(maybeExitCode.value());
 
+    // Call event
+    CLuaArguments arguments;
+    arguments.PushResource(&resource);
+    arguments.PushString(reason.data());
+    g_pGame->GetMapManager()->GetRootElement()->CallEvent("onShutdown", arguments);
+
     g_pGame->SetIsFinished(true);
     return true;
 }
@@ -402,7 +409,7 @@ int CLuaFunctionDefs::SetGameType(lua_State* luaVM)
     SString strGameType;
 
     CScriptArgReader argStream(luaVM);
-    argStream.ReadIfNextIsString(strGameType, "");            // Default to empty for backward compat with previous implementation
+    argStream.ReadIfNextIsString(strGameType, "");  // Default to empty for backward compat with previous implementation
 
     if (!argStream.HasErrors())
     {
@@ -426,7 +433,7 @@ int CLuaFunctionDefs::SetMapName(lua_State* luaVM)
     SString strMapName;
 
     CScriptArgReader argStream(luaVM);
-    argStream.ReadIfNextIsString(strMapName, "");            // Default to empty for backward compat with previous implementation
+    argStream.ReadIfNextIsString(strMapName, "");  // Default to empty for backward compat with previous implementation
 
     if (!argStream.HasErrors())
     {
@@ -757,7 +764,7 @@ int CLuaFunctionDefs::GetPerformanceStats(lua_State* luaVM)
         for (int c = 0; c < Result.ColumnCount(); c++)
         {
             const SString& name = Result.ColumnName(c);
-            lua_pushnumber(luaVM, c + 1);            // row index number (starting at 1, not 0)
+            lua_pushnumber(luaVM, c + 1);  // row index number (starting at 1, not 0)
             lua_pushlstring(luaVM, name.c_str(), name.length());
             lua_settable(luaVM, -3);
         }
@@ -765,10 +772,10 @@ int CLuaFunctionDefs::GetPerformanceStats(lua_State* luaVM)
         lua_newtable(luaVM);
         for (int r = 0; r < Result.RowCount(); r++)
         {
-            lua_newtable(luaVM);                     // new table
-            lua_pushnumber(luaVM, r + 1);            // row index number (starting at 1, not 0)
-            lua_pushvalue(luaVM, -2);                // value
-            lua_settable(luaVM, -4);                 // refer to the top level table
+            lua_newtable(luaVM);           // new table
+            lua_pushnumber(luaVM, r + 1);  // row index number (starting at 1, not 0)
+            lua_pushvalue(luaVM, -2);      // value
+            lua_settable(luaVM, -4);       // refer to the top level table
 
             for (int c = 0; c < Result.ColumnCount(); c++)
             {
@@ -777,7 +784,7 @@ int CLuaFunctionDefs::GetPerformanceStats(lua_State* luaVM)
                 lua_pushlstring(luaVM, cell.c_str(), cell.length());
                 lua_settable(luaVM, -3);
             }
-            lua_pop(luaVM, 1);            // pop the inner table
+            lua_pop(luaVM, 1);  // pop the inner table
         }
         return 2;
     }

@@ -26,21 +26,22 @@
 #include "curl_setup.h"
 
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_HSTS)
-#include <curl/curl.h>
 #include "llist.h"
 
-#ifdef DEBUGBUILD
+#define MAX_HSTS_ENTRIES 10000
+
+#if defined(DEBUGBUILD) || defined(UNITTESTS)
 extern time_t deltatime;
 #endif
 
 struct stsentry {
-  struct Curl_llist_element node;
-  const char *host;
-  bool includeSubDomains;
+  struct Curl_llist_node node;
   curl_off_t expires; /* the timestamp of this entry's expiry */
+  BIT(includeSubDomains);
+  char host[1];
 };
 
-/* The HSTS cache. Needs to be able to tailmatch host names. */
+/* The HSTS cache. Needs to be able to tailmatch hostnames. */
 struct hsts {
   struct Curl_llist list;
   char *filename;
@@ -50,20 +51,20 @@ struct hsts {
 struct hsts *Curl_hsts_init(void);
 void Curl_hsts_cleanup(struct hsts **hp);
 CURLcode Curl_hsts_parse(struct hsts *h, const char *hostname,
-                         const char *sts);
+                         const char *header);
 struct stsentry *Curl_hsts(struct hsts *h, const char *hostname,
-                           bool subdomain);
+                           size_t hlen, bool subdomain);
 CURLcode Curl_hsts_save(struct Curl_easy *data, struct hsts *h,
                         const char *file);
 CURLcode Curl_hsts_loadfile(struct Curl_easy *data,
                             struct hsts *h, const char *file);
 CURLcode Curl_hsts_loadcb(struct Curl_easy *data,
                           struct hsts *h);
-void Curl_hsts_loadfiles(struct Curl_easy *data);
+CURLcode Curl_hsts_loadfiles(struct Curl_easy *data);
 #else
 #define Curl_hsts_cleanup(x)
-#define Curl_hsts_loadcb(x,y) CURLE_OK
-#define Curl_hsts_save(x,y,z)
-#define Curl_hsts_loadfiles(x)
+#define Curl_hsts_loadcb(x, y) CURLE_OK
+#define Curl_hsts_save(x, y, z)
+#define Curl_hsts_loadfiles(x) CURLE_OK
 #endif /* CURL_DISABLE_HTTP || CURL_DISABLE_HSTS */
 #endif /* HEADER_CURL_HSTS_H */

@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIWindow.h
  *  PURPOSE:     Window widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -16,7 +16,7 @@
 class CGUIWindow : public CGUIElement
 {
 public:
-    virtual ~CGUIWindow(){};
+    virtual ~CGUIWindow() {};
 
     virtual void SetMovable(bool bMovable) = 0;
     virtual bool IsMovable() = 0;

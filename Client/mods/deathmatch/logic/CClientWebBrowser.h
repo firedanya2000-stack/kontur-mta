@@ -31,7 +31,7 @@ public:
     const SString& GetTitle();
     SString        GetURL();
     void           SetRenderingPaused(bool bPaused);
-    const bool     GetRenderingPaused() const { return m_pWebView->GetRenderingPaused(); }
+    const bool     GetRenderingPaused() const { return m_pWebView ? m_pWebView->GetRenderingPaused() : false; }
     void           Focus();
 
     bool ExecuteJavascript(const SString& strJavascriptCode);
@@ -40,7 +40,7 @@ public:
     bool GetProperty(const SString& strKey, SString& outValue);
 
     void InjectMouseMove(int iPosX, int iPosY);
-    void InjectMouseDown(eWebBrowserMouseButton mouseButton);
+    void InjectMouseDown(eWebBrowserMouseButton mouseButton, int count);
     void InjectMouseUp(eWebBrowserMouseButton mouseButton);
     void InjectMouseWheel(int iScrollVert, int iScrollHorz);
 
@@ -56,7 +56,7 @@ public:
 
     void Resize(const CVector2D& size);
 
-    using ajax_callback_t = const std::function<const SString(std::vector<SString>& vecGet, std::vector<SString>& vecPost)>;
+    using ajax_callback_t = const std::function<const std::string(std::vector<std::string>& vecGet, std::vector<std::string>& vecPost)>;
 
     bool AddAjaxHandler(const SString& strURL, ajax_callback_t& handler);
     bool RemoveAjaxHandler(const SString& strURL);
@@ -84,11 +84,13 @@ public:
     bool Events_OnResourceFileCheck(const SString& strURL, CBuffer& outFileData) override;
     void Events_OnResourceBlocked(const SString& strURL, const SString& strDomain, unsigned char reason) override;
     void Events_OnAjaxRequest(CAjaxResourceHandlerInterface* pHandler, const SString& strURL) override;
+    void Events_OnConsoleMessage(const std::string& message, const std::string& source, int line, std::int16_t level) override;
 
 private:
     CWebViewInterface*                 m_pWebView;
     CResource*                         m_pResource;
     std::map<SString, ajax_callback_t> m_mapAjaxCallback;
+    bool                               m_bBeingDestroyed = false;
 };
 
 class CClientGUIWebBrowser : public CClientGUIElement
@@ -100,5 +102,5 @@ public:
     CClientWebBrowser* GetBrowser() { return m_pBrowser; }
 
 private:
-    CClientWebBrowser* m_pBrowser;
+    CClientWebBrowser* m_pBrowser = nullptr;
 };

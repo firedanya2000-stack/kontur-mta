@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CBoatHandlingEntrySA.cpp
  *  PURPOSE:     Vehicle flying handling data entry
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -24,6 +24,9 @@ CBoatHandlingEntrySA::CBoatHandlingEntrySA(tBoatHandlingDataSA* pOriginal)
 
 void CBoatHandlingEntrySA::Assign(const CBoatHandlingEntry* pData)
 {
-    const CBoatHandlingEntrySA* pEntrySA = static_cast<const CBoatHandlingEntrySA*>(pData);
+    if (!pData)
+        return;
+
+    const auto* pEntrySA = static_cast<const CBoatHandlingEntrySA*>(pData);
     m_pBoatHandlingSA = pEntrySA->m_pBoatHandlingSA;
 }

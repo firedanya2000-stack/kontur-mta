@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIProgressBar_Impl.h
  *  PURPOSE:     Progress bar widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -25,7 +25,7 @@ public:
 
     eCGUIType GetType() { return CGUI_PROGRESSBAR; };
 
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 
 private:
 };

@@ -5,7 +5,7 @@
  *  FILE:        gui/CGUIScrollBar_Impl.h
  *  PURPOSE:     Scroll bar widget class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -27,7 +27,7 @@ public:
 
     eCGUIType GetType() { return CGUI_SCROLLBAR; };
 
-    #include "CGUIElement_Inc.h"
+#include "CGUIElement_Inc.h"
 
 private:
     bool Event_OnScroll(const CEGUI::EventArgs& e);

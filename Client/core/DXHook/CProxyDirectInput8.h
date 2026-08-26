@@ -5,7 +5,7 @@
  *  FILE:        core/CProxyDirectInput8.h
  *  PURPOSE:     Header file for DirectInput 8 proxy class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -23,8 +23,8 @@ public:
     ~CProxyDirectInput8();
     /*** IUnknown methods ***/
     virtual HRESULT __stdcall QueryInterface(REFIID riid, LPVOID* ppvObj);
-    virtual ULONG __stdcall AddRef();
-    virtual ULONG __stdcall Release();
+    virtual ULONG __stdcall   AddRef();
+    virtual ULONG __stdcall   Release();
 
     /*** IDirectInput8A methods ***/
     virtual HRESULT __stdcall CreateDevice(REFGUID, LPDIRECTINPUTDEVICE8A*, LPUNKNOWN);

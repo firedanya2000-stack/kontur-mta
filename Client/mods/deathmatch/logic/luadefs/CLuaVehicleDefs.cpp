@@ -5,14 +5,20 @@
  *  FILE:        mods/shared_logic/luadefs/CLuaVehicleDefs.cpp
  *  PURPOSE:     Lua vehicle definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #include "StdInc.h"
 #include <game/CHandlingEntry.h>
 #include <game/CHandlingManager.h>
+#include <game/CVehicleAudioSettingsManager.h>
 #include "lua/CLuaFunctionParser.h"
+#include <CClientVehicleManager.h>
+
+#include "enums/HandlingProperty.h"
+
+#include <limits>
 
 void CLuaVehicleDefs::LoadFunctions()
 {
@@ -54,12 +60,12 @@ void CLuaVehicleDefs::LoadFunctions()
         {"getVehicleNameFromModel", GetVehicleNameFromModel},
         {"getVehicleAdjustableProperty", GetVehicleAdjustableProperty},
         {"getHelicopterRotorSpeed", GetHelicopterRotorSpeed},
+        {"getVehicleRotorSpeed", ArgumentParser<GetVehicleRotorSpeed>},
         {"getVehicleEngineState", GetVehicleEngineState},
         {"isTrainDerailed", IsTrainDerailed},
         {"isTrainDerailable", IsTrainDerailable},
         {"getTrainDirection", GetTrainDirection},
         {"getTrainSpeed", GetTrainSpeed},
-        //{"getTrainTrack", ArgumentParser<GetTrainTrack>},
         {"getTrainPosition", GetTrainPosition},
         {"isTrainChainEngine", IsTrainChainEngine},
         {"getVehicleGravity", GetVehicleGravity},
@@ -90,6 +96,11 @@ void CLuaVehicleDefs::LoadFunctions()
         {"getVehicleWheelScale", ArgumentParser<GetVehicleWheelScale>},
         {"getVehicleModelWheelSize", ArgumentParser<GetVehicleModelWheelSize>},
         {"getVehicleWheelFrictionState", ArgumentParser<GetVehicleWheelFrictionState>},
+        {"getVehicleEntryPoints", ArgumentParser<GetVehicleEntryPoints>},
+        {"isVehicleSmokeTrailEnabled", ArgumentParser<IsSmokeTrailEnabled>},
+        {"getVehicleRotorState", ArgumentParser<GetVehicleRotorState>},
+        {"getVehicleModelAudioSettings", ArgumentParser<GetVehicleModelAudioSettings>},
+        {"getVehicleAudioSettings", ArgumentParser<GetVehicleAudioSettings>},
 
         // Vehicle set funcs
         {"createVehicle", CreateVehicle},
@@ -102,7 +113,9 @@ void CLuaVehicleDefs::LoadFunctions()
         {"setVehicleDoorsUndamageable", SetVehicleDoorsUndamageable},
         {"setVehicleSirensOn", SetVehicleSirensOn},
         {"addVehicleUpgrade", AddVehicleUpgrade},
+        {"addVehicleSirens", ArgumentParser<AddVehicleSirens>},
         {"removeVehicleUpgrade", RemoveVehicleUpgrade},
+        {"removeVehicleSirens", ArgumentParser<RemoveVehicleSirens>},
         {"setVehicleDoorState", SetVehicleDoorState},
         {"setVehicleWheelStates", SetVehicleWheelStates},
         {"setVehicleLightState", SetVehicleLightState},
@@ -118,11 +131,12 @@ void CLuaVehicleDefs::LoadFunctions()
         {"setVehicleFrozen", SetVehicleFrozen},
         {"setVehicleAdjustableProperty", SetVehicleAdjustableProperty},
         {"setHelicopterRotorSpeed", SetHelicopterRotorSpeed},
+        {"setVehicleRotorSpeed", ArgumentParser<SetVehicleRotorSpeed>},
+        {"setVehicleWheelsRotation", ArgumentParser<SetVehicleWheelsRotation>},
         {"setTrainDerailed", SetTrainDerailed},
         {"setTrainDerailable", SetTrainDerailable},
         {"setTrainDirection", SetTrainDirection},
         {"setTrainSpeed", SetTrainSpeed},
-        //{"setTrainTrack", ArgumentParser<SetTrainTrack>},
         {"setTrainPosition", SetTrainPosition},
         {"setVehicleTaxiLightOn", SetVehicleTaxiLightOn},
         {"setVehicleGravity", SetVehicleGravity},
@@ -151,11 +165,25 @@ void CLuaVehicleDefs::LoadFunctions()
         {"setVehicleVariant", ArgumentParser<SetVehicleVariant>},
         {"setVehicleWheelScale", ArgumentParser<SetVehicleWheelScale>},
         {"setVehicleModelWheelSize", ArgumentParser<SetVehicleModelWheelSize>},
+        {"spawnVehicleFlyingComponent", ArgumentParser<SpawnVehicleFlyingComponent>},
+        {"setVehicleSmokeTrailEnabled", ArgumentParser<SetSmokeTrailEnabled>},
+        {"setVehicleRotorState", ArgumentParser<SetVehicleRotorState>},
+        {"setVehicleModelAudioSetting", ArgumentParser<SetVehicleModelAudioSetting>},
+        {"resetVehicleModelAudioSettings", ArgumentParser<ResetVehicleModelAudioSettings>},
+        {"setVehicleAudioSetting", ArgumentParser<SetVehicleAudioSetting>},
+        {"resetVehicleAudioSettings", ArgumentParser<ResetVehicleAudioSettings>},
     };
 
     // Add functions
     for (const auto& [name, func] : functions)
         CLuaCFunctions::AddFunction(name, func);
+
+    // Add train track related functions
+    if (CLuaShared::CustomTrainTracks)
+    {
+        CLuaCFunctions::AddFunction("getTrainTrack", ArgumentParser<GetTrainTrack>);
+        CLuaCFunctions::AddFunction("setTrainTrack", ArgumentParser<SetTrainTrack>);
+    }
 }
 
 void CLuaVehicleDefs::AddClass(lua_State* luaVM)
@@ -185,7 +213,8 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "getNitroLevel", "getVehicleNitroLevel");
     lua_classfunction(luaVM, "getDirection", "getTrainDirection");
     lua_classfunction(luaVM, "getTrainSpeed", "getTrainSpeed");
-    // lua_classfunction(luaVM, "getTrack", "getTrainTrack");
+    if (CLuaShared::CustomTrainTracks)
+        lua_classfunction(luaVM, "getTrainTrack", "getTrainTrack");
     lua_classfunction(luaVM, "getTrainPosition", "getTrainPosition");
     lua_classfunction(luaVM, "getName", "getVehicleName");
     lua_classfunction(luaVM, "getVehicleType", "getVehicleType");
@@ -200,7 +229,7 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "getHelicopterRotorSpeed", "getHelicopterRotorSpeed");
     lua_classfunction(luaVM, "areHeliBladeCollisionsEnabled", "getHeliBladeCollisionsEnabled");
     lua_classfunction(luaVM, "getPaintjob", "getVehiclePaintjob");
-    lua_classfunction(luaVM, "getTurretPosition", "getVehicleTurretPosition");
+    lua_classfunction(luaVM, "getTurretPosition", ArgumentParserWarn<false, OOP_GetVehicleTurretPosition>);
     lua_classfunction(luaVM, "getWheelStates", "getVehicleWheelStates");
     lua_classfunction(luaVM, "isWheelOnGround", "isVehicleWheelOnGround");
     lua_classfunction(luaVM, "getDoorOpenRatio", "getVehicleDoorOpenRatio");
@@ -238,6 +267,9 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "getWheelScale", "getVehicleWheelScale");
     lua_classfunction(luaVM, "getModelWheelSize", "getVehicleModelWheelSize");
     lua_classfunction(luaVM, "getWheelFrictionState", "getVehicleWheelFrictionState");
+    lua_classfunction(luaVM, "getEntryPoints", ArgumentParser<OOP_GetVehicleEntryPoints>);
+    lua_classfunction(luaVM, "isSmokeTrailEnabled", "isVehicleSmokeTrailEnabled");
+    lua_classfunction(luaVM, "getRotorState", "getVehicleRotorState");
 
     lua_classfunction(luaVM, "setComponentVisible", "setVehicleComponentVisible");
     lua_classfunction(luaVM, "setSirensOn", "setVehicleSirensOn");
@@ -271,7 +303,8 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "setNitroLevel", "setVehicleNitroLevel");
     lua_classfunction(luaVM, "setDirection", "setTrainDirection");
     lua_classfunction(luaVM, "setTrainSpeed", "setTrainSpeed");
-    // lua_classfunction(luaVM, "setTrack", "setTrainTrack");
+    if (CLuaShared::CustomTrainTracks)
+        lua_classfunction(luaVM, "setTrainTrack", "setTrainTrack");
     lua_classfunction(luaVM, "setTrainPosition", "setTrainPosition");
     lua_classfunction(luaVM, "setDerailable", "setTrainDerailable");
     lua_classfunction(luaVM, "setDerailed", "setTrainDerailed");
@@ -286,6 +319,10 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "setVariant", "setVehicleVariant");
     lua_classfunction(luaVM, "setWheelScale", "setVehicleWheelScale");
     lua_classfunction(luaVM, "setModelWheelSize", "setVehicleModelWheelSize");
+    lua_classfunction(luaVM, "setSmokeTrailEnabled", "setVehicleSmokeTrailEnabled");
+    lua_classfunction(luaVM, "setRotorState", "setVehicleRotorState");
+    lua_classfunction(luaVM, "resetAudioSettings", "resetVehicleAudioSettings");
+    lua_classfunction(luaVM, "setAudioSetting", "setVehicleAudioSetting");
 
     lua_classfunction(luaVM, "resetComponentPosition", "resetVehicleComponentPosition");
     lua_classfunction(luaVM, "resetComponentRotation", "resetVehicleComponentRotation");
@@ -295,6 +332,8 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classfunction(luaVM, "detachTrailer", "detachTrailerFromVehicle");
     lua_classfunction(luaVM, "addUpgrade", "addVehicleUpgrade");
     lua_classfunction(luaVM, "removeUpgrade", "removeVehicleUpgrade");
+
+    lua_classfunction(luaVM, "spawnFlyingComponent", "spawnVehicleFlyingComponent");
 
     lua_classvariable(luaVM, "locked", "setVehicleLocked", "isVehicleLocked");
     lua_classvariable(luaVM, "controller", NULL, "getVehicleController");
@@ -330,7 +369,8 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classvariable(luaVM, "towedByVehicle", NULL, "getVehicleTowedByVehicle");
     lua_classvariable(luaVM, "direction", "setTrainDirection", "getTrainDirection");
     lua_classvariable(luaVM, "trainSpeed", "setTrainSpeed", "getTrainSpeed");
-    // lua_classvariable(luaVM, "track", "setTrainTrack", "getTrainTrack");
+    if (CLuaShared::CustomTrainTracks)
+        lua_classvariable(luaVM, "trainTrack", "setTrainTrack", "getTrainTrack");
     lua_classvariable(luaVM, "trainPosition", "setTrainPosition", "getTrainPosition");
     lua_classvariable(luaVM, "derailable", "setTrainDerailable", "isTrainDerailable");
     lua_classvariable(luaVM, "derailed", "setTrainDerailed", "isTrainDerailed");
@@ -341,7 +381,10 @@ void CLuaVehicleDefs::AddClass(lua_State* luaVM)
     lua_classvariable(luaVM, "nitroRecharging", NULL, "isVehicleNitroRecharging");
     lua_classvariable(luaVM, "gravity", SetVehicleGravity, OOP_GetVehicleGravity);
     lua_classvariable(luaVM, "turnVelocity", SetVehicleTurnVelocity, OOP_GetVehicleTurnVelocity);
+    lua_classvariable(luaVM, "turretPosition", SetVehicleTurretPosition, ArgumentParserWarn<false, OOP_GetVehicleTurretPosition>);
     lua_classvariable(luaVM, "wheelScale", "setVehicleWheelScale", "getVehicleWheelScale");
+    lua_classvariable(luaVM, "rotorState", "setVehicleRotorState", "getVehicleRotorState");
+    lua_classvariable(luaVM, "audioSettings", nullptr, "getVehicleAudioSettings");
 
     lua_registerclass(luaVM, "Vehicle", "Element");
 }
@@ -367,7 +410,7 @@ int CLuaVehicleDefs::GetVehicleType(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        lua_pushstring(luaVM, CVehicleNames::GetVehicleTypeName(ucModel));            // Range check will be done by GetVehicleTypeName
+        lua_pushstring(luaVM, CVehicleNames::GetVehicleTypeName(ucModel));  // Range check will be done by GetVehicleTypeName
         return 1;
     }
     else
@@ -755,6 +798,18 @@ int CLuaVehicleDefs::GetVehicleTurretPosition(lua_State* luaVM)
     return 1;
 }
 
+std::variant<CLuaMultiReturn<float, float>, CVector2D> CLuaVehicleDefs::OOP_GetVehicleTurretPosition(lua_State* luaVM, CClientVehicle* vehicle)
+{
+    CVector2D vecPosition;
+    vehicle->GetTurretRotation(vecPosition.fX, vecPosition.fY);
+
+    // Keep returning two floats when the caller assigns two results
+    if (lua_ncallresult(luaVM) == 2)
+        return CLuaMultiReturn<float, float>(vecPosition.fX, vecPosition.fY);
+
+    return vecPosition;
+}
+
 int CLuaVehicleDefs::IsVehicleLocked(lua_State* luaVM)
 {
     CClientVehicle*  pVehicle = NULL;
@@ -878,10 +933,10 @@ int CLuaVehicleDefs::GetVehicleUpgradeSlotName(lua_State* luaVM)
 int CLuaVehicleDefs::GetVehicleCompatibleUpgrades(lua_State* luaVM)
 {
     CClientVehicle*  pVehicle = NULL;
-    unsigned char    ucSlot = 0xFF;
+    unsigned int     uiSlot = 0xFF;
     CScriptArgReader argStream(luaVM);
     argStream.ReadUserData(pVehicle);
-    argStream.ReadIfNextIsNumber(ucSlot, 0xFF);
+    argStream.ReadIfNextIsNumber(uiSlot, 0xFF);
 
     if (!argStream.HasErrors())
     {
@@ -896,13 +951,13 @@ int CLuaVehicleDefs::GetVehicleCompatibleUpgrades(lua_State* luaVM)
             {
                 if (pUpgrades->IsUpgradeCompatible(usUpgrade))
                 {
-                    if (ucSlot != 0xFF)
+                    if (uiSlot != 0xFF)
                     {
                         unsigned char ucUpgradeSlot;
                         if (!pUpgrades->GetSlotFromUpgrade(usUpgrade, ucUpgradeSlot))
                             continue;
 
-                        if (ucUpgradeSlot != ucSlot)
+                        if (ucUpgradeSlot != static_cast<unsigned char>(uiSlot))
                             continue;
                     }
 
@@ -1235,7 +1290,13 @@ int CLuaVehicleDefs::GetVehicleName(lua_State* luaVM)
 
     if (!argStream.HasErrors())
     {
-        const char* szVehicleName = CVehicleNames::GetVehicleName(pVehicle->GetModel());
+        unsigned short model = pVehicle->GetModel();
+        CModelInfo*    modelInfo = g_pGame->GetModelInfo(model);
+
+        if (modelInfo && modelInfo->GetParentID() != 0)
+            model = modelInfo->GetParentID();
+
+        const char* szVehicleName = CVehicleNames::GetVehicleName(model);
         if (szVehicleName)
         {
             lua_pushstring(luaVM, szVehicleName);
@@ -1291,6 +1352,17 @@ int CLuaVehicleDefs::GetHelicopterRotorSpeed(lua_State* luaVM)
 
     lua_pushboolean(luaVM, false);
     return 1;
+}
+
+std::variant<bool, float> CLuaVehicleDefs::GetVehicleRotorSpeed(CClientVehicle* pVehicle)
+{
+    float fSpeed;
+    if (pVehicle->GetRotorSpeed(fSpeed))
+    {
+        return fSpeed;
+    }
+    else
+        return false;
 }
 
 int CLuaVehicleDefs::IsTrainDerailed(lua_State* luaVM)
@@ -1925,14 +1997,17 @@ int CLuaVehicleDefs::SetVehiclePanelState(lua_State* luaVM)
 {
     CClientEntity*   pEntity = NULL;
     unsigned char    ucPanel = 0, ucState = 0;
+    bool             spawnFlyingComponent, breakGlass;
     CScriptArgReader argStream(luaVM);
     argStream.ReadUserData(pEntity);
     argStream.ReadNumber(ucPanel);
     argStream.ReadNumber(ucState);
+    argStream.ReadBool(spawnFlyingComponent, true);
+    argStream.ReadBool(breakGlass, false);
 
     if (!argStream.HasErrors())
     {
-        if (CStaticFunctionDefinitions::SetVehiclePanelState(*pEntity, ucPanel, ucState))
+        if (CStaticFunctionDefinitions::SetVehiclePanelState(*pEntity, ucPanel, ucState, spawnFlyingComponent, breakGlass))
         {
             lua_pushboolean(luaVM, true);
             return 1;
@@ -2204,6 +2279,16 @@ int CLuaVehicleDefs::SetHelicopterRotorSpeed(lua_State* luaVM)
     return 1;
 }
 
+bool CLuaVehicleDefs::SetVehicleRotorSpeed(CClientVehicle* pVehicle, float fSpeed)
+{
+    return pVehicle->SetRotorSpeed(fSpeed);
+}
+
+bool CLuaVehicleDefs::SetVehicleWheelsRotation(CClientVehicle* pVehicle, float fRotation) noexcept
+{
+    return pVehicle->SetWheelsRotation(fRotation, fRotation, fRotation, fRotation);
+}
+
 int CLuaVehicleDefs::SetTrainDerailed(lua_State* luaVM)
 {
     CClientVehicle*  pVehicle = NULL;
@@ -2300,7 +2385,7 @@ int CLuaVehicleDefs::SetTrainSpeed(lua_State* luaVM)
 bool CLuaVehicleDefs::SetTrainTrack(CClientVehicle* pVehicle, uchar ucTrack)
 {
     if (ucTrack > 3)
-        throw new std::invalid_argument("Invalid track number range (0-3)");
+        throw std::invalid_argument("Invalid track number range (0-3)");
 
     if (pVehicle->GetVehicleType() != CLIENTVEHICLE_TRAIN)
         return false;
@@ -2432,16 +2517,16 @@ int CLuaVehicleDefs::SetVehicleHeadLightColor(lua_State* luaVM)
 
 int CLuaVehicleDefs::SetVehicleTurretPosition(lua_State* luaVM)
 {
+    // Accept Vector2 as well so vehicle.turretPosition = Vector2(...) works via the OOP property
     CClientVehicle*  pVehicle = NULL;
-    float            fHorizontal = 0.0f, fVertical = 0.0f;
+    CVector2D        vecPosition;
     CScriptArgReader argStream(luaVM);
     argStream.ReadUserData(pVehicle);
-    argStream.ReadNumber(fHorizontal);
-    argStream.ReadNumber(fVertical);
+    argStream.ReadVector2D(vecPosition);
 
     if (!argStream.HasErrors())
     {
-        pVehicle->SetTurretRotation(fHorizontal, fVertical);
+        pVehicle->SetTurretRotation(vecPosition.fX, vecPosition.fY);
         lua_pushboolean(luaVM, true);
         return 1;
     }
@@ -2467,8 +2552,8 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
             SString strProperty;
             argStream.ReadString(strProperty);
 
-            eHandlingProperty eProperty = g_pGame->GetHandlingManager()->GetPropertyEnumFromName(strProperty);
-            if (eProperty)
+            HandlingProperty eProperty = g_pGame->GetHandlingManager()->GetPropertyEnumFromName(strProperty);
+            if (eProperty > HandlingProperty::HANDLING_NONE)
             {
                 if (argStream.NextIsNil())
                 {
@@ -2482,27 +2567,27 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                 {
                     switch (eProperty)
                     {
-                        case HANDLING_MASS:
-                        case HANDLING_TURNMASS:
-                        case HANDLING_DRAGCOEFF:
-                        case HANDLING_TRACTIONMULTIPLIER:
-                        case HANDLING_ENGINEACCELERATION:
-                        case HANDLING_ENGINEINERTIA:
-                        case HANDLING_MAXVELOCITY:
-                        case HANDLING_BRAKEDECELERATION:
-                        case HANDLING_BRAKEBIAS:
-                        case HANDLING_STEERINGLOCK:
-                        case HANDLING_TRACTIONLOSS:
-                        case HANDLING_TRACTIONBIAS:
-                        case HANDLING_SUSPENSION_FORCELEVEL:
-                        case HANDLING_SUSPENSION_DAMPING:
-                        case HANDLING_SUSPENSION_HIGHSPEEDDAMPING:
-                        case HANDLING_SUSPENSION_UPPER_LIMIT:
-                        case HANDLING_SUSPENSION_LOWER_LIMIT:
-                        case HANDLING_SUSPENSION_FRONTREARBIAS:
-                        case HANDLING_SUSPENSION_ANTIDIVEMULTIPLIER:
-                        case HANDLING_COLLISIONDAMAGEMULTIPLIER:
-                        case HANDLING_SEATOFFSETDISTANCE:
+                        case HandlingProperty::HANDLING_MASS:
+                        case HandlingProperty::HANDLING_TURNMASS:
+                        case HandlingProperty::HANDLING_DRAGCOEFF:
+                        case HandlingProperty::HANDLING_TRACTIONMULTIPLIER:
+                        case HandlingProperty::HANDLING_ENGINEACCELERATION:
+                        case HandlingProperty::HANDLING_ENGINEINERTIA:
+                        case HandlingProperty::HANDLING_MAXVELOCITY:
+                        case HandlingProperty::HANDLING_BRAKEDECELERATION:
+                        case HandlingProperty::HANDLING_BRAKEBIAS:
+                        case HandlingProperty::HANDLING_STEERINGLOCK:
+                        case HandlingProperty::HANDLING_TRACTIONLOSS:
+                        case HandlingProperty::HANDLING_TRACTIONBIAS:
+                        case HandlingProperty::HANDLING_SUSPENSION_FORCELEVEL:
+                        case HandlingProperty::HANDLING_SUSPENSION_DAMPING:
+                        case HandlingProperty::HANDLING_SUSPENSION_HIGHSPEEDDAMPING:
+                        case HandlingProperty::HANDLING_SUSPENSION_UPPER_LIMIT:
+                        case HandlingProperty::HANDLING_SUSPENSION_LOWER_LIMIT:
+                        case HandlingProperty::HANDLING_SUSPENSION_FRONTREARBIAS:
+                        case HandlingProperty::HANDLING_SUSPENSION_ANTIDIVEMULTIPLIER:
+                        case HandlingProperty::HANDLING_COLLISIONDAMAGEMULTIPLIER:
+                        case HandlingProperty::HANDLING_SEATOFFSETDISTANCE:
                         {
                             float fValue;
                             argStream.ReadNumber(fValue);
@@ -2513,10 +2598,10 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                             }
                             break;
                         }
-                        case HANDLING_PERCENTSUBMERGED:            // unsigned int
-                                                                   // case HANDLING_MONETARY:
-                        case HANDLING_HANDLINGFLAGS:
-                        case HANDLING_MODELFLAGS:
+                        case HandlingProperty::HANDLING_PERCENTSUBMERGED:  // unsigned int
+                                                                           // case HANDLING_MONETARY:
+                        case HandlingProperty::HANDLING_HANDLINGFLAGS:
+                        case HandlingProperty::HANDLING_MODELFLAGS:
                         {
                             unsigned int uiValue;
                             argStream.ReadNumber(uiValue);
@@ -2527,8 +2612,8 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                             }
                             break;
                         }
-                        case HANDLING_NUMOFGEARS:
-                        case HANDLING_ANIMGROUP:
+                        case HandlingProperty::HANDLING_NUMOFGEARS:
+                        case HandlingProperty::HANDLING_ANIMGROUP:
                         {
                             unsigned char ucValue;
                             argStream.ReadNumber(ucValue);
@@ -2539,7 +2624,7 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                             }
                             break;
                         }
-                        case HANDLING_CENTEROFMASS:
+                        case HandlingProperty::HANDLING_CENTEROFMASS:
                         {
                             if (argStream.NextIsTable())
                             {
@@ -2569,8 +2654,8 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                             argStream.SetTypeError("table");
                             break;
                         }
-                        case HANDLING_DRIVETYPE:
-                        case HANDLING_ENGINETYPE:
+                        case HandlingProperty::HANDLING_DRIVETYPE:
+                        case HandlingProperty::HANDLING_ENGINETYPE:
                             // case HANDLING_HEADLIGHT:
                             // case HANDLING_TAILLIGHT:
                             {
@@ -2583,7 +2668,7 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                                 }
                                 break;
                             }
-                        case HANDLING_ABS:
+                        case HandlingProperty::HANDLING_ABS:
                         {
                             bool bValue;
                             argStream.ReadBool(bValue);
@@ -2594,7 +2679,7 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
                             }
                             break;
                         }
-                        case HANDLING_MAX:
+                        case HandlingProperty::HANDLING_MAX:
                         {
                             argStream.SetCustomError("Invalid property");
                             break;
@@ -2623,27 +2708,90 @@ int CLuaVehicleDefs::SetVehicleHandling(lua_State* luaVM)
 
 int CLuaVehicleDefs::GetVehicleHandling(lua_State* luaVM)
 {
-    CClientVehicle*  pVehicle = NULL;
+    // table getVehicleHandling ( element theVehicle, [ string property ] )
+    CClientVehicle*  pVehicle = nullptr;
     CScriptArgReader argStream(luaVM);
     argStream.ReadUserData(pVehicle);
 
     if (!argStream.HasErrors())
     {
-        CHandlingEntry* pEntry = pVehicle->GetHandlingData();
+        if (argStream.NextIsString())
+        {
+            SString strProperty;
+            argStream.ReadString(strProperty);
+
+            bool             bResult = true;
+            HandlingProperty eProperty = g_pGame->GetHandlingManager()->GetPropertyEnumFromName(strProperty);
+            if (eProperty != HandlingProperty::HANDLING_MAX)
+            {
+                float         fValue = 0.0f;
+                CVector       vecValue = CVector(0.0f, 0.0f, 0.0f);
+                SString       strValue = "";
+                unsigned int  uiValue = 0;
+                unsigned char ucValue = 0;
+                if (CStaticFunctionDefinitions::GetVehicleHandling(pVehicle, eProperty, fValue))
+                {
+                    lua_pushnumber(luaVM, fValue);
+                }
+                else if (CStaticFunctionDefinitions::GetVehicleHandling(pVehicle, eProperty, uiValue))
+                {
+                    lua_pushnumber(luaVM, uiValue);
+                }
+                else if (CStaticFunctionDefinitions::GetVehicleHandling(pVehicle, eProperty, ucValue))
+                {
+                    lua_pushnumber(luaVM, ucValue);
+                }
+                else if (CStaticFunctionDefinitions::GetVehicleHandling(pVehicle, eProperty, strValue))
+                {
+                    lua_pushstring(luaVM, strValue);
+                }
+                else if (CStaticFunctionDefinitions::GetVehicleHandling(pVehicle, eProperty, vecValue))
+                {
+                    lua_createtable(luaVM, 3, 0);
+                    lua_pushnumber(luaVM, 1);
+                    lua_pushnumber(luaVM, vecValue.fX);
+                    lua_settable(luaVM, -3);
+                    lua_pushnumber(luaVM, 2);
+                    lua_pushnumber(luaVM, vecValue.fY);
+                    lua_settable(luaVM, -3);
+                    lua_pushnumber(luaVM, 3);
+                    lua_pushnumber(luaVM, vecValue.fZ);
+                    lua_settable(luaVM, -3);
+                }
+                else
+                {
+                    bResult = false;
+                }
+            }
+            else
+            {
+                bResult = false;
+            }
+
+            if (!bResult)
+            {
+                argStream.SetCustomError("Invalid property");
+                m_pScriptDebugging->LogCustom(luaVM, argStream.GetFullErrorMessage());
+                lua_pushboolean(luaVM, false);
+            }
+            return 1;
+        }
+
+        const auto* const entry = pVehicle->GetHandlingData();
 
         lua_newtable(luaVM);
 
-        lua_pushnumber(luaVM, pEntry->GetMass());
+        lua_pushnumber(luaVM, entry->GetMass());
         lua_setfield(luaVM, -2, "mass");
 
-        lua_pushnumber(luaVM, pEntry->GetTurnMass());
+        lua_pushnumber(luaVM, entry->GetTurnMass());
         lua_setfield(luaVM, -2, "turnMass");
 
-        lua_pushnumber(luaVM, pEntry->GetDragCoeff());
+        lua_pushnumber(luaVM, entry->GetDragCoeff());
         lua_setfield(luaVM, -2, "dragCoeff");
 
         lua_createtable(luaVM, 3, 0);
-        CVector vecCenter = pEntry->GetCenterOfMass();
+        CVector vecCenter = entry->GetCenterOfMass();
         lua_pushnumber(luaVM, 1);
         lua_pushnumber(luaVM, vecCenter.fX);
         lua_settable(luaVM, -3);
@@ -2655,23 +2803,23 @@ int CLuaVehicleDefs::GetVehicleHandling(lua_State* luaVM)
         lua_settable(luaVM, -3);
         lua_setfield(luaVM, -2, "centerOfMass");
 
-        lua_pushnumber(luaVM, pEntry->GetPercentSubmerged());
+        lua_pushnumber(luaVM, entry->GetPercentSubmerged());
         lua_setfield(luaVM, -2, "percentSubmerged");
 
-        lua_pushnumber(luaVM, pEntry->GetTractionMultiplier());
+        lua_pushnumber(luaVM, entry->GetTractionMultiplier());
         lua_setfield(luaVM, -2, "tractionMultiplier");
 
-        CHandlingEntry::eDriveType eDriveType = pEntry->GetCarDriveType();
+        CHandlingEntry::eDriveType eDriveType = entry->GetCarDriveType();
         if (eDriveType == CHandlingEntry::FWD)
             lua_pushstring(luaVM, "fwd");
         else if (eDriveType == CHandlingEntry::RWD)
             lua_pushstring(luaVM, "rwd");
         else if (eDriveType == CHandlingEntry::FOURWHEEL)
             lua_pushstring(luaVM, "awd");
-        else            // What the ... (yeah, security)
+        else  // What the ... (yeah, security)
             lua_pushnil(luaVM);
         lua_setfield(luaVM, -2, "driveType");
-        CHandlingEntry::eEngineType eEngineType = pEntry->GetCarEngineType();
+        CHandlingEntry::eEngineType eEngineType = entry->GetCarEngineType();
         if (eEngineType == CHandlingEntry::PETROL)
             lua_pushstring(luaVM, "petrol");
         else if (eEngineType == CHandlingEntry::DIESEL)
@@ -2682,73 +2830,73 @@ int CLuaVehicleDefs::GetVehicleHandling(lua_State* luaVM)
             lua_pushnil(luaVM);
         lua_setfield(luaVM, -2, "engineType");
 
-        lua_pushnumber(luaVM, pEntry->GetNumberOfGears());
+        lua_pushnumber(luaVM, entry->GetNumberOfGears());
         lua_setfield(luaVM, -2, "numberOfGears");
 
-        lua_pushnumber(luaVM, pEntry->GetEngineAcceleration());
+        lua_pushnumber(luaVM, entry->GetEngineAcceleration());
         lua_setfield(luaVM, -2, "engineAcceleration");
 
-        lua_pushnumber(luaVM, pEntry->GetEngineInertia());
+        lua_pushnumber(luaVM, entry->GetEngineInertia());
         lua_setfield(luaVM, -2, "engineInertia");
 
-        lua_pushnumber(luaVM, pEntry->GetMaxVelocity());
+        lua_pushnumber(luaVM, entry->GetMaxVelocity());
         lua_setfield(luaVM, -2, "maxVelocity");
 
-        lua_pushnumber(luaVM, pEntry->GetBrakeDeceleration());
+        lua_pushnumber(luaVM, entry->GetBrakeDeceleration());
         lua_setfield(luaVM, -2, "brakeDeceleration");
 
-        lua_pushnumber(luaVM, pEntry->GetBrakeBias());
+        lua_pushnumber(luaVM, entry->GetBrakeBias());
         lua_setfield(luaVM, -2, "brakeBias");
 
-        lua_pushboolean(luaVM, pEntry->GetABS());
+        lua_pushboolean(luaVM, entry->GetABS());
         lua_setfield(luaVM, -2, "ABS");
 
-        lua_pushnumber(luaVM, pEntry->GetSteeringLock());
+        lua_pushnumber(luaVM, entry->GetSteeringLock());
         lua_setfield(luaVM, -2, "steeringLock");
 
-        lua_pushnumber(luaVM, pEntry->GetTractionLoss());
+        lua_pushnumber(luaVM, entry->GetTractionLoss());
         lua_setfield(luaVM, -2, "tractionLoss");
 
-        lua_pushnumber(luaVM, pEntry->GetTractionBias());
+        lua_pushnumber(luaVM, entry->GetTractionBias());
         lua_setfield(luaVM, -2, "tractionBias");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionForceLevel());
+        lua_pushnumber(luaVM, entry->GetSuspensionForceLevel());
         lua_setfield(luaVM, -2, "suspensionForceLevel");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionDamping());
+        lua_pushnumber(luaVM, entry->GetSuspensionDamping());
         lua_setfield(luaVM, -2, "suspensionDamping");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionHighSpeedDamping());
+        lua_pushnumber(luaVM, entry->GetSuspensionHighSpeedDamping());
         lua_setfield(luaVM, -2, "suspensionHighSpeedDamping");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionUpperLimit());
+        lua_pushnumber(luaVM, entry->GetSuspensionUpperLimit());
         lua_setfield(luaVM, -2, "suspensionUpperLimit");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionLowerLimit());
+        lua_pushnumber(luaVM, entry->GetSuspensionLowerLimit());
         lua_setfield(luaVM, -2, "suspensionLowerLimit");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionFrontRearBias());
+        lua_pushnumber(luaVM, entry->GetSuspensionFrontRearBias());
         lua_setfield(luaVM, -2, "suspensionFrontRearBias");
 
-        lua_pushnumber(luaVM, pEntry->GetSuspensionAntiDiveMultiplier());
+        lua_pushnumber(luaVM, entry->GetSuspensionAntiDiveMultiplier());
         lua_setfield(luaVM, -2, "suspensionAntiDiveMultiplier");
 
-        lua_pushnumber(luaVM, pEntry->GetCollisionDamageMultiplier());
+        lua_pushnumber(luaVM, entry->GetCollisionDamageMultiplier());
         lua_setfield(luaVM, -2, "collisionDamageMultiplier");
 
-        lua_pushnumber(luaVM, pEntry->GetSeatOffsetDistance());
+        lua_pushnumber(luaVM, entry->GetSeatOffsetDistance());
         lua_setfield(luaVM, -2, "seatOffsetDistance");
 
-        lua_pushnumber(luaVM, pEntry->GetHandlingFlags());
+        lua_pushnumber(luaVM, entry->GetHandlingFlags());
         lua_setfield(luaVM, -2, "handlingFlags");
 
-        lua_pushnumber(luaVM, pEntry->GetModelFlags());
+        lua_pushnumber(luaVM, entry->GetModelFlags());
         lua_setfield(luaVM, -2, "modelFlags");
 
-        lua_pushnumber(luaVM, pEntry->GetMonetary());
+        lua_pushnumber(luaVM, entry->GetMonetary());
         lua_setfield(luaVM, -2, "monetary");
 
-        CHandlingEntry::eLightType eHeadType = pEntry->GetHeadLight();
+        CHandlingEntry::eLightType eHeadType = entry->GetHeadLight();
         if (eHeadType == CHandlingEntry::LONG)
             lua_pushstring(luaVM, "long");
         else if (eHeadType == CHandlingEntry::SMALL)
@@ -2759,7 +2907,7 @@ int CLuaVehicleDefs::GetVehicleHandling(lua_State* luaVM)
             lua_pushnil(luaVM);
         lua_setfield(luaVM, -2, "headLight");
 
-        CHandlingEntry::eLightType eTailType = pEntry->GetTailLight();
+        CHandlingEntry::eLightType eTailType = entry->GetTailLight();
         if (eTailType == CHandlingEntry::LONG)
             lua_pushstring(luaVM, "long");
         else if (eTailType == CHandlingEntry::SMALL)
@@ -2770,7 +2918,7 @@ int CLuaVehicleDefs::GetVehicleHandling(lua_State* luaVM)
             lua_pushnil(luaVM);
         lua_setfield(luaVM, -2, "tailLight");
 
-        lua_pushnumber(luaVM, pEntry->GetAnimGroup());
+        lua_pushnumber(luaVM, entry->GetAnimGroup());
         lua_setfield(luaVM, -2, "animGroup");
         return 1;
     }
@@ -2783,27 +2931,26 @@ int CLuaVehicleDefs::GetVehicleHandling(lua_State* luaVM)
 
 int CLuaVehicleDefs::GetOriginalHandling(lua_State* luaVM)
 {
-    int              iType = 0;
+    std::uint32_t model;
+
     CScriptArgReader argStream(luaVM);
-    argStream.ReadNumber(iType);
+    argStream.ReadNumber(model);
 
     if (!argStream.HasErrors())
     {
-        eVehicleTypes eModel = static_cast<eVehicleTypes>(iType);
-        if (eModel)
+        if (CClientVehicleManager::IsValidModel(model))
         {
-            const CHandlingEntry* pEntry = g_pGame->GetHandlingManager()->GetOriginalHandlingData(eModel);
-            if (pEntry)
+            if (const auto* const entry = g_pGame->GetHandlingManager()->GetOriginalHandlingData(model))
             {
                 lua_newtable(luaVM);
-                lua_pushnumber(luaVM, pEntry->GetMass());
+                lua_pushnumber(luaVM, entry->GetMass());
                 lua_setfield(luaVM, -2, "mass");
-                lua_pushnumber(luaVM, pEntry->GetTurnMass());
+                lua_pushnumber(luaVM, entry->GetTurnMass());
                 lua_setfield(luaVM, -2, "turnMass");
-                lua_pushnumber(luaVM, pEntry->GetDragCoeff());
+                lua_pushnumber(luaVM, entry->GetDragCoeff());
                 lua_setfield(luaVM, -2, "dragCoeff");
                 lua_createtable(luaVM, 3, 0);
-                CVector vecCenter = pEntry->GetCenterOfMass();
+                CVector vecCenter = entry->GetCenterOfMass();
                 lua_pushnumber(luaVM, 1);
                 lua_pushnumber(luaVM, vecCenter.fX);
                 lua_settable(luaVM, -3);
@@ -2814,21 +2961,21 @@ int CLuaVehicleDefs::GetOriginalHandling(lua_State* luaVM)
                 lua_pushnumber(luaVM, vecCenter.fZ);
                 lua_settable(luaVM, -3);
                 lua_setfield(luaVM, -2, "centerOfMass");
-                lua_pushnumber(luaVM, pEntry->GetPercentSubmerged());
+                lua_pushnumber(luaVM, entry->GetPercentSubmerged());
                 lua_setfield(luaVM, -2, "percentSubmerged");
-                lua_pushnumber(luaVM, pEntry->GetTractionMultiplier());
+                lua_pushnumber(luaVM, entry->GetTractionMultiplier());
                 lua_setfield(luaVM, -2, "tractionMultiplier");
-                CHandlingEntry::eDriveType eDriveType = pEntry->GetCarDriveType();
+                CHandlingEntry::eDriveType eDriveType = entry->GetCarDriveType();
                 if (eDriveType == CHandlingEntry::FWD)
                     lua_pushstring(luaVM, "fwd");
                 else if (eDriveType == CHandlingEntry::RWD)
                     lua_pushstring(luaVM, "rwd");
                 else if (eDriveType == CHandlingEntry::FOURWHEEL)
                     lua_pushstring(luaVM, "awd");
-                else            // What the ... (yeah, security)
+                else  // What the ... (yeah, security)
                     lua_pushnil(luaVM);
                 lua_setfield(luaVM, -2, "driveType");
-                CHandlingEntry::eEngineType eEngineType = pEntry->GetCarEngineType();
+                CHandlingEntry::eEngineType eEngineType = entry->GetCarEngineType();
                 if (eEngineType == CHandlingEntry::PETROL)
                     lua_pushstring(luaVM, "petrol");
                 else if (eEngineType == CHandlingEntry::DIESEL)
@@ -2838,51 +2985,51 @@ int CLuaVehicleDefs::GetOriginalHandling(lua_State* luaVM)
                 else
                     lua_pushnil(luaVM);
                 lua_setfield(luaVM, -2, "engineType");
-                lua_pushnumber(luaVM, pEntry->GetNumberOfGears());
+                lua_pushnumber(luaVM, entry->GetNumberOfGears());
                 lua_setfield(luaVM, -2, "numberOfGears");
-                lua_pushnumber(luaVM, pEntry->GetEngineAcceleration());
+                lua_pushnumber(luaVM, entry->GetEngineAcceleration());
                 lua_setfield(luaVM, -2, "engineAcceleration");
-                lua_pushnumber(luaVM, pEntry->GetEngineInertia());
+                lua_pushnumber(luaVM, entry->GetEngineInertia());
                 lua_setfield(luaVM, -2, "engineInertia");
-                lua_pushnumber(luaVM, pEntry->GetMaxVelocity());
+                lua_pushnumber(luaVM, entry->GetMaxVelocity());
                 lua_setfield(luaVM, -2, "maxVelocity");
-                lua_pushnumber(luaVM, pEntry->GetBrakeDeceleration());
+                lua_pushnumber(luaVM, entry->GetBrakeDeceleration());
                 lua_setfield(luaVM, -2, "brakeDeceleration");
-                lua_pushnumber(luaVM, pEntry->GetBrakeBias());
+                lua_pushnumber(luaVM, entry->GetBrakeBias());
                 lua_setfield(luaVM, -2, "brakeBias");
-                lua_pushboolean(luaVM, pEntry->GetABS());
+                lua_pushboolean(luaVM, entry->GetABS());
                 lua_setfield(luaVM, -2, "ABS");
-                lua_pushnumber(luaVM, pEntry->GetSteeringLock());
+                lua_pushnumber(luaVM, entry->GetSteeringLock());
                 lua_setfield(luaVM, -2, "steeringLock");
-                lua_pushnumber(luaVM, pEntry->GetTractionLoss());
+                lua_pushnumber(luaVM, entry->GetTractionLoss());
                 lua_setfield(luaVM, -2, "tractionLoss");
-                lua_pushnumber(luaVM, pEntry->GetTractionBias());
+                lua_pushnumber(luaVM, entry->GetTractionBias());
                 lua_setfield(luaVM, -2, "tractionBias");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionForceLevel());
+                lua_pushnumber(luaVM, entry->GetSuspensionForceLevel());
                 lua_setfield(luaVM, -2, "suspensionForceLevel");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionDamping());
+                lua_pushnumber(luaVM, entry->GetSuspensionDamping());
                 lua_setfield(luaVM, -2, "suspensionDamping");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionHighSpeedDamping());
+                lua_pushnumber(luaVM, entry->GetSuspensionHighSpeedDamping());
                 lua_setfield(luaVM, -2, "suspensionHighSpeedDamping");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionUpperLimit());
+                lua_pushnumber(luaVM, entry->GetSuspensionUpperLimit());
                 lua_setfield(luaVM, -2, "suspensionUpperLimit");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionLowerLimit());
+                lua_pushnumber(luaVM, entry->GetSuspensionLowerLimit());
                 lua_setfield(luaVM, -2, "suspensionLowerLimit");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionFrontRearBias());
+                lua_pushnumber(luaVM, entry->GetSuspensionFrontRearBias());
                 lua_setfield(luaVM, -2, "suspensionFrontRearBias");
-                lua_pushnumber(luaVM, pEntry->GetSuspensionAntiDiveMultiplier());
+                lua_pushnumber(luaVM, entry->GetSuspensionAntiDiveMultiplier());
                 lua_setfield(luaVM, -2, "suspensionAntiDiveMultiplier");
-                lua_pushnumber(luaVM, pEntry->GetCollisionDamageMultiplier());
+                lua_pushnumber(luaVM, entry->GetCollisionDamageMultiplier());
                 lua_setfield(luaVM, -2, "collisionDamageMultiplier");
-                lua_pushnumber(luaVM, pEntry->GetSeatOffsetDistance());
+                lua_pushnumber(luaVM, entry->GetSeatOffsetDistance());
                 lua_setfield(luaVM, -2, "seatOffsetDistance");
-                lua_pushnumber(luaVM, pEntry->GetHandlingFlags());
+                lua_pushnumber(luaVM, entry->GetHandlingFlags());
                 lua_setfield(luaVM, -2, "handlingFlags");
-                lua_pushnumber(luaVM, pEntry->GetModelFlags());
+                lua_pushnumber(luaVM, entry->GetModelFlags());
                 lua_setfield(luaVM, -2, "modelFlags");
-                lua_pushnumber(luaVM, pEntry->GetMonetary());
+                lua_pushnumber(luaVM, entry->GetMonetary());
                 lua_setfield(luaVM, -2, "monetary");
-                CHandlingEntry::eLightType eHeadType = pEntry->GetHeadLight();
+                CHandlingEntry::eLightType eHeadType = entry->GetHeadLight();
                 if (eHeadType == CHandlingEntry::LONG)
                     lua_pushstring(luaVM, "long");
                 else if (eHeadType == CHandlingEntry::SMALL)
@@ -2892,7 +3039,7 @@ int CLuaVehicleDefs::GetOriginalHandling(lua_State* luaVM)
                 else
                     lua_pushnil(luaVM);
                 lua_setfield(luaVM, -2, "headLight");
-                CHandlingEntry::eLightType eTailType = pEntry->GetTailLight();
+                CHandlingEntry::eLightType eTailType = entry->GetTailLight();
                 if (eTailType == CHandlingEntry::LONG)
                     lua_pushstring(luaVM, "long");
                 else if (eTailType == CHandlingEntry::SMALL)
@@ -2902,8 +3049,9 @@ int CLuaVehicleDefs::GetOriginalHandling(lua_State* luaVM)
                 else
                     lua_pushnil(luaVM);
                 lua_setfield(luaVM, -2, "tailLight");
-                lua_pushnumber(luaVM, pEntry->GetAnimGroup());
+                lua_pushnumber(luaVM, entry->GetAnimGroup());
                 lua_setfield(luaVM, -2, "animGroup");
+
                 return 1;
             }
             else
@@ -2956,37 +3104,37 @@ int CLuaVehicleDefs::GetVehicleSirenParams(lua_State* luaVM)
     argStream.ReadUserData(pVehicle);
     if (!argStream.HasErrors())
     {
-        tSirenInfo = pVehicle->m_tSirenBeaconInfo;            // Grab the siren structure data
+        tSirenInfo = pVehicle->m_tSirenBeaconInfo;  // Grab the siren structure data
         lua_newtable(luaVM);
 
         lua_pushstring(luaVM, "SirenCount");
         lua_pushnumber(luaVM, tSirenInfo.m_ucSirenCount);
-        lua_settable(luaVM, -3);            // End of SirenCount Property
+        lua_settable(luaVM, -3);  // End of SirenCount Property
 
         lua_pushstring(luaVM, "SirenType");
         lua_pushnumber(luaVM, tSirenInfo.m_ucSirenType);
-        lua_settable(luaVM, -3);            // End of SirenType Property
+        lua_settable(luaVM, -3);  // End of SirenType Property
 
         lua_pushstring(luaVM, "Flags");
         lua_newtable(luaVM);
 
         lua_pushstring(luaVM, "360");
         lua_pushboolean(luaVM, tSirenInfo.m_b360Flag);
-        lua_settable(luaVM, -3);            // End of 360 Property
+        lua_settable(luaVM, -3);  // End of 360 Property
 
         lua_pushstring(luaVM, "DoLOSCheck");
         lua_pushboolean(luaVM, tSirenInfo.m_bDoLOSCheck);
-        lua_settable(luaVM, -3);            // End of DoLOSCheck Property
+        lua_settable(luaVM, -3);  // End of DoLOSCheck Property
 
         lua_pushstring(luaVM, "UseRandomiser");
         lua_pushboolean(luaVM, tSirenInfo.m_bUseRandomiser);
-        lua_settable(luaVM, -3);            // End of UseRandomiser Property
+        lua_settable(luaVM, -3);  // End of UseRandomiser Property
 
         lua_pushstring(luaVM, "Silent");
         lua_pushboolean(luaVM, tSirenInfo.m_bSirenSilent);
-        lua_settable(luaVM, -3);            // End of Silent Property
+        lua_settable(luaVM, -3);  // End of Silent Property
 
-        lua_settable(luaVM, -3);            // End of table
+        lua_settable(luaVM, -3);  // End of table
 
         return 1;
     }
@@ -3007,7 +3155,7 @@ int CLuaVehicleDefs::GetVehicleSirens(lua_State* luaVM)
     argStream.ReadUserData(pVehicle);
     if (!argStream.HasErrors())
     {
-        tSirenInfo = pVehicle->m_tSirenBeaconInfo;            // Grab the siren structure data
+        tSirenInfo = pVehicle->m_tSirenBeaconInfo;  // Grab the siren structure data
         lua_newtable(luaVM);
 
         for (int i = 0; i < tSirenInfo.m_ucSirenCount; i++)
@@ -3017,37 +3165,37 @@ int CLuaVehicleDefs::GetVehicleSirens(lua_State* luaVM)
 
             lua_pushstring(luaVM, "Min_Alpha");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_dwMinSirenAlpha);
-            lua_settable(luaVM, -3);            // End of Min_Alpha property
+            lua_settable(luaVM, -3);  // End of Min_Alpha property
 
             lua_pushstring(luaVM, "Red");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_RGBBeaconColour.R);
-            lua_settable(luaVM, -3);            // End of Red property
+            lua_settable(luaVM, -3);  // End of Red property
 
             lua_pushstring(luaVM, "Green");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_RGBBeaconColour.G);
-            lua_settable(luaVM, -3);            // End of Green property
+            lua_settable(luaVM, -3);  // End of Green property
 
             lua_pushstring(luaVM, "Blue");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_RGBBeaconColour.B);
-            lua_settable(luaVM, -3);            // End of Blue property
+            lua_settable(luaVM, -3);  // End of Blue property
 
             lua_pushstring(luaVM, "Alpha");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_RGBBeaconColour.A);
-            lua_settable(luaVM, -3);            // End of Alpha property
+            lua_settable(luaVM, -3);  // End of Alpha property
 
             lua_pushstring(luaVM, "x");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_vecSirenPositions.fX);
-            lua_settable(luaVM, -3);            // End of X property
+            lua_settable(luaVM, -3);  // End of X property
 
             lua_pushstring(luaVM, "y");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_vecSirenPositions.fY);
-            lua_settable(luaVM, -3);            // End of Y property
+            lua_settable(luaVM, -3);  // End of Y property
 
             lua_pushstring(luaVM, "z");
             lua_pushnumber(luaVM, tSirenInfo.m_tSirenInfo[i].m_vecSirenPositions.fZ);
-            lua_settable(luaVM, -3);            // End of Z property
+            lua_settable(luaVM, -3);  // End of Z property
 
-            lua_settable(luaVM, -3);            // End of Table
+            lua_settable(luaVM, -3);  // End of Table
         }
 
         return 1;
@@ -3073,7 +3221,7 @@ int CLuaVehicleDefs::SetVehicleSirens(lua_State* luaVM)
     {
         if (ucSirenID > 0 && ucSirenID < 9)
         {
-            // Array indicies start at 0 so compensate here. This way all code works properly and we get nice 1-8 numbers for API
+            // Array indices start at 0 so compensate here. This way all code works properly and we get nice 1-8 numbers for API
             ucSirenID--;
             argStream.ReadVector3D(tSirenInfo.m_tSirenInfo[ucSirenID].m_vecSirenPositions);
             argStream.ReadNumber(tSirenInfo.m_tSirenInfo[ucSirenID].m_RGBBeaconColour.R);
@@ -3544,7 +3692,7 @@ int CLuaVehicleDefs::GetVehicleComponents(lua_State* luaVM)
         {
             lua_pushstring(luaVM, (*iter).first);
             lua_pushboolean(luaVM, (*iter).second.m_bVisible);
-            lua_settable(luaVM, -3);            // End of Table
+            lua_settable(luaVM, -3);  // End of Table
         }
         return 1;
     }
@@ -3858,9 +4006,9 @@ int CLuaVehicleDefs::IsVehicleWindowOpen(lua_State* luaVM)
 int CLuaVehicleDefs::SetVehicleModelDummyPosition(lua_State* luaVM)
 {
     // bool setVehicleModelDummyPosition ( int modelID, vehicle-dummy dummy, float x, float y, float z )
-    unsigned short  usModel;
-    eVehicleDummies eDummy;
-    CVector         vecPosition;
+    unsigned short usModel;
+    VehicleDummies eDummy;
+    CVector        vecPosition;
 
     CScriptArgReader argStream(luaVM);
     argStream.ReadNumber(usModel);
@@ -3885,8 +4033,8 @@ int CLuaVehicleDefs::SetVehicleModelDummyPosition(lua_State* luaVM)
 int CLuaVehicleDefs::GetVehicleModelDummyPosition(lua_State* luaVM)
 {
     // float, float, float getVehicleModelDummyPosition ( int modelID, vehicle-dummy dummy )
-    unsigned short  usModel;
-    eVehicleDummies eDummy;
+    unsigned short usModel;
+    VehicleDummies eDummy;
 
     CScriptArgReader argStream(luaVM);
     argStream.ReadNumber(usModel);
@@ -3914,8 +4062,8 @@ int CLuaVehicleDefs::GetVehicleModelDummyPosition(lua_State* luaVM)
 int CLuaVehicleDefs::OOP_GetVehicleModelDummyPosition(lua_State* luaVM)
 {
     // float, float, float getVehicleModelDummyPosition ( int modelID, vehicle-dummy dummy )
-    unsigned short  usModel;
-    eVehicleDummies eDummy;
+    unsigned short usModel;
+    VehicleDummies eDummy;
 
     CScriptArgReader argStream(luaVM);
     argStream.ReadNumber(usModel);
@@ -4043,7 +4191,7 @@ bool CLuaVehicleDefs::SetVehicleWheelScale(CClientVehicle* const pVehicle, const
 }
 
 std::variant<float, std::unordered_map<std::string, float>> CLuaVehicleDefs::GetVehicleModelWheelSize(
-    const unsigned short usModel, const std::optional<eResizableVehicleWheelGroup> eWheelGroup)
+    const unsigned short usModel, const std::optional<ResizableVehicleWheelGroup> eWheelGroup)
 {
     CModelInfo* pModelInfo = nullptr;
     if (CClientVehicleManager::IsValidModel(usModel))
@@ -4052,19 +4200,19 @@ std::variant<float, std::unordered_map<std::string, float>> CLuaVehicleDefs::Get
     if (!pModelInfo)
         throw std::invalid_argument("Invalid model ID");
 
-    eResizableVehicleWheelGroup eActualWheelGroup = eWheelGroup.value_or(eResizableVehicleWheelGroup::ALL_WHEELS);
-    if (eActualWheelGroup == eResizableVehicleWheelGroup::ALL_WHEELS)
+    ResizableVehicleWheelGroup eActualWheelGroup = eWheelGroup.value_or(ResizableVehicleWheelGroup::ALL_WHEELS);
+    if (eActualWheelGroup == ResizableVehicleWheelGroup::ALL_WHEELS)
     {
         // Return a table like { ["front_axle"] = 0.7, ["rear_axle"] = 0.8 }
         return std::unordered_map<std::string, float>{
-            {"front_axle", pModelInfo->GetVehicleWheelSize(eResizableVehicleWheelGroup::FRONT_AXLE)},
-            {"rear_axle", pModelInfo->GetVehicleWheelSize(eResizableVehicleWheelGroup::REAR_AXLE)},
+            {"front_axle", pModelInfo->GetVehicleWheelSize(ResizableVehicleWheelGroup::FRONT_AXLE)},
+            {"rear_axle", pModelInfo->GetVehicleWheelSize(ResizableVehicleWheelGroup::REAR_AXLE)},
         };
     }
     return pModelInfo->GetVehicleWheelSize(eActualWheelGroup);
 }
 
-bool CLuaVehicleDefs::SetVehicleModelWheelSize(const unsigned short usModel, const eResizableVehicleWheelGroup eWheelGroup, const float fWheelSize)
+bool CLuaVehicleDefs::SetVehicleModelWheelSize(const unsigned short usModel, const ResizableVehicleWheelGroup eWheelGroup, const float fWheelSize)
 {
     CModelInfo* pModelInfo = nullptr;
 
@@ -4086,17 +4234,21 @@ bool CLuaVehicleDefs::SetVehicleModelWheelSize(const unsigned short usModel, con
 
 int CLuaVehicleDefs::GetVehicleWheelFrictionState(CClientVehicle* pVehicle, unsigned char wheel)
 {
-    if (wheel < 0 || wheel > 3)
+    if (wheel >= MAX_WHEELS)
         throw std::invalid_argument("Invalid wheel number");
 
-    if (CClientVehicleManager::GetVehicleType(pVehicle->GetModel()) != CLIENTVEHICLE_CAR)
-        throw std::invalid_argument("Invalid vehicle type");
+    auto vehicleType = pVehicle->GetVehicleType();
 
-    return pVehicle->GetWheelFrictionState(wheel);
+    if (vehicleType == CLIENTVEHICLE_CAR || vehicleType == CLIENTVEHICLE_MONSTERTRUCK || vehicleType == CLIENTVEHICLE_QUADBIKE ||
+        vehicleType == CLIENTVEHICLE_BIKE || vehicleType == CLIENTVEHICLE_BMX || vehicleType == CLIENTVEHICLE_TRAILER)
+    {
+        return pVehicle->GetWheelFrictionState(wheel);
+    }
+
+    throw std::invalid_argument("Invalid vehicle type");
 }
 
-std::variant<bool, CLuaMultiReturn<float, float, float>> CLuaVehicleDefs::GetVehicleModelDummyDefaultPosition(unsigned short  vehicleModel,
-                                                                                                              eVehicleDummies dummy)
+std::variant<bool, CLuaMultiReturn<float, float, float>> CLuaVehicleDefs::GetVehicleModelDummyDefaultPosition(unsigned short vehicleModel, VehicleDummies dummy)
 {
     CVector position;
 
@@ -4106,7 +4258,7 @@ std::variant<bool, CLuaMultiReturn<float, float, float>> CLuaVehicleDefs::GetVeh
     return std::tuple(position.fX, position.fY, position.fZ);
 }
 
-std::variant<bool, CVector> CLuaVehicleDefs::OOP_GetVehicleModelDummyDefaultPosition(unsigned short vehicleModel, eVehicleDummies dummy)
+std::variant<bool, CVector> CLuaVehicleDefs::OOP_GetVehicleModelDummyDefaultPosition(unsigned short vehicleModel, VehicleDummies dummy)
 {
     CVector position;
 
@@ -4116,12 +4268,12 @@ std::variant<bool, CVector> CLuaVehicleDefs::OOP_GetVehicleModelDummyDefaultPosi
     return position;
 }
 
-bool CLuaVehicleDefs::SetVehicleDummyPosition(CClientVehicle* vehicle, eVehicleDummies dummy, CVector position)
+bool CLuaVehicleDefs::SetVehicleDummyPosition(CClientVehicle* vehicle, VehicleDummies dummy, CVector position)
 {
     return vehicle->SetDummyPosition(dummy, position);
 }
 
-std::variant<bool, CLuaMultiReturn<float, float, float>> CLuaVehicleDefs::GetVehicleDummyPosition(CClientVehicle* vehicle, eVehicleDummies dummy)
+std::variant<bool, CLuaMultiReturn<float, float, float>> CLuaVehicleDefs::GetVehicleDummyPosition(CClientVehicle* vehicle, VehicleDummies dummy)
 {
     CVector position;
 
@@ -4131,7 +4283,7 @@ std::variant<bool, CLuaMultiReturn<float, float, float>> CLuaVehicleDefs::GetVeh
     return std::tuple(position.fX, position.fY, position.fZ);
 }
 
-std::variant<bool, CVector> CLuaVehicleDefs::OOP_GetVehicleDummyPosition(CClientVehicle* vehicle, eVehicleDummies dummy)
+std::variant<bool, CVector> CLuaVehicleDefs::OOP_GetVehicleDummyPosition(CClientVehicle* vehicle, VehicleDummies dummy)
 {
     CVector position;
 
@@ -4149,4 +4301,488 @@ bool CLuaVehicleDefs::ResetVehicleDummyPositions(CClientVehicle* vehicle)
 bool CLuaVehicleDefs::BlowVehicle(CClientEntity* entity, std::optional<bool> withExplosion)
 {
     return CStaticFunctionDefinitions::BlowVehicle(*entity, withExplosion);
+}
+
+std::variant<bool, std::array<std::array<float, 3>, 4>> CLuaVehicleDefs::GetVehicleEntryPoints(CClientVehicle* vehicle)
+{
+    auto entryPointVectors = OOP_GetVehicleEntryPoints(vehicle);
+
+    if (std::holds_alternative<bool>(entryPointVectors))
+    {
+        return false;
+    }
+
+    std::array<std::array<float, 3>, 4> entryPoints;
+    std::array<CVector, 4>              vectorArray = std::get<std::array<CVector, 4>>(entryPointVectors);
+
+    std::uint32_t i = 0;
+    for (auto& entryPoint : entryPoints)
+    {
+        entryPoints[i] = {vectorArray[i].fX, vectorArray[i].fY, vectorArray[i].fZ};
+        i++;
+    }
+
+    return entryPoints;
+}
+
+std::variant<bool, std::array<CVector, 4>> CLuaVehicleDefs::OOP_GetVehicleEntryPoints(CClientVehicle* vehicle)
+{
+    if (CClientVehicleManager::GetMaxPassengerCount(vehicle->GetModel()) == 255)
+    {
+        return false;
+    }
+
+    std::array<CVector, 4> entryPoints;
+
+    std::uint32_t i = 0;
+    for (auto& entryPoint : entryPoints)
+    {
+        entryPoint = vehicle->GetEntryPoint(i++);
+    }
+
+    return entryPoints;
+}
+
+bool CLuaVehicleDefs::SpawnVehicleFlyingComponent(CClientVehicle* const vehicle, std::uint8_t nodeIndex, std::optional<std::uint8_t> componentCollisionType,
+                                                  std::optional<std::uint32_t> removalTime)
+{
+    auto partNodeIndex = static_cast<eCarNodes>(nodeIndex);
+    auto collisionType = componentCollisionType.has_value() ? static_cast<eCarComponentCollisionTypes>(componentCollisionType.value())
+                                                            : eCarComponentCollisionTypes::COL_NODE_PANEL;
+
+    if (nodeIndex < 1 || partNodeIndex >= eCarNodes::NUM_NODES)
+        throw std::invalid_argument("Invalid component index");
+
+    if (collisionType >= eCarComponentCollisionTypes::COL_NODES_NUM)
+        throw std::invalid_argument("Invalid collision type index");
+
+    if (!componentCollisionType.has_value())
+    {
+        switch (partNodeIndex)
+        {
+            case eCarNodes::WHEEL_RF:
+            case eCarNodes::WHEEL_RB:
+            case eCarNodes::WHEEL_LF:
+            case eCarNodes::WHEEL_LB:
+            {
+                collisionType = eCarComponentCollisionTypes::COL_NODE_WHEEL;
+                break;
+            }
+            case eCarNodes::DOOR_RF:
+            case eCarNodes::DOOR_RR:
+            case eCarNodes::DOOR_LF:
+            case eCarNodes::DOOR_LR:
+            {
+                collisionType = eCarComponentCollisionTypes::COL_NODE_DOOR;
+                break;
+            }
+            case eCarNodes::BUMP_FRONT:
+            case eCarNodes::BUMP_REAR:
+            case eCarNodes::WHEEL_LM:
+            case eCarNodes::WHEEL_RM:
+            {
+                collisionType = eCarComponentCollisionTypes::COL_NODE_BUMPER;
+                break;
+            }
+            case eCarNodes::BOOT:
+            case eCarNodes::CHASSIS:
+            {
+                collisionType = eCarComponentCollisionTypes::COL_NODE_BOOT;
+                break;
+            }
+            case eCarNodes::BONNET:
+            case eCarNodes::WINDSCREEN:
+            {
+                collisionType = eCarComponentCollisionTypes::COL_NODE_BONNET;
+                break;
+            }
+            default:
+            {
+                collisionType = eCarComponentCollisionTypes::COL_NODE_PANEL;
+                break;
+            }
+        }
+    }
+
+    return vehicle->SpawnFlyingComponent(partNodeIndex, collisionType, removalTime.value_or(-1));
+}
+
+bool CLuaVehicleDefs::AddVehicleSirens(CClientVehicle* vehicle, std::uint8_t sirenType, std::uint8_t sirenCount, std::optional<bool> enable360,
+                                       std::optional<bool> enableLOSCheck, std::optional<bool> enableRandomiser, std::optional<bool> enableSilent) noexcept
+{
+    if (sirenType < 1 || sirenType > 6)
+        return false;
+
+    if (sirenCount > SIREN_COUNT_MAX)
+        return false;
+
+    vehicle->GiveVehicleSirens(sirenType, sirenCount);
+    vehicle->SetVehicleFlags(enable360.value_or(false), enableRandomiser.value_or(true), enableLOSCheck.value_or(true), enableSilent.value_or(false));
+    return true;
+}
+
+bool CLuaVehicleDefs::RemoveVehicleSirens(CClientVehicle* vehicle) noexcept
+{
+    vehicle->RemoveVehicleSirens();
+    return true;
+}
+
+bool CLuaVehicleDefs::SetSmokeTrailEnabled(CClientVehicle* vehicle, bool state)
+{
+    std::uint16_t model = vehicle->GetModel();
+    if (model != 512 && model != 513)
+        throw LuaFunctionError("Invalid model ID");
+
+    vehicle->SetSmokeTrailEnabled(state);
+    return true;
+}
+
+bool CLuaVehicleDefs::IsSmokeTrailEnabled(CClientVehicle* vehicle) noexcept
+{
+    return vehicle->IsSmokeTrailEnabled();
+}
+
+bool CLuaVehicleDefs::SetVehicleRotorState(CClientVehicle* vehicle, bool state, std::optional<bool> stopRotor) noexcept
+{
+    if (vehicle->GetVehicleType() != eClientVehicleType::CLIENTVEHICLE_HELI && vehicle->GetVehicleType() != eClientVehicleType::CLIENTVEHICLE_PLANE)
+        return false;
+
+    vehicle->SetVehicleRotorState(state, stopRotor.value_or(true));
+    return true;
+}
+
+bool CLuaVehicleDefs::GetVehicleRotorState(CClientVehicle* vehicle) noexcept
+{
+    return vehicle->GetVehicleRotorState();
+}
+
+bool CLuaVehicleDefs::SetVehicleModelAudioSetting(const uint32_t uiModel, const VehicleAudioSettingProperty eProperty, float varValue)
+{
+    if (!CClientVehicleManager::IsStandardModel(uiModel))
+        throw std::invalid_argument("Cannot change audio setting for allocated vechiles");
+
+    const auto toInt = [](float value) -> int
+    {
+        const int iValue = static_cast<int>(value);
+        if (static_cast<float>(iValue) != value)
+            throw std::invalid_argument("Expected an integer value");
+
+        return iValue;
+    };
+
+    const auto toChar = [&toInt](float value) -> char
+    {
+        const int iValue = toInt(value);
+        if (iValue < std::numeric_limits<char>::min() || iValue > std::numeric_limits<char>::max())
+            throw std::invalid_argument("Value out of range");
+
+        return static_cast<char>(iValue);
+    };
+
+    CVehicleAudioSettingsEntry& pModelSettings = g_pGame->GetVehicleAudioSettingsManager()->GetVehicleModelAudioSettingsData(uiModel);
+
+    switch (eProperty)
+    {
+        case VehicleAudioSettingProperty::DOOR_SOUND:
+        {
+            pModelSettings.SetDoorSound(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::ENGINE_OFF_SOUND_BANK_ID:
+        {
+            // Using SPC_ sound banks other than SPC_EA causes a crash
+            const int iValue = toInt(varValue);
+            if (iValue < 0 || iValue > 410)
+                throw std::invalid_argument("Invalid engine-off-sound-bank-id value");
+
+            pModelSettings.SetEngineOffSoundBankID(static_cast<short>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::ENGINE_ON_SOUND_BANK_ID:
+        {
+            // Using SPC_ sound banks other than SPC_EA causes a crash
+            const int iValue = toInt(varValue);
+            if (iValue < 0 || iValue > 410)
+                throw std::invalid_argument("Invalid engine-on-sound-bank-id value");
+
+            pModelSettings.SetEngineOnSoundBankID(static_cast<short>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::HORN_HIGH:
+        {
+            pModelSettings.SetHornHign(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::HORN_TON:
+        {
+            pModelSettings.SetHornTon(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::HORN_VOLUME_DELTA:
+        {
+            pModelSettings.SetHornVolumeDelta(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::RADIO_NUM:
+        {
+            pModelSettings.SetRadioNum(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::RADIO_TYPE:
+        {
+            pModelSettings.SetRadioType(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::SOUND_TYPE:
+        {
+            const int iValue = toInt(varValue);
+            if (!((iValue >= 0 && iValue <= 5) || (iValue >= 8 && iValue <= 10)))
+                throw std::invalid_argument("Invalid sound-type value");
+
+            pModelSettings.SetSoundType(static_cast<VehicleSoundType>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::BASS_SETTING:
+        {
+            const int iValue = toInt(varValue);
+            if (iValue < 0 || iValue > 2)
+                throw std::invalid_argument("Invalid bass-setting value");
+
+            pModelSettings.SetBassSetting(static_cast<char>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::BASS_EQ:
+        {
+            pModelSettings.SetBassEq(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::FIELD_C:
+        {
+            pModelSettings.SetFieldC(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::ENGINE_UPGRADE:
+        {
+            pModelSettings.SetEngineUpgrade(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::VEHICLE_TYPE_FOR_AUDIO:
+        {
+            pModelSettings.SetVehicleTypeForAudio(toChar(varValue));
+            break;
+        }
+        default:
+            return false;
+    }
+
+    auto iter = g_pClientGame->GetVehicleManager()->IterBegin();
+    auto end = g_pClientGame->GetVehicleManager()->IterEnd();
+    for (; iter != end; ++iter)
+    {
+        CClientVehicle* pVehicle = *iter;
+        if (pVehicle && pVehicle->GetModel() == uiModel)
+        {
+            pVehicle->ApplyAudioSettings();
+        }
+    }
+
+    return true;
+}
+
+bool CLuaVehicleDefs::ResetVehicleModelAudioSettings(const uint32_t uiModel)
+{
+    if (!CClientVehicleManager::IsStandardModel(uiModel))
+        throw std::invalid_argument("Cannot change audio setting for allocated vechiles");
+
+    g_pGame->GetVehicleAudioSettingsManager()->ResetModelSettings(uiModel);
+
+    return true;
+}
+
+bool CLuaVehicleDefs::SetVehicleAudioSetting(CClientVehicle* pVehicle, const VehicleAudioSettingProperty eProperty, float varValue)
+{
+    CVehicleAudioSettingsEntry& pModelSettings = pVehicle->GetOrCreateAudioSettings();
+
+    const auto toInt = [](float value) -> int
+    {
+        const int iValue = static_cast<int>(value);
+        if (static_cast<float>(iValue) != value)
+            throw std::invalid_argument("Expected an integer value");
+
+        return iValue;
+    };
+
+    const auto toChar = [&toInt](float value) -> char
+    {
+        const int iValue = toInt(value);
+        if (iValue < std::numeric_limits<char>::min() || iValue > std::numeric_limits<char>::max())
+            throw std::invalid_argument("Value out of range");
+
+        return static_cast<char>(iValue);
+    };
+
+    switch (eProperty)
+    {
+        case VehicleAudioSettingProperty::DOOR_SOUND:
+        {
+            pModelSettings.SetDoorSound(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::ENGINE_OFF_SOUND_BANK_ID:
+        {
+            // Using SPC_ sound banks other than SPC_EA causes a crash
+            const int iValue = toInt(varValue);
+            if (iValue < 0 || iValue > 410)
+                throw std::invalid_argument("Invalid engine-off-sound-bank-id value");
+
+            pModelSettings.SetEngineOffSoundBankID(static_cast<short>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::ENGINE_ON_SOUND_BANK_ID:
+        {
+            // Using SPC_ sound banks other than SPC_EA causes a crash
+            const int iValue = toInt(varValue);
+            if (iValue < 0 || iValue > 410)
+                throw std::invalid_argument("Invalid engine-on-sound-bank-id value");
+
+            pModelSettings.SetEngineOnSoundBankID(static_cast<short>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::HORN_HIGH:
+        {
+            pModelSettings.SetHornHign(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::HORN_TON:
+        {
+            pModelSettings.SetHornTon(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::HORN_VOLUME_DELTA:
+        {
+            pModelSettings.SetHornVolumeDelta(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::RADIO_NUM:
+        {
+            pModelSettings.SetRadioNum(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::RADIO_TYPE:
+        {
+            pModelSettings.SetRadioType(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::SOUND_TYPE:
+        {
+            const int iValue = toInt(varValue);
+            if (!((iValue >= 0 && iValue <= 5) || (iValue >= 8 && iValue <= 10)))
+                throw std::invalid_argument("Invalid sound-type value");
+
+            pModelSettings.SetSoundType(static_cast<VehicleSoundType>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::BASS_SETTING:
+        {
+            const int iValue = toInt(varValue);
+            if (iValue < 0 || iValue > 2)
+                throw std::invalid_argument("Invalid bass-setting value");
+
+            pModelSettings.SetBassSetting(static_cast<char>(iValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::BASS_EQ:
+        {
+            pModelSettings.SetBassEq(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::FIELD_C:
+        {
+            pModelSettings.SetFieldC(varValue);
+            break;
+        }
+        case VehicleAudioSettingProperty::ENGINE_UPGRADE:
+        {
+            pModelSettings.SetEngineUpgrade(toChar(varValue));
+            break;
+        }
+        case VehicleAudioSettingProperty::VEHICLE_TYPE_FOR_AUDIO:
+        {
+            pModelSettings.SetVehicleTypeForAudio(toChar(varValue));
+            break;
+        }
+        default:
+            return false;
+    }
+
+    pVehicle->ApplyAudioSettings();
+
+    return true;
+}
+
+bool CLuaVehicleDefs::ResetVehicleAudioSettings(CClientVehicle* pVehicle)
+{
+    pVehicle->ResetAudioSettings();
+    return true;
+}
+
+std::unordered_map<std::string, float> CLuaVehicleDefs::GetVehicleModelAudioSettings(uint32_t uiModel)
+{
+    if (!CClientVehicleManager::IsStandardModel(uiModel))
+    {
+        auto* modelInfo = g_pGame->GetModelInfo(uiModel);
+
+        if (!modelInfo)
+            throw std::invalid_argument("Invalid model id");
+
+        uiModel = modelInfo->GetParentID();
+
+        if (!CClientVehicleManager::IsStandardModel(uiModel))
+            throw std::invalid_argument("Invalid model id");
+    }
+
+    CVehicleAudioSettingsEntry& pEntry = g_pGame->GetVehicleAudioSettingsManager()->GetVehicleModelAudioSettingsData(uiModel);
+
+    std::unordered_map<std::string, float> output;
+
+    output["sound-type"] = static_cast<float>(static_cast<int>(pEntry.GetSoundType()));
+    output["engine-on-soundbank-id"] = static_cast<float>(pEntry.GetEngineOnSoundBankID());
+    output["engine-off-soundbank-id"] = static_cast<float>(pEntry.GetEngineOffSoundBankID());
+    output["bass-setting"] = static_cast<float>(pEntry.GetBassSetting());
+    output["bass-eq"] = pEntry.GetBassEq();
+    output["field-c"] = pEntry.GetFieldC();
+    output["horn-ton"] = static_cast<float>(pEntry.GetHornTon());
+    output["horn-high"] = pEntry.GetHornHign();
+    output["engine-upgrade"] = static_cast<float>(pEntry.GetEngineUpgrade());
+    output["door-sound"] = static_cast<float>(pEntry.GetDoorSound());
+    output["radio-num"] = static_cast<float>(pEntry.GetRadioNum());
+    output["radio-type"] = static_cast<float>(pEntry.GetRadioType());
+    output["vehicle-type-for-audio"] = static_cast<float>(pEntry.GetVehicleTypeForAudio());
+    output["horn-volume-delta"] = pEntry.GetHornVolumeDelta();
+
+    return output;
+}
+
+std::unordered_map<std::string, float> CLuaVehicleDefs::GetVehicleAudioSettings(CClientVehicle* pVehicle)
+{
+    const CVehicleAudioSettingsEntry& pEntry = pVehicle->GetAudioSettings();
+
+    std::unordered_map<std::string, float> output;
+
+    output["sound-type"] = static_cast<float>(static_cast<int>(pEntry.GetSoundType()));
+    output["engine-on-soundbank-id"] = static_cast<float>(pEntry.GetEngineOnSoundBankID());
+    output["engine-off-soundbank-id"] = static_cast<float>(pEntry.GetEngineOffSoundBankID());
+    output["bass-setting"] = static_cast<float>(pEntry.GetBassSetting());
+    output["bass-eq"] = pEntry.GetBassEq();
+    output["field-c"] = pEntry.GetFieldC();
+    output["horn-ton"] = static_cast<float>(pEntry.GetHornTon());
+    output["horn-high"] = pEntry.GetHornHign();
+    output["engine-upgrade"] = static_cast<float>(pEntry.GetEngineUpgrade());
+    output["door-sound"] = static_cast<float>(pEntry.GetDoorSound());
+    output["radio-num"] = static_cast<float>(pEntry.GetRadioNum());
+    output["radio-type"] = static_cast<float>(pEntry.GetRadioType());
+    output["vehicle-type-for-audio"] = static_cast<float>(pEntry.GetVehicleTypeForAudio());
+    output["horn-volume-delta"] = pEntry.GetHornVolumeDelta();
+
+    return output;
 }

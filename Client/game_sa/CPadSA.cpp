@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CPadSA.cpp
  *  PURPOSE:     Controller pad input logic
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -62,7 +62,7 @@ void CPadSA::Disable(bool bDisable)
 
 void CPadSA::Clear()
 {
-    CControllerState cs;            // create a null controller (class is inited to null)
+    CControllerState cs;  // create a null controller (class is inited to null)
     SetCurrentControllerState(&cs);
     SetLastControllerState(&cs);
 }
@@ -78,4 +78,19 @@ void CPadSA::SetHornHistoryValue(bool value)
 void CPadSA::SetLastTimeTouched(DWORD dwTime)
 {
     internalInterface->LastTimeTouched = dwTime;
+}
+
+short CPadSA::GetShakeDur()
+{
+    return internalInterface->ShakeDur;
+}
+
+unsigned char CPadSA::GetShakeFreq()
+{
+    return internalInterface->ShakeFreq;
+}
+
+void CPadSA::SetShakeDur(short sShakeDur)
+{
+    internalInterface->ShakeDur = sShakeDur;
 }

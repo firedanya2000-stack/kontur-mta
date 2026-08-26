@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CSyncDebug.h
  *  PURPOSE:     Header for sync debug class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -30,14 +30,14 @@ public:
     void OnPulse();
 
 #else
-    CSyncDebug(CClientManager* pManager){};
+    CSyncDebug(CClientManager* pManager) {};
 
-    void Unreference(CClientPlayer& Player){};
+    void Unreference(CClientPlayer& Player) {};
 
-    void Attach(CClientPlayer& Player){};
-    void Detach(){};
+    void Attach(CClientPlayer& Player) {};
+    void Detach() {};
 
-    void OnPulse(){};
+    void OnPulse() {};
 
 #endif
 

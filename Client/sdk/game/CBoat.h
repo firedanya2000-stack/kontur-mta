@@ -5,7 +5,7 @@
  *  FILE:        sdk/game/CBoat.h
  *  PURPOSE:     Boat vehicle interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -18,7 +18,7 @@ class CBoatHandlingEntry;
 class CBoat : public virtual CVehicle
 {
 public:
-    virtual ~CBoat(){};
+    virtual ~CBoat() {};
 
     virtual CBoatHandlingEntry* GetBoatHandlingData() = 0;
     virtual void                SetBoatHandlingData(CBoatHandlingEntry* pHandling) = 0;

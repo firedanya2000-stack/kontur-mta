@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/packets/CPlayerACInfoPacket.h
  *  PURPOSE:
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@ class CPlayerACInfoPacket final : public CPacket
 {
 public:
     ePacketID     GetPacketID() const { return PACKET_ID_PLAYER_ACINFO; };
-    unsigned long GetFlags() const { return 0; };            // Not used
+    unsigned long GetFlags() const { return 0; };  // Not used
 
     bool Read(NetBitStreamInterface& BitStream);
 

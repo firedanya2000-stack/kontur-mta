@@ -5,7 +5,7 @@
  *  FILE:        game_sa/CPedSoundSA.cpp
  *  PURPOSE:     Ped sound
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -30,7 +30,7 @@ short CPedSoundSA::GetVoiceID()
 
 void CPedSoundSA::SetVoiceTypeID(short sVoiceType)
 {
-    m_pInterface->m_sVoiceType = sVoiceType;
+    m_pInterface->m_sVoiceType = static_cast<ePedVoiceType>(sVoiceType);
 }
 
 void CPedSoundSA::SetVoiceID(short sVoiceID)
@@ -43,12 +43,14 @@ bool CPedSoundSA::IsSpeechDisabled()
     bool  bReturn;
     DWORD dwThis = (DWORD)m_pInterface;
     DWORD dwFunc = FUNC_CAEPedSound__IsSpeedDisabled;
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThis
         call    dwFunc
         mov     bReturn, al
     }
+    // clang-format on
     return bReturn;
 }
 
@@ -56,23 +58,27 @@ void CPedSoundSA::EnablePedSpeech()
 {
     DWORD dwThis = (DWORD)m_pInterface;
     DWORD dwFunc = FUNC_CAEPedSound__EnablePedSpeech;
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThis
         call    dwFunc
     }
+    // clang-format on
 }
 
 void CPedSoundSA::DisablePedSpeech(bool bStopCurrent)
 {
     DWORD dwThis = (DWORD)m_pInterface;
     DWORD dwFunc = FUNC_CAEPedSound__DisablePedSpeech;
-    _asm
+    // clang-format off
+    __asm
     {
         mov     ecx, dwThis
         push    bStopCurrent
         call    dwFunc
     }
+    // clang-format on
 }
 
 short CPedSoundSA::GetVoiceTypeIDFromName(const char* szVoiceTypeName)
@@ -80,13 +86,15 @@ short CPedSoundSA::GetVoiceTypeIDFromName(const char* szVoiceTypeName)
     DWORD dwFunc = (DWORD)FUNC_CAEPedSound__GetAudioPedType;
     short sVoiceTypeID;
 
-    _asm
+    // clang-format off
+    __asm
     {
         push    szVoiceTypeName
         call    dwFunc
         add     esp, 4
         mov     sVoiceTypeID, ax
     }
+    // clang-format on
     return sVoiceTypeID;
 }
 
@@ -95,7 +103,8 @@ short CPedSoundSA::GetVoiceIDFromName(short sVoiceTypeID, const char* szVoiceNam
     DWORD dwFunc = (DWORD)FUNC_CAEPedSound__GetVoice;
     short sVoiceID;
 
-    _asm
+    // clang-format off
+    __asm
     {
         movzx eax, sVoiceTypeID
         push    eax
@@ -104,6 +113,7 @@ short CPedSoundSA::GetVoiceIDFromName(short sVoiceTypeID, const char* szVoiceNam
         add     esp, 8
         mov     sVoiceID, ax
     }
+    // clang-format on
     return sVoiceID;
 }
 

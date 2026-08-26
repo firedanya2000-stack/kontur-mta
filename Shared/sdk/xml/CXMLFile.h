@@ -5,7 +5,7 @@
  *  FILE:        sdk/xml/CXMLFile.h
  *  PURPOSE:     XML file interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -22,7 +22,7 @@ class CXMLNode;
 class CXMLFile : public CXMLCommon
 {
 public:
-    virtual ~CXMLFile(){};
+    virtual ~CXMLFile() {};
 
     virtual const char* GetFilename() = 0;
     virtual void        SetFilename(const char* szFilename) = 0;

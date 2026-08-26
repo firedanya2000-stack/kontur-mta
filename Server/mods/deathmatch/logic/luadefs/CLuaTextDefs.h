@@ -5,12 +5,14 @@
  *  FILE:        mods/deathmatch/logic/luadefs/CLuaTextDefs.h
  *  PURPOSE:     Lua text display function definitions class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
 #pragma once
 #include "CLuaDefs.h"
+
+class CTextItem;
 
 class CLuaTextDefs : public CLuaDefs
 {
@@ -36,6 +38,7 @@ public:
     LUA_DECLARE(textItemGetScale);
     LUA_DECLARE(textItemSetPosition);
     LUA_DECLARE(textItemGetPosition);
+    static std::variant<CLuaMultiReturn<float, float>, CVector2D> OOP_textItemGetPosition(lua_State* luaVM, CTextItem* textItem);
     LUA_DECLARE(textItemSetColor);
     LUA_DECLARE(textItemGetColor);
     LUA_DECLARE(textItemSetPriority);

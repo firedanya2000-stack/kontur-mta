@@ -1,4 +1,4 @@
--- From: http://industriousone.com/topic/oscopydir
+-- From: https://industriousone.com/topic/oscopydir
 
 --
 -- Allows copying directories.
@@ -96,7 +96,7 @@ function os.sha256_file(path)
 	local windows = os.host() == "windows"
 	local s, errc
 	if windows then
-		s, errc = os.outputof(string.format("CertUtil -hashfile \"%s\" SHA256", path))
+		s, errc = os.outputof(string.format("call \"utils\\7z\\7za.exe\" h -scrcSHA256 \"%s\"", path))
 	else
 		s, errc = os.outputof(string.format("sha256sum \"%s\" | awk '{ print $1 }'", path))
 	end
@@ -109,7 +109,7 @@ function os.sha256_file(path)
 
 	-- Clean windows output
 	if windows then
-		s = (s:match("\n(.*)\n(.*)") or ""):gsub(" ", "")
+		s = (s:match("SHA256 for data: +([^\n]*)") or "")
 	end
 
 	return s:lower()
@@ -127,6 +127,24 @@ function os.extract_archive(archive_path, target_path, override)
 	end
 
 	return false
+end
+
+function http.create_download_progress_handler(options)
+	local last_update = 0
+
+	return function (total, current)
+		local tick = os.clock()
+		if tick - last_update < options.update_interval_s then
+			return
+		end
+
+		last_update = tick
+
+		local ratio = current / total;
+		ratio = math.min(math.max(ratio, 0), 1)
+		local percent = math.floor(ratio * 100)
+		print(string.format("Downloading (%d/%d) %d%%", current, total, percent))
+	end
 end
 
 function http.download_print_errors(url, file, options)
@@ -152,4 +170,26 @@ function errormsg(title, message)
 		print()
 	end
 	term.popColor()
+end
+
+-- Does a normal file copy and adds hardcoded text to the beginning of the resulting file
+-- Used in compose_files.lua and install_data.lua
+function makeconfigtemplate(file_path, result_path)
+	if not os.copyfile(file_path, result_path) then
+		return false
+	end
+	local result_file = io.open(result_path, "r")
+	if not result_file then
+		return false
+	end
+    local file_content = result_file:read("*all")
+    result_file:close()
+	result_file = io.open(result_path, "w")
+    if not result_file then
+        return false, "Failed to open result file for writing."
+    end
+    result_file:write("<!-- DELETING THIS FILE IS NOT RECOMMENDED ('mtaserver.conf.template')!\n     It is automatically used by the server for inserting missing settings into 'mtaserver.conf' on startup.\n-->\n")
+    result_file:write(file_content)
+    result_file:close()
+    return true
 end

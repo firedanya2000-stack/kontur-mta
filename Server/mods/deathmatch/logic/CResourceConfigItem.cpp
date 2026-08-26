@@ -5,7 +5,7 @@
  *  FILE:        mods/deathmatch/logic/CResourceConfigItem.cpp
  *  PURPOSE:     Resource server-side (XML) configuration file item class
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -68,6 +68,7 @@ bool CResourceConfigItem::Start()
         // Delete the XML again, invalid
         delete m_pXMLFile;
         m_pXMLFile = NULL;
+        m_pXMLRootNode = NULL;
     }
     else
         CLogger::ErrorPrintf("Couldn't load config %s in resource %s\n", m_strShortName.c_str(), m_resource->GetName().c_str());
@@ -81,6 +82,7 @@ bool CResourceConfigItem::Stop()
     {
         delete m_pXMLFile;
         m_pXMLFile = NULL;
+        m_pXMLRootNode = NULL;
     }
 
     return true;

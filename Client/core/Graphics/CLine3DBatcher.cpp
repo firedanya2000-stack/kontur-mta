@@ -11,6 +11,7 @@
 
 #include <StdInc.h>
 #include "CLine3DBatcher.h"
+#include "DXHook/CProxyDirect3DDevice9.h"
 
 ////////////////////////////////////////////////////////////////
 //
@@ -19,9 +20,9 @@
 //
 //
 ////////////////////////////////////////////////////////////////
-CLine3DBatcher::CLine3DBatcher(bool bZTest)
+CLine3DBatcher::CLine3DBatcher(bool bPreGUI)
 {
-    m_bZTest = bZTest;
+    m_bPreGUI = bPreGUI;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -80,8 +81,8 @@ void CLine3DBatcher::Flush()
     {
         const SLine3DItem& item = *iter;
 
+        const ulong    ulColor = item.ulColor;
         const float    fWidth = item.fWidth;
-        ulong          ulColor = item.ulColor;
         const CVector& vecA = item.vecFrom;
         const CVector& vecB = item.vecTo;
 
@@ -116,7 +117,7 @@ void CLine3DBatcher::Flush()
     // Set states
     if (g_pDeviceState->AdapterState.bRequiresClipping)
         m_pDevice->SetRenderState(D3DRS_CLIPPING, TRUE);
-    m_pDevice->SetRenderState(D3DRS_ZENABLE, m_bZTest ? D3DZB_TRUE : D3DZB_FALSE);
+    m_pDevice->SetRenderState(D3DRS_ZENABLE, m_bPreGUI ? D3DZB_TRUE : D3DZB_FALSE);
     m_pDevice->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
     m_pDevice->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
     m_pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);

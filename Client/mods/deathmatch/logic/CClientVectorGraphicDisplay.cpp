@@ -10,12 +10,23 @@
 #include "StdInc.h"
 #include "CClientVectorGraphicDisplay.h"
 #include "CClientVectorGraphic.h"
-#include <lunasvg.h>
 
 using namespace lunasvg;
 
-CClientVectorGraphicDisplay::CClientVectorGraphicDisplay(CClientDisplayManager* pDisplayManager, CClientVectorGraphic* pVectorGraphic, int ID)
-    : CClientDisplay(pDisplayManager, ID)
+static bool SafeSvgRender(Document* doc, Bitmap& bitmap, const Matrix& matrix)
+{
+    __try
+    {
+        doc->render(bitmap, matrix);
+        return true;
+    }
+    __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+    {
+        return false;
+    }
+}
+
+CClientVectorGraphicDisplay::CClientVectorGraphicDisplay(CClientVectorGraphic* pVectorGraphic, int ID) : CClientDisplay(ID)
 {
     m_pVectorGraphic = pVectorGraphic;
     m_bVisible = true;
@@ -62,25 +73,50 @@ void CClientVectorGraphicDisplay::UpdateTexture()
     if (!surface)
         return;
 
-    Bitmap bitmap = svgDocument->renderToBitmap(pVectorGraphicItem->m_uiSizeX, pVectorGraphicItem->m_uiSizeY);
-    if (!bitmap.valid())
+    // Validate render item dimensions
+    if (pVectorGraphicItem->m_uiSizeX == 0 || pVectorGraphicItem->m_uiSizeY == 0)
         return;
+
+    // Validate SVG document dimensions (reject zero, negative, NaN, Inf)
+    float svgWidth = svgDocument->width();
+    float svgHeight = svgDocument->height();
+    if (svgWidth <= 0 || svgHeight <= 0 || !std::isfinite(svgWidth) || !std::isfinite(svgHeight))
+        return;
+
+    // Reject documents whose content bounding box is degenerate.
+    // Catches fully-empty or NaN-dimension documents before they reach the renderer.
+    Box bbox = svgDocument->boundingBox();
+    if (bbox.w <= 0 || bbox.h <= 0 || !std::isfinite(bbox.w) || !std::isfinite(bbox.h) || !std::isfinite(bbox.x) || !std::isfinite(bbox.y))
+        return;
+
+    // SVG has a predefined width and height. We need to transform it to the requested size
+    float scaleX = pVectorGraphicItem->m_uiSizeX / svgWidth;
+    float scaleY = pVectorGraphicItem->m_uiSizeY / svgHeight;
+
+    const Matrix transformationMatrix(scaleX, 0, 0, scaleY, 0, 0);
 
     // Lock surface
     D3DLOCKED_RECT LockedRect;
     if (SUCCEEDED(surface->LockRect(&LockedRect, nullptr, D3DLOCK_DISCARD)))
     {
-        auto surfaceData = static_cast<byte*>(LockedRect.pBits);
-        auto sourceData = static_cast<const byte*>(bitmap.data());
+        auto surfaceData = static_cast<std::uint8_t*>(LockedRect.pBits);
+        auto stride = static_cast<std::int32_t>(LockedRect.Pitch);
 
-        for (uint32_t y = 0; y < bitmap.height(); ++y)
+        Bitmap bitmap{surfaceData, (int32_t)pVectorGraphicItem->m_uiSizeX, (int32_t)pVectorGraphicItem->m_uiSizeY, stride};
+        bitmap.clear(0);
+
+        if (!SafeSvgRender(svgDocument, bitmap, transformationMatrix))
         {
-            memcpy(surfaceData, sourceData, bitmap.width() * 4);            // 4 bytes per pixel
-
-            // advance row pointers
-            sourceData += bitmap.stride();
-            surfaceData += LockedRect.Pitch;
+            // SVG triggered an access violation during rendering (malformed content)
+            surface->UnlockRect();
+            m_bHasUpdated = false;
+            return;
         }
+
+        // The surface stays in lunasvg's native premultiplied ARGB layout.
+        // CGraphics::DrawTextureQueued routes the draw to a PM blend so we
+        // avoid the precision loss caused by an integer unpremultiply
+        // (see issue #4891 banding on translucent SVG gradients).
 
         // Unlock surface
         surface->UnlockRect();

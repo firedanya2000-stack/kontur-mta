@@ -5,7 +5,7 @@
  *  FILE:        sdk/gui/CGUIProgressBar.h
  *  PURPOSE:     Progress bar widget interface
  *
- *  Multi Theft Auto is available from http://www.multitheftauto.com/
+ *  Multi Theft Auto is available from https://www.multitheftauto.com/
  *
  *****************************************************************************/
 
@@ -17,7 +17,7 @@
 class CGUIProgressBar : public CGUIElement
 {
 public:
-    virtual ~CGUIProgressBar(){};
+    virtual ~CGUIProgressBar() {};
 
     virtual void  SetProgress(float fProgress) = 0;
     virtual float GetProgress() = 0;
